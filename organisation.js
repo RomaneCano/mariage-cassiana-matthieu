@@ -349,13 +349,16 @@ async function seatPlan(rows) {
 }
 
 
+let orgTok = 0;
 async function renderOrg(key) {
+  const tok = ++orgTok;
   orgState.key = key;
   document.querySelectorAll("[data-org]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.org === key)));
   const host = $("#org-body"); host.replaceChildren();
-  if (key === "notes") return renderNotes(host);
+  if (key === "notes") return renderNotes(host, () => tok === orgTok);
   const M = ORG[key]; let rows = [];
   try { rows = await orgStore.list(M.table); } catch (e) { host.append(el("p", { class: "msg err", text: "Impossible de charger : " + explainErr(e) + " Exécutez supabase-tout-en-un.sql dans Supabase." })); return; }
+  if (tok !== orgTok) return;
   rows = sortRows(key, rows);
   M.fields.filter(f => f.t === "select").forEach(f => rows.forEach(r => { if (r[f.k] && !f.o.includes(r[f.k])) f.o.push(r[f.k]); }));
   host.append(orgSummary(key, rows));
@@ -370,7 +373,7 @@ async function renderOrg(key) {
   }
   host.append(bar);
 
-  if (key === "seating" && rows.length) host.append(await seatPlan(rows));
+  if (key === "seating" && rows.length) { const sp = await seatPlan(rows); if (tok !== orgTok) return; host.append(sp); }
 
   // formulaire d'ajout
   const form = el("form", { class: "card org-add", novalidate: true });
@@ -469,8 +472,9 @@ async function renderOrg(key) {
   host.append(el("div", { class: "tbl org-wrap" }, table));
 }
 
-async function renderNotes(host) {
+async function renderNotes(host, current) {
   let v = ""; try { v = await store.getSetting("org_notes"); } catch {}
+  if (current && !current()) return;
   const ta = el("textarea", { class: "org-notes", rows: "16", placeholder: "Idées, numéros utiles, mots de passe de réservation à ne pas écrire ici, questions à poser au prêtre, listes en vrac…", "aria-label": "Notes" }); ta.value = v || "";
   const st = el("p", { class: "hint", text: "Enregistrement automatique quand vous quittez le champ." });
   ta.addEventListener("blur", async () => { try { await store.setSetting("org_notes", ta.value); st.textContent = "✓ Enregistré à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }); } catch (e) { st.textContent = "⚠ " + orgErr(e); } });
