@@ -344,6 +344,7 @@ body.is-admin .public{display:none}
     <div class="admin-tabs" role="group" aria-label="Rubriques">
       <button class="btn small" type="button" data-tab="al" aria-pressed="true">Allergies</button>
       <button class="btn small" type="button" data-tab="gi" aria-pressed="false">Cadeaux</button>
+      <button class="btn small" type="button" data-tab="so" aria-pressed="false">Chants</button>
     </div>
 
     <div id="tab-al">
@@ -360,6 +361,13 @@ body.is-admin .public{display:none}
     </div>
 
     <div id="tab-gi" hidden>
+      <form class="card" id="pot-form" novalidate style="margin-bottom:22px">
+        <h3>Cagnotte en ligne</h3>
+        <p class="hint">Collez le lien de votre cagnotte (Leetchi, Lydia, PayPal...). Il apparaît dans la rubrique Cadeaux et dans la FAQ. Laissez vide pour le retirer.</p>
+        <label for="pot-url">Lien de la cagnotte<input id="pot-url" type="url" placeholder="https://"></label>
+        <button class="btn solid" type="submit">Enregistrer</button>
+        <p class="msg" id="pot-msg" role="status" hidden></p>
+      </form>
       <form class="card" id="gift-form" novalidate style="margin-bottom:22px">
         <h3>Ajouter un cadeau</h3>
         <label for="g-title">Nom du cadeau<input id="g-title" required maxlength="80"></label>
@@ -376,6 +384,26 @@ body.is-admin .public{display:none}
         <tbody id="gi-rows"></tbody>
       </table></div>
       <p class="empty" id="gi-empty" hidden>La liste est vide. Ajoutez un premier cadeau ci-dessus.</p>
+    </div>
+
+    <div id="tab-so" hidden>
+      <form class="card" id="song-form" novalidate style="margin-bottom:22px">
+        <h3>Ajouter un chant</h3>
+        <div class="two-f">
+          <label for="s-moment">Moment de la messe<input id="s-moment" required maxlength="60" placeholder="Entrée, communion, sortie..."></label>
+          <label for="s-title">Titre<input id="s-title" required maxlength="100"></label>
+        </div>
+        <label for="s-author">Auteur ou interprète (facultatif)<input id="s-author" maxlength="100"></label>
+        <label for="s-audio">Lien audio (facultatif)<input id="s-audio" type="url" placeholder="Lien YouTube, ou lien direct vers un fichier .mp3"></label>
+        <p class="hint">Un lien .mp3 affiche un lecteur sur le site. Un lien YouTube affiche un bouton « Écouter sur YouTube ». Sans lien, le bouton lance une recherche YouTube du titre.</p>
+        <button class="btn solid" type="submit">Ajouter le chant</button>
+        <p class="msg" id="s-msg" role="status" hidden></p>
+      </form>
+      <div class="tbl"><table>
+        <thead><tr><th>Moment</th><th>Titre</th><th>Lien audio</th><th></th></tr></thead>
+        <tbody id="so-rows"></tbody>
+      </table></div>
+      <p class="empty" id="so-empty" hidden>Aucun chant pour l'instant.</p>
     </div>
   </div>
 </div>
@@ -494,6 +522,27 @@ const store = {
     if (remote) { const { error } = await remote.from("gifts").update({ reserved, reserved_by: reserved ? who : "" }).eq("id", id); if (error) throw error; }
     else local.write("gifts", local.read("gifts").map(g => g.id === id ? { ...g, reserved, reserved_by: reserved ? who : "" } : g));
   },
+  async listSongs(){
+    if (remote) { const { data, error } = await remote.from("songs").select("*").order("position").order("created_at"); if (error) throw error; return data; }
+    const l = local.read("songs");
+    return l.length ? l : CONTENT.songs.map((x,i) => ({ id:"d"+i, moment:x.moment, title:x.title, author:x.author, audio_url:x.audio||"" }));
+  },
+  async addSong(song){
+    if (remote) { const { error } = await remote.from("songs").insert(song); if (error) throw error; return; }
+    const l = (await this.listSongs()).filter(x => !String(x.id).startsWith("d")); l.push({ id: uid(), created_at: new Date().toISOString(), ...song }); local.write("songs", l);
+  },
+  async deleteSong(id){
+    if (remote) { const { error } = await remote.from("songs").delete().eq("id", id); if (error) throw error; return; }
+    local.write("songs", (await this.listSongs()).filter(x => x.id !== id && !String(x.id).startsWith("d")));
+  },
+  async getSetting(key){
+    if (remote) { const { data } = await remote.from("settings").select("value").eq("key", key).maybeSingle(); return data ? data.value : ""; }
+    try { return localStorage.getItem("mariage:set:"+key) || ""; } catch { return mem["set:"+key] || ""; }
+  },
+  async setSetting(key, value){
+    if (remote) { const { error } = await remote.from("settings").upsert({ key, value }); if (error) throw error; return; }
+    mem["set:"+key] = value; try { localStorage.setItem("mariage:set:"+key, value); } catch {}
+  },
   async reserveGift(id, who){
     if (remote) { const { error } = await remote.rpc("reserve_gift", { gift_id: id, who }); if (error) throw error; }
     else await this.setGiftReserved(id, true, who);
@@ -518,30 +567,41 @@ function renderStatic(){
   const sw = (list, no, host) => list.forEach(([n,c]) => host.append(el("li",{}, el("span",{class:"swatch"+(no?" no":""), style:`background:${c}`, role:"img","aria-label":(no?"À éviter : ":"")+n}), n)));
   sw(CONTENT.dress.ok, false, $("#palette-ok")); sw(CONTENT.dress.no, true, $("#palette-no"));
 
-  const songs = $("#songs");
-  CONTENT.songs.forEach(s => {
-    const isFile = /\.(mp3|m4a|ogg|wav)(\?.*)?$/i.test(s.audio || "");
-    const yt = s.audio && !isFile ? s.audio : "https://www.youtube.com/results?search_query=" + encodeURIComponent(s.query || s.title);
-    songs.append(el("article",{class:"card song"},
-      el("span",{class:"moment",text:s.moment}),
-      el("p",{class:"title",text:s.title}),
-      s.author ? el("span",{class:"hint",text:s.author}) : "",
-      isFile ? el("audio",{controls:true,preload:"none",src:s.audio,"aria-label":"Écouter " + s.title}) : "",
-      el("div",{class:"row"}, el("a",{class:"btn small solid",href:isFile ? s.audio : yt,target:"_blank",rel:"noopener",text: isFile ? "Ouvrir le fichier audio" : "Écouter sur YouTube"}))));
-  });
-
   const chips = $("#al-chips");
   CONTENT.allergens.forEach((a,i) => chips.append(el("label",{for:"al-c"+i}, el("input",{type:"checkbox",id:"al-c"+i,name:"allergen",value:a}), el("span",{text:a}))));
 
-  const faq = $("#faq-list");
+}
+
+const state = { cagnotte: CONTENT.cagnotteUrl || "" };
+
+function renderFaq(){
+  const faq = $("#faq-list"); faq.replaceChildren();
   CONTENT.faq.forEach(([q,a,extra]) => {
     const body = el("p",{text:a});
     if (extra === "gifts") {
       const row = el("div",{style:"display:flex;gap:10px;flex-wrap:wrap;margin:0 4px 16px"});
-      if (CONTENT.cagnotteUrl) row.append(el("a",{class:"btn small solid",href:CONTENT.cagnotteUrl,target:"_blank",rel:"noopener",text:"Accéder à la cagnotte en ligne"}));
+      if (state.cagnotte) row.append(el("a",{class:"btn small solid",href:state.cagnotte,target:"_blank",rel:"noopener",text:"Accéder à la cagnotte en ligne"}));
       row.append(el("a",{class:"btn small",href:"#cadeaux",text:"Voir la liste de cadeaux"}));
       faq.append(el("details",{}, el("summary",{text:q}), body, row));
     } else faq.append(el("details",{}, el("summary",{text:q}), body));
+  });
+}
+
+async function renderSongs(){
+  const host = $("#songs"); host.replaceChildren();
+  let list = [];
+  try { list = await store.listSongs(); } catch { host.append(el("p",{class:"msg err",text:"Les chants n'ont pas pu être chargés. Réessayez dans un instant."})); return; }
+  if (!list.length) { host.append(el("p",{class:"empty",text:"Les chants seront ajoutés bientôt."})); return; }
+  list.forEach(x => {
+    const url = x.audio_url || "";
+    const isFile = /\.(mp3|m4a|ogg|wav)(\?.*)?$/i.test(url);
+    const href = isFile ? url : (url || "https://www.youtube.com/results?search_query=" + encodeURIComponent(x.title));
+    host.append(el("article",{class:"card song"},
+      el("span",{class:"moment",text:x.moment}),
+      el("p",{class:"title",text:x.title}),
+      x.author ? el("span",{class:"hint",text:x.author}) : "",
+      isFile ? el("audio",{controls:true,preload:"none",src:url,"aria-label":"Écouter " + x.title}) : "",
+      el("div",{class:"row"}, el("a",{class:"btn small solid",href,target:"_blank",rel:"noopener",text: isFile ? "Ouvrir le fichier audio" : (url ? "Écouter sur YouTube" : "Chercher sur YouTube")}))));
   });
 }
 
@@ -566,7 +626,7 @@ function highlightTabs(){
 
 async function renderGifts(){
   const pot = $("#gift-pot"); pot.replaceChildren();
-  if (CONTENT.cagnotteUrl) pot.append(el("div",{class:"calm",style:"margin-bottom:20px"}, el("p",{class:"big",text:"Cagnotte en ligne"}), el("p",{style:"margin:0 0 1rem",text:"Vous préférez participer à notre projet ? Une cagnotte est ouverte."}), el("a",{class:"btn solid",href:CONTENT.cagnotteUrl,target:"_blank",rel:"noopener",text:"Participer à la cagnotte"})));
+  if (state.cagnotte) pot.append(el("div",{class:"calm",style:"margin-bottom:20px"}, el("p",{class:"big",text:"Cagnotte en ligne"}), el("p",{style:"margin:0 0 1rem",text:"Vous préférez participer à notre projet ? Une cagnotte est ouverte."}), el("a",{class:"btn solid",href:state.cagnotte,target:"_blank",rel:"noopener",text:"Participer à la cagnotte"})));
   const host = $("#gifts"), err = $("#gift-error");
   host.replaceChildren(); err.hidden = true;
   let gifts = [];
@@ -631,7 +691,7 @@ async function enterAdmin(){
     $("#logout").hidden = !adminSession;
   }
   login.hidden = adminSession; panel.hidden = !adminSession;
-  if (adminSession) { await Promise.all([renderAllergies(), renderGiftAdmin()]); }
+  if (adminSession) { await Promise.all([renderAllergies(), renderGiftAdmin(), renderSongAdmin(), loadPotField()]); }
 }
 function leaveAdmin(){ document.body.classList.remove("is-admin"); }
 function route(){
@@ -670,10 +730,38 @@ async function renderGiftAdmin(){
       " ", el("button",{class:"btn small",type:"button",text:"Supprimer","aria-label":"Supprimer " + g.title,onclick: async () => { await store.deleteGift(g.id); renderGiftAdmin(); }})))));
 }
 
+async function renderSongAdmin(){
+  const rows = $("#so-rows"); rows.replaceChildren();
+  let list = [];
+  try { list = await store.listSongs(); } catch { return; }
+  $("#so-empty").hidden = list.length > 0;
+  list.forEach(x => rows.append(el("tr",{},
+    el("td",{text:x.moment}), el("td",{}, el("b",{text:x.title}), x.author ? el("div",{class:"hint",text:x.author}) : ""),
+    el("td",{style:"word-break:break-all",text:x.audio_url || "–"}),
+    el("td",{}, el("button",{class:"btn small",type:"button",text:"Supprimer","aria-label":"Supprimer " + x.title,onclick: async () => { await store.deleteSong(x.id); renderSongAdmin(); renderSongs(); }})))));
+}
+async function loadPotField(){ try { $("#pot-url").value = await store.getSetting("cagnotte_url"); } catch {} }
+
 function bindAdmin(){
+  $("#song-form").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const msg = $("#s-msg"), moment = $("#s-moment").value.trim(), title = $("#s-title").value.trim();
+    if (!moment || !title) return showMsg(msg, "Indiquez le moment de la messe et le titre.", "err");
+    try {
+      const n = (await store.listSongs()).length;
+      await store.addSong({ moment, title, author: $("#s-author").value.trim(), audio_url: $("#s-audio").value.trim(), position: n });
+      ev.target.reset(); showMsg(msg, "Chant ajouté.", "ok"); renderSongAdmin(); renderSongs();
+    } catch { showMsg(msg, "L'ajout a échoué. Vérifiez que vous êtes bien connecté(e).", "err"); }
+  });
+  $("#pot-form").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const msg = $("#pot-msg"), url = $("#pot-url").value.trim();
+    try { await store.setSetting("cagnotte_url", url); state.cagnotte = url; renderFaq(); renderGifts(); showMsg(msg, url ? "Cagnotte enregistrée." : "Cagnotte retirée.", "ok"); }
+    catch { showMsg(msg, "L'enregistrement a échoué. Vérifiez que vous êtes bien connecté(e).", "err"); }
+  });
   document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => {
     document.querySelectorAll("[data-tab]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
-    $("#tab-al").hidden = b.dataset.tab !== "al"; $("#tab-gi").hidden = b.dataset.tab !== "gi";
+    $("#tab-al").hidden = b.dataset.tab !== "al"; $("#tab-gi").hidden = b.dataset.tab !== "gi"; $("#tab-so").hidden = b.dataset.tab !== "so";
   }));
   $("#gift-form").addEventListener("submit", async ev => {
     ev.preventDefault();
@@ -704,6 +792,7 @@ function showToast(text){
 }
 
 /* ============ DÉMARRAGE ============ */
-renderStatic(); startCountdown(); highlightTabs(); bindAllergyForm(); bindAdmin(); renderGifts();
+renderStatic(); renderFaq(); startCountdown(); highlightTabs(); bindAllergyForm(); bindAdmin(); renderSongs(); renderGifts();
+store.getSetting("cagnotte_url").then(u => { if (u) { state.cagnotte = u; renderFaq(); renderGifts(); } }).catch(() => {});
 window.addEventListener("hashchange", route); route();
 </script>

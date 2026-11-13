@@ -1,8 +1,8 @@
 -- Base de données du site de mariage (Supabase > SQL Editor > coller > Run)
 
 create table if not exists admins (email text primary key);
--- Remplacez par les vraies adresses de Cassiana et Matthieu :
-insert into admins(email) values ('cassiana@exemple.fr'), ('matthieu@exemple.fr') on conflict do nothing;
+-- Adresse commune des mariés (le lien de connexion arrive dans cette boîte) :
+insert into admins(email) values ('cassmattas@gmail.com') on conflict do nothing;
 
 create or replace function is_admin() returns boolean language sql stable security definer as $$
   select exists (select 1 from admins where email = lower(auth.jwt() ->> 'email'));
@@ -51,3 +51,26 @@ language sql security definer as $$
   where id = gift_id and reserved = false;
 $$;
 grant execute on function reserve_gift(uuid, text) to anon, authenticated;
+
+-- Chants : lecture publique, modification par les mariés.
+create table if not exists songs (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  position int not null default 0,
+  moment text not null check (char_length(moment) between 1 and 60),
+  title text not null check (char_length(title) between 1 and 100),
+  author text check (char_length(author) <= 100),
+  audio_url text check (audio_url is null or audio_url = '' or audio_url ~* '^https?://')
+);
+alter table songs enable row level security;
+create policy songs_read  on songs for select to anon, authenticated using (true);
+create policy songs_admin on songs for all to authenticated using (is_admin()) with check (is_admin());
+insert into songs(position, moment, title, author, audio_url)
+  select 0, 'Chant de sortie', 'Je suis dans la joie', 'Guy Bahi / Glorious', ''
+  where not exists (select 1 from songs);
+
+-- Réglages (lien de la cagnotte) : lecture publique, modification par les mariés.
+create table if not exists settings (key text primary key, value text not null default '');
+alter table settings enable row level security;
+create policy settings_read  on settings for select to anon, authenticated using (true);
+create policy settings_admin on settings for all to authenticated using (is_admin()) with check (is_admin());
