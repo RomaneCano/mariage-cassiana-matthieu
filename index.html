@@ -27,42 +27,46 @@ a{color:var(--olive)}
 :focus-visible{outline:3px solid var(--olive-soft);outline-offset:3px;border-radius:4px}
 .wrap{max-width:960px;margin:0 auto}
 
-/* Fleurs d'angle : même illustration, miroir aux quatre coins, sans déformation */
-.corner{position:absolute;pointer-events:none;user-select:none;height:auto;width:clamp(96px,22vw,230px)}
-.corner.tl{top:0;left:0}
-.corner.tr{top:0;right:0;transform:scaleX(-1)}
-.corner.bl{bottom:0;left:0;transform:scaleY(-1)}
-.corner.br{bottom:0;right:0;transform:scale(-1,-1)}
+/* Fleurs d'angle : fixes aux quatre coins de l'écran, celles du haut débordent sur le bandeau d'onglets */
+.corner{position:fixed;pointer-events:none;user-select:none;height:auto}
+.c-tl,.c-tr{top:0;width:clamp(84px,18vw,200px);z-index:40}
+.c-tl{left:0}
+.c-tr{right:0;transform:scaleX(-1)}
+.c-bl,.c-br{bottom:0;width:clamp(80px,16vw,180px);z-index:0}
+.c-br{right:0}
+.c-bl{left:0;transform:scaleX(-1)}
 
 /* Onglets (en haut de page) */
 .tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--paper);border-bottom:1px solid var(--line);
   margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--paper);z-index:30}
-.tabs ul{list-style:none;margin:0 auto;padding:6px 0;display:flex;gap:4px;overflow-x:auto;max-width:960px;scrollbar-width:none;justify-content:safe center}
+.tabs ul{list-style:none;margin:0 auto;padding:6px clamp(70px,15vw,170px);display:flex;gap:4px;overflow-x:auto;max-width:960px;scrollbar-width:none;justify-content:safe center}
 .tabs ul::-webkit-scrollbar{display:none}
 .tabs a{display:block;white-space:nowrap;text-decoration:none;padding:10px 14px;border-radius:999px;font-size:.9rem;letter-spacing:.04em;min-height:44px;line-height:24px}
 .tabs a:hover,.tabs a[aria-current="true"]{background:var(--paper-2)}
 
-/* Hero */
-.hero{position:relative;text-align:center;padding-block:clamp(48px,9vw,84px) 8px;overflow:hidden;margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
-.hero .wrap{position:relative;max-width:820px}
-.kicker{font-size:clamp(.95rem,2.6vw,1.2rem);letter-spacing:.16em;text-transform:uppercase;margin:0 0 .6rem;text-wrap:balance}
-.names{font-family:var(--script);font-weight:400;color:var(--olive-soft);margin:.1rem 0;line-height:1.05;font-size:clamp(3.6rem,15vw,8rem)}
+main.stage{position:relative;z-index:1;max-width:860px;margin:0 auto;min-height:calc(100dvh - 60px)}
+.panel{display:none;padding-block:28px 24px}
+.panel.active{display:block}
+.foot{text-align:center;margin:8px 0 40px;font-size:.8rem;opacity:.7}
+
+/* Accueil */
+.hero{text-align:center}
+.kicker{font-size:clamp(.95rem,2.6vw,1.2rem);letter-spacing:.16em;text-transform:uppercase;margin:0 0 .4rem;text-wrap:balance}
+.names{font-family:var(--script);font-weight:400;color:var(--olive-soft);margin:.1rem 0;line-height:1.05;font-size:clamp(3.6rem,15vw,7.5rem)}
 .names .amp{display:block;font-size:.55em;color:var(--olive);line-height:1}
-.lead{text-transform:uppercase;letter-spacing:.1em;font-size:clamp(.95rem,2.8vw,1.25rem);max-width:30em;margin:1.4rem auto;text-wrap:balance}
-.when{font-size:clamp(1.05rem,3.2vw,1.5rem);letter-spacing:.08em;text-transform:uppercase;margin:1.4rem 0 0}
-.where{font-family:var(--script);font-size:clamp(1.9rem,6.5vw,3rem);color:var(--olive-soft);margin:1.1rem 0 0;line-height:1.15}
+.lead{text-transform:uppercase;letter-spacing:.1em;font-size:clamp(.95rem,2.8vw,1.25rem);max-width:30em;margin:1rem auto;text-wrap:balance}
+.when{font-size:clamp(1.05rem,3.2vw,1.5rem);letter-spacing:.08em;text-transform:uppercase;margin:1rem 0 0}
+.where{font-family:var(--script);font-size:clamp(1.9rem,6.5vw,3rem);color:var(--olive-soft);margin:.8rem 0 0;line-height:1.15}
 .where small{display:block;font-family:var(--serif);font-size:clamp(.9rem,2.4vw,1.1rem);letter-spacing:.08em;color:var(--olive);margin-top:.2rem}
 .watercolor{height:auto;display:block;margin-inline:auto;-webkit-mask-image:radial-gradient(ellipse 66% 66% at 50% 50%,#000 42%,transparent 100%);mask-image:radial-gradient(ellipse 66% 66% at 50% 50%,#000 42%,transparent 100%)}
-.hero-art{margin-top:1.4rem}
-.hero-art .watercolor{width:min(100%,520px)}
+.hero-art{margin-top:.6rem}
+.hero-art .watercolor{width:min(100%,440px)}
 
 /* Sections */
-section{padding-block:56px 8px;scroll-margin-top:64px}
-main.wrap{max-width:860px}
 h2{font-family:var(--script);font-weight:400;color:var(--olive-soft);font-size:clamp(2.4rem,9vw,3.2rem);text-align:center;margin:0 0 .4rem;line-height:1.1}
-.sub{text-align:center;margin:0 auto 2rem;max-width:30em;text-wrap:balance}
-.rule{display:flex;align-items:center;gap:14px;margin:0 auto 2rem;max-width:320px}
+.sub{text-align:center;margin:0 auto 1.4rem;max-width:30em;text-wrap:balance}
+.rule{display:flex;align-items:center;gap:14px;margin:0 auto 1.4rem;max-width:320px}
 .rule::before,.rule::after{content:"";flex:1;border-top:1px solid var(--line)}
 .rule img{width:44px}
 h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
@@ -76,47 +80,49 @@ h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
 .btn.small{min-height:40px;padding:6px 16px;font-size:.85rem}
 .btn[disabled]{opacity:.5;cursor:not-allowed}
 
-/* Programme : frise chronologique en zigzag */
+/* Programme : frise chronologique en zigzag, compacte */
 .timeline{display:grid;gap:0}
-.step{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;text-align:center;justify-items:center;align-items:center}
-.step .watercolor{width:min(100%,300px)}
-.step.salle .watercolor{width:min(100%,320px)}
-.step .hour{font-size:1.5rem;letter-spacing:.04em;margin:0}
-.step .what{font-family:var(--script);font-size:2.3rem;color:var(--olive-soft);line-height:1.1;margin:0}
-.step .place{margin:0}
-.step .place em{display:block;font-family:var(--script);font-style:normal;font-size:1.3rem;color:var(--olive-soft)}
-.zig{display:block;width:min(100%,360px);height:auto;margin:6px auto;overflow:visible}
+.step{display:grid;grid-template-columns:minmax(0,42%) minmax(0,1fr);gap:16px;align-items:center;text-align:left}
+.step.rev{grid-template-columns:minmax(0,1fr) minmax(0,42%)}
+.step.rev .watercolor{order:2}
+.step.rev .txt{text-align:right}
+.step .watercolor{width:100%}
+.step .hour{font-size:1.15rem;letter-spacing:.04em;margin:0}
+.step .what{font-family:var(--script);font-size:clamp(1.8rem,6vw,2.4rem);color:var(--olive-soft);line-height:1.1;margin:0}
+.step .place{margin:0;font-size:.92rem;line-height:1.45}
+.step .place em{display:block;font-family:var(--script);font-style:normal;font-size:1.2rem;color:var(--olive-soft)}
+.zig{display:block;width:min(60%,280px);height:auto;margin:0 auto;overflow:visible}
 .zig.flip{transform:scaleX(-1)}
 .zig path{fill:none;stroke:var(--olive-soft);stroke-width:1.3;stroke-linecap:round}
 .zig .leaf{fill:var(--olive-soft);stroke:none}
-.transit{text-align:center;font-style:italic;font-size:.95rem;margin:0 0 6px}
-@media(min-width:760px){
-  .step{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;text-align:left;justify-items:stretch}
-  .step .watercolor{justify-self:center}
-  .step.rev .watercolor{order:2}
-  .step.rev .txt{text-align:right}
-  .zig{width:min(70%,520px)}
-}
+.transit{text-align:center;font-style:italic;font-size:.88rem;margin:0}
 
-/* Infos pratiques */
-.info-grid{display:grid;gap:18px}
-.parking-list{list-style:none;margin:1rem 0 0;padding:0;display:grid;gap:10px}
-.parking-list li{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line)}
-.parking-list li:first-child{border-top:0}
-.parking-list .pname{min-width:0;flex:1 1 200px}
-.parking-list small{display:block;opacity:.85}
-.badge{display:inline-block;padding:2px 12px;border-radius:999px;background:var(--olive);color:var(--paper);font-size:.78rem;letter-spacing:.06em;text-transform:uppercase}
-.calm{border:1.5px solid var(--olive-soft);border-radius:14px;padding:22px;text-align:center;background:transparent}
-.calm .big{font-family:var(--script);font-size:2.4rem;color:var(--olive-soft);line-height:1.1;margin:0 0 .2rem}
+/* Infos pratiques : tout sur un seul écran, réparti en grille */
+.route{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.route .card{padding:14px;display:grid;gap:8px;align-content:start;min-width:0}
+.route h3{font-size:1rem;margin:0}
+.route p{margin:0;font-size:.85rem;line-height:1.5}
+.route .wide{grid-column:1/-1}
+.route-time{display:flex;align-items:center;justify-content:center;gap:10px;text-align:center;font-style:italic;font-size:.92rem}
+.route-time::before,.route-time::after{content:"";flex:1;max-width:90px;border-top:1.3px dashed var(--olive-soft)}
+.pk{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0}
+@media(min-width:760px){.pk{grid-template-columns:repeat(4,1fr)}}
+.pk .btn{min-height:44px;padding:6px 10px;border-radius:14px;font-size:.8rem;line-height:1.25;text-align:center}
+.route .btn.small{padding:6px 10px;font-size:.8rem;line-height:1.25;text-align:center}
 
 /* Dress code */
-.palette{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:1rem 0 0;padding:0;list-style:none}
-.palette li{display:grid;justify-items:center;gap:6px;font-size:.85rem;width:92px;text-align:center}
-.swatch{width:60px;height:60px;border-radius:50%;border:1px solid var(--line);position:relative}
-.swatch.no::after{content:"";position:absolute;inset:-2px;border-radius:50%;background:linear-gradient(to top right,transparent calc(50% - 1.5px),var(--alert) calc(50% - 1.5px),var(--alert) calc(50% + 1.5px),transparent calc(50% + 1.5px))}
-.dress-grid{display:grid;gap:18px}
-@media(min-width:760px){.dress-grid{grid-template-columns:repeat(3,1fr)}}
-.avoid h3{color:var(--alert)}
+.dress{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dress .tile{border:1px solid var(--line);border-radius:16px;padding:16px 14px;display:grid;gap:8px;justify-items:center;text-align:center;align-content:start;min-width:0}
+.dress .tile.wide{grid-column:1/-1;background:var(--paper-2);border-color:transparent;padding:18px 14px}
+.dress .tile h3{margin:0;font-size:1rem}
+.dress .tile.wide h3{color:var(--alert)}
+.dress .tile p{margin:0;font-size:.88rem;line-height:1.5}
+.dress .ico{width:40px;height:40px;fill:none;stroke:var(--olive-soft);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.palette{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;max-width:420px;margin:.4rem 0 0;padding:0;list-style:none}
+.palette li{display:grid;justify-items:center;gap:6px;font-size:.78rem;line-height:1.2}
+.swatch{width:clamp(44px,12vw,58px);aspect-ratio:1;border-radius:50%;border:1px solid var(--line);position:relative;box-shadow:0 1px 3px rgba(79,80,32,.15)}
+.swatch.no::after{content:"";position:absolute;inset:0;border-radius:50%;background:linear-gradient(to top right,transparent calc(50% - .7px),rgba(138,59,43,.85) calc(50% - .7px),rgba(138,59,43,.85) calc(50% + .7px),transparent calc(50% + .7px))}
+@media(min-width:760px){.dress{grid-template-columns:1.4fr 1fr 1fr}.dress .tile.wide{grid-column:auto}}
 
 /* Chants */
 .song{display:grid;gap:10px}
@@ -181,6 +187,11 @@ body.is-admin .public{display:none}
 </style>
 
 <div class="public" id="public">
+  <img class="corner c-tl" src="img/coin-haut.png" alt="" width="483" height="441">
+  <img class="corner c-tr" src="img/coin-haut.png" alt="" width="483" height="441">
+  <img class="corner c-bl" src="img/coin-bas.png" alt="" width="474" height="258">
+  <img class="corner c-br" src="img/coin-bas.png" alt="" width="474" height="258">
+
   <nav class="tabs" aria-label="Sections du site">
     <ul>
       <li><a href="#accueil">Accueil</a></li>
@@ -188,51 +199,46 @@ body.is-admin .public{display:none}
       <li><a href="#infos">S'y rendre</a></li>
       <li><a href="#tenue">Dress code</a></li>
       <li><a href="#chants">Chants</a></li>
-      <li><a href="#cadeaux">Cadeaux</a></li>
-      <li><a href="#presence">Présence</a></li>
       <li><a href="#faq">Questions</a></li>
     </ul>
   </nav>
 
-  <header class="hero" id="accueil">
-    <img class="corner tl" src="img/fleurs-tl.png" alt="" width="405" height="420">
-    <img class="corner tr" src="img/fleurs-tl.png" alt="" width="405" height="420">
-    <div class="wrap">
+  <main class="stage">
+    <!-- ACCUEIL -->
+    <section class="panel hero active" id="accueil">
       <p class="kicker">Avec joie et bonheur</p>
       <h1 class="names">Cassiana<span class="amp">&amp;</span>Matthieu</h1>
       <p class="lead">ont le plaisir de vous inviter à la célébration de leur mariage</p>
       <p class="when">Le samedi 09 octobre 2027<br>à 13h30</p>
       <p class="where">Église Notre-Dame des Ardents<small>LAGNY-SUR-MARNE • FRANCE</small></p>
-      <p style="margin:1.6rem 0 0"><a class="btn solid" href="#presence">Confirmer ma présence</a></p>
       <div class="hero-art"><img class="watercolor" src="img/domaine-hero.png" alt="Aquarelle du Clos du Colombier, le domaine de la réception" width="794" height="608"></div>
-    </div>
-  </header>
+      <p style="margin:.4rem 0 0"><a class="btn solid" href="#presence">Confirmer ma présence</a></p>
+    </section>
 
-  <main class="wrap">
     <!-- PROGRAMME -->
-    <section id="programme">
+    <section class="panel" id="programme">
       <h2>Le programme</h2>
       <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
       <div class="timeline">
         <article class="step">
-          <img class="watercolor" src="img/eglise.png" alt="Aquarelle de l'église Notre-Dame des Ardents" width="264" height="396" loading="lazy">
+          <img class="watercolor" src="img/eglise.png" alt="Aquarelle de l'église Notre-Dame des Ardents" width="264" height="396">
           <div class="txt">
             <p class="hour">13h30</p><p class="what">Cérémonie religieuse</p>
             <p class="place">Église Notre-Dame des Ardents<em>Lagny-sur-Marne</em></p>
           </div>
         </article>
-        <svg class="zig" viewBox="0 0 360 120" aria-hidden="true"><path d="M60 4 C 60 70, 300 30, 300 110"/><path class="leaf" d="M300 110 c-7-9-7-17 0-24 c7 7 7 15 0 24z"/></svg>
+        <svg class="zig" viewBox="0 0 360 100" aria-hidden="true"><path d="M60 4 C 60 60, 300 24, 300 90"/><path class="leaf" d="M300 90 c-6-8-6-15 0-21 c6 6 6 13 0 21z"/></svg>
         <p class="transit" id="transit-line"></p>
         <article class="step rev">
-          <img class="watercolor" src="img/domaine.png" alt="Aquarelle du Clos du Colombier" width="441" height="297" loading="lazy">
+          <img class="watercolor" src="img/domaine.png" alt="Aquarelle du Clos du Colombier" width="441" height="297">
           <div class="txt">
             <p class="hour">17h30 – 19h30</p><p class="what">Cocktail</p>
             <p class="place">Le Clos du Colombier<em>Fontenay-Trésigny</em></p>
           </div>
         </article>
-        <svg class="zig flip" viewBox="0 0 360 120" aria-hidden="true"><path d="M60 4 C 60 70, 300 30, 300 110"/><path class="leaf" d="M300 110 c-7-9-7-17 0-24 c7 7 7 15 0 24z"/></svg>
-        <article class="step salle">
-          <img class="watercolor" src="img/salle.png" alt="Aquarelle de la salle de réception" width="468" height="390" loading="lazy">
+        <svg class="zig flip" viewBox="0 0 360 100" aria-hidden="true"><path d="M60 4 C 60 60, 300 24, 300 90"/><path class="leaf" d="M300 90 c-6-8-6-15 0-21 c6 6 6 13 0 21z"/></svg>
+        <article class="step">
+          <img class="watercolor" src="img/salle.png" alt="Aquarelle de la salle de réception" width="468" height="390">
           <div class="txt">
             <p class="hour">19h30 – 4h00</p><p class="what">Dîner et soirée</p>
             <p class="place">Le Clos du Colombier</p>
@@ -242,132 +248,107 @@ body.is-admin .public{display:none}
     </section>
 
     <!-- S'Y RENDRE -->
-    <section id="infos">
+    <section class="panel" id="infos">
       <h2>Comment s'y rendre ?</h2>
-      <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
-      <div class="info-grid">
+      <div class="route">
         <div class="card">
-          <h3>À l'église</h3>
-          <p style="margin:0">Église Notre-Dame des Ardents<br>1 rue du Docteur-Nodier, 77400 Lagny-sur-Marne</p>
-          <p class="hint" style="margin-top:.6rem">Le stationnement est limité près de l'église. Arrivez tôt et garez-vous dans l'un des parkings du centre-ville, puis rejoignez l'église à pied. Tapez le nom exact dans Waze.</p>
-          <ul class="parking-list" id="parking-list"></ul>
-          <p style="margin:1rem 0 0"><a class="btn solid" href="#" id="waze-church" target="_blank" rel="noopener">Itinéraire vers l'église (Waze)</a></p>
+          <h3>Église</h3>
+          <p>Notre-Dame des Ardents<br>1 rue du Docteur-Nodier<br>77400 Lagny-sur-Marne</p>
+          <a class="btn solid small" href="#" id="waze-church" target="_blank" rel="noopener">Ouvrir dans Waze</a>
         </div>
-
         <div class="card">
-          <h3>De l'église au domaine</h3>
-          <p style="margin:0">Comptez environ <b id="drive-time"></b> de route entre l'église de Lagny-sur-Marne et le Clos du Colombier. Le cocktail commence à 17h30, vous avez le temps de vous y rendre tranquillement.</p>
+          <h3>Domaine</h3>
+          <p>Le Clos du Colombier<br>Ferme de Malassise, D402<br>77610 Fontenay-Trésigny</p>
+          <a class="btn solid small" href="#" id="waze-domaine" target="_blank" rel="noopener">Ouvrir dans Waze</a>
         </div>
-
-        <div class="calm">
-          <p class="big">Aucun stress pour le domaine</p>
-          <p style="margin:0">Le Clos du Colombier dispose d'environ <b>100 places de parking</b> sur place. Chacun trouvera sa place.</p>
-          <p class="hint" style="margin-top:.8rem">Ferme de Malassise, D402, 77610 Fontenay-Trésigny</p>
-          <p style="margin:1rem 0 0"><a class="btn solid" href="#" id="waze-domaine" target="_blank" rel="noopener">Itinéraire vers le domaine (Waze)</a></p>
+        <p class="route-time wide">Environ <b id="drive-time"></b> de route entre les deux</p>
+        <div class="card wide">
+          <h3>Où se garer à l'église ?</h3>
+          <p>Peu de places près de l'église. Garez-vous dans l'un de ces parkings du centre-ville (nom à taper dans Waze) puis rejoignez l'église à pied.</p>
+          <div class="pk" id="parking-list"></div>
+          <p>Au domaine, environ <b>100 places de parking</b> sur place.</p>
         </div>
       </div>
     </section>
 
     <!-- DRESS CODE -->
-    <section id="tenue">
+    <section class="panel" id="tenue">
       <h2>Dress code</h2>
       <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
       <p class="sub">Aucune couleur n'est imposée : venez dans la tenue qui vous plaît, en évitant simplement les couleurs ci-dessous.</p>
-      <div class="dress-grid">
-        <div class="card avoid">
+      <div class="dress">
+        <div class="tile wide">
           <h3>Couleurs à éviter</h3>
-          <p class="hint">Le blanc, le noir et toutes les nuances de vert.</p>
+          <p>Le blanc, le noir et toutes les nuances de vert.</p>
           <ul class="palette" id="palette-no"></ul>
         </div>
-        <div class="card">
+        <div class="tile">
+          <svg class="ico" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 3v7M17 6h6M9 36V21l11-9 11 9v15zM15 36v-8a5 5 0 0 1 10 0v8"/></svg>
           <h3>À l'église</h3>
-          <p style="margin:0">Une tenue décente est demandée : épaules et décolleté couverts. Si votre tenue est décolletée ou sans manches, emportez un châle, une étole ou une veste pour vous couvrir pendant la cérémonie.</p>
+          <p>Épaules et décolleté couverts. Sinon, emportez un châle, une étole ou une veste.</p>
         </div>
-        <div class="card">
-          <h3>Nous sommes en octobre</h3>
-          <p style="margin:0">Il peut faire frais, surtout en soirée et en extérieur. Prévoyez de quoi vous couvrir : veste, châle ou manteau.</p>
+        <div class="tile">
+          <svg class="ico" viewBox="0 0 40 40" aria-hidden="true"><path d="M17 9a3 3 0 0 1 6 0v15.5a6.5 6.5 0 1 1-6 0zM20 15v14"/></svg>
+          <h3>En octobre</h3>
+          <p>Il peut faire frais, surtout le soir et en extérieur. Prévoyez de quoi vous couvrir.</p>
         </div>
       </div>
     </section>
 
     <!-- CHANTS -->
-    <section id="chants">
+    <section class="panel" id="chants">
       <h2>Les chants de la messe</h2>
       <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
-      <p class="sub">Pour chanter avec nous le jour J, vous pouvez écouter les chants à l'avance. Pas besoin de savoir chanter, la joie suffit.</p>
+      <p class="sub">Écoutez-les à l'avance pour chanter avec nous le jour J. Pas besoin de savoir chanter, la joie suffit.</p>
       <div class="stack" id="songs"></div>
     </section>
 
-    <!-- CADEAUX -->
-    <section id="cadeaux">
-      <h2>Un petit mot, un coup de pouce</h2>
-      <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
-      <p class="sub">Il n'y aura pas de liste de cadeaux. Votre présence est le plus beau des cadeaux.</p>
-      <div class="card" style="text-align:center">
-        <p style="margin:0">Si vous souhaitez tout de même nous faire plaisir, nous serons touchés par un <b>petit mot</b>, ou par une <b>participation pour notre nuit de noces</b>.</p>
-        <div id="gift-pot" style="margin-top:1.2rem"></div>
-      </div>
-    </section>
-
-    <!-- PRÉSENCE + ALLERGIES -->
-    <section id="presence">
-      <h2>Confirmer ma présence</h2>
-      <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
-      <p class="sub">Merci de répondre avant le 9 juillet 2027. Une réponse par personne, enfants compris.</p>
-      <form class="card" id="rsvp-form" novalidate>
-        <div class="two-f">
-          <label for="rs-prenom">Prénom<input id="rs-prenom" name="prenom" autocomplete="given-name" required maxlength="60"></label>
-          <label for="rs-nom">Nom<input id="rs-nom" name="nom" autocomplete="family-name" required maxlength="60"></label>
-        </div>
-        <fieldset style="border:0;padding:0;margin:0">
-          <legend style="font-weight:700;font-size:.95rem;margin-bottom:8px;padding:0">Serez-vous présent(e) ?</legend>
-          <div class="chips">
-            <label for="rs-oui"><input type="radio" name="presence" id="rs-oui" value="oui"><span>Oui, je serai là</span></label>
-            <label for="rs-non"><input type="radio" name="presence" id="rs-non" value="non"><span>Non, je ne pourrai pas venir</span></label>
-          </div>
-        </fieldset>
-        <div id="rs-allergy" hidden style="display:grid;gap:16px">
-          <fieldset style="border:0;padding:0;margin:0">
-            <legend style="font-weight:700;font-size:.95rem;margin-bottom:8px;padding:0">Avez-vous une allergie ou une intolérance alimentaire ?</legend>
-            <div class="chips">
-              <label for="rs-al-non"><input type="radio" name="hasallergy" id="rs-al-non" value="non"><span>Non</span></label>
-              <label for="rs-al-oui"><input type="radio" name="hasallergy" id="rs-al-oui" value="oui"><span>Oui</span></label>
-            </div>
-          </fieldset>
-          <div id="rs-allergy-detail" hidden style="display:grid;gap:16px">
-            <fieldset style="border:0;padding:0;margin:0">
-              <legend style="font-weight:700;font-size:.95rem;margin-bottom:8px;padding:0">Lesquelles ? (plusieurs choix possibles)</legend>
-              <div class="chips" id="al-chips"></div>
-            </fieldset>
-            <label for="al-autre">Autre précision (aliment, gravité, régime)
-              <textarea id="al-autre" name="autre" maxlength="300" placeholder="Exemple : allergie sévère aux crevettes, trace possible"></textarea>
-            </label>
-          </div>
-          <p class="hint">Ces informations servent uniquement à préparer le repas. Elles ne sont lues que par les mariés et le traiteur.</p>
-        </div>
-        <button class="btn solid" type="submit" id="rs-submit">Envoyer ma réponse</button>
-        <p class="msg" id="rs-msg" role="status" hidden></p>
-      </form>
-      <p class="hint" style="text-align:center;margin-top:1rem">Vous préférez écrire ? Envoyez-nous un message à
-        <a href="mailto:cassmattas@gmail.com?subject=Ma%20r%C3%A9ponse%20pour%20le%20mariage">cassmattas@gmail.com</a>
-        avec votre nom, votre présence et vos allergies éventuelles.</p>
-    </section>
-
     <!-- QUESTIONS / RÉPONSES -->
-    <section id="faq">
+    <section class="panel" id="faq">
       <h2>Questions et réponses</h2>
       <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
       <div id="faq-list"></div>
     </section>
+
+    <p class="foot"><a href="#admin">Espace mariés</a></p>
   </main>
 
-  <footer>
-    <img class="corner bl" src="img/fleurs-tl.png" alt="" width="405" height="420">
-    <img class="corner br" src="img/fleurs-tl.png" alt="" width="405" height="420">
-    <p class="script">À très vite !</p>
-    <p style="margin:.3rem 0 0">Cassiana &amp; Matthieu</p>
-    <a class="adm" href="#admin">Espace mariés</a>
-  </footer>
+  <div id="rsvp-store" hidden>
+    <form class="card" id="rsvp-form" novalidate style="margin:0 4px 16px">
+      <div class="two-f">
+        <label for="rs-prenom">Prénom<input id="rs-prenom" name="prenom" autocomplete="given-name" required maxlength="60"></label>
+        <label for="rs-nom">Nom<input id="rs-nom" name="nom" autocomplete="family-name" required maxlength="60"></label>
+      </div>
+      <fieldset style="border:0;padding:0;margin:0">
+        <legend style="font-weight:700;font-size:.95rem;margin-bottom:8px;padding:0">Serez-vous présent(e) ?</legend>
+        <div class="chips">
+          <label for="rs-oui"><input type="radio" name="presence" id="rs-oui" value="oui"><span>Oui, je serai là</span></label>
+          <label for="rs-non"><input type="radio" name="presence" id="rs-non" value="non"><span>Non, je ne pourrai pas venir</span></label>
+        </div>
+      </fieldset>
+      <div id="rs-allergy" style="display:none;gap:16px">
+        <fieldset style="border:0;padding:0;margin:0">
+          <legend style="font-weight:700;font-size:.95rem;margin-bottom:8px;padding:0">Avez-vous une allergie ou une intolérance alimentaire ?</legend>
+          <div class="chips">
+            <label for="rs-al-non"><input type="radio" name="hasallergy" id="rs-al-non" value="non"><span>Non</span></label>
+            <label for="rs-al-oui"><input type="radio" name="hasallergy" id="rs-al-oui" value="oui"><span>Oui</span></label>
+          </div>
+        </fieldset>
+        <div id="rs-allergy-detail" style="display:none;gap:16px">
+          <fieldset style="border:0;padding:0;margin:0">
+            <legend style="font-weight:700;font-size:.95rem;margin-bottom:8px;padding:0">Lesquelles ? (plusieurs choix possibles)</legend>
+            <div class="chips" id="al-chips"></div>
+          </fieldset>
+          <label for="al-autre">Autre précision (aliment, gravité, régime)
+            <textarea id="al-autre" name="autre" maxlength="300" placeholder="Exemple : allergie sévère aux crevettes, trace possible"></textarea>
+          </label>
+        </div>
+        <p class="hint">Ces informations servent uniquement à préparer le repas. Elles ne sont lues que par les mariés et le traiteur.</p>
+      </div>
+      <button class="btn solid" type="submit" id="rs-submit">Envoyer ma réponse</button>
+      <p class="msg" id="rs-msg" role="status" hidden></p>
+    </form>
+  </div>
 </div>
 
 <!-- ESPACE MARIÉS -->
@@ -474,10 +455,10 @@ const CONTENT = {
   ],
   allergens: ["Arachides","Fruits à coque","Gluten","Lactose / lait","Œufs","Poisson","Crustacés","Mollusques","Soja","Sésame","Moutarde","Céleri","Sulfites","Fruits exotiques","Végétarien","Sans porc"],
   faq: [
-    ["Comment confirmer ma présence ?","Remplissez le formulaire de la section « Confirmer ma présence » avant le 9 juillet 2027, soit trois mois avant le mariage. Vous pouvez aussi écrire à cassmattas@gmail.com.","presence"],
-    ["Comment s'y rendre ?","L'église est au 1 rue du Docteur-Nodier à Lagny-sur-Marne. Le domaine, le Clos du Colombier, est à Fontenay-Trésigny, environ 40 minutes de route plus loin. Retrouvez les adresses, les parkings et les liens Waze dans la section dédiée.","route"],
-    ["Où se garer à l'église ?","Dans l'un des parkings du centre de Lagny-sur-Marne listés dans la section « Comment s'y rendre ? », puis à pied jusqu'à l'église."],
-    ["Y a-t-il de la place pour se garer au domaine ?","Oui, environ 100 places sur place. Aucun stress."],
+    ["Comment confirmer ma présence et signaler une allergie ?","Merci de répondre avant le 9 juillet 2027, soit trois mois avant le mariage. Remplissez le formulaire ci-dessous, une réponse par personne, enfants compris. Vous pouvez aussi écrire à cassmattas@gmail.com.","form"],
+    ["Comment s'y rendre ?","L'église est au 1 rue du Docteur-Nodier à Lagny-sur-Marne. Le domaine, le Clos du Colombier, est à Fontenay-Trésigny, environ 40 minutes de route plus loin.","route"],
+    ["Où se garer à l'église ?","Dans l'un des parkings du centre de Lagny-sur-Marne indiqués dans la section « Comment s'y rendre ? », puis à pied jusqu'à l'église."],
+    ["Y a-t-il de la place pour se garer au domaine ?","Oui, environ 100 places sur place."],
     ["Combien de temps entre l'église et le domaine ?","Environ 40 minutes en voiture. Le cocktail est à 17h30."],
     ["À quelle heure dois-je arriver à l'église ?","La cérémonie commence à 13h30. Pensez à arriver 20 à 30 minutes avant pour vous garer et vous installer."],
     ["Quel est le dress code ?","Aucune couleur n'est imposée, mais évitez le blanc, le noir et toutes les nuances de vert. À l'église, prévoyez une tenue décente : épaules et décolleté couverts, ou de quoi vous couvrir. Nous sommes en octobre, prévoyez aussi de quoi vous couvrir contre le froid."],
@@ -584,9 +565,7 @@ function renderStatic(){
   $("#waze-domaine").href = wazeUrl(CONTENT.domaine.name + ", " + CONTENT.domaine.address);
 
   const pl = $("#parking-list");
-  CONTENT.parkings.forEach(p => pl.append(el("li",{},
-    el("span",{class:"pname"}, el("b",{text:p.name}), el("small",{text:p.where})),
-    el("a",{class:"btn small", href:wazeUrl(p.name + ", " + p.where), target:"_blank", rel:"noopener", text:"Ouvrir dans Waze"}))));
+  CONTENT.parkings.forEach(p => pl.append(el("a",{class:"btn small", href:wazeUrl(p.name + ", " + p.where), target:"_blank", rel:"noopener", title:p.where, text:p.name})));
 
   CONTENT.avoid.forEach(([n,c]) => $("#palette-no").append(el("li",{}, el("span",{class:"swatch no", style:`background:${c}`, role:"img","aria-label":"À éviter : "+n}), n)));
 
@@ -598,16 +577,15 @@ function renderStatic(){
 const state = { cagnotte: CONTENT.cagnotteUrl || "" };
 
 function renderFaq(){
-  const faq = $("#faq-list"); faq.replaceChildren();
+  const faq = $("#faq-list"), form = $("#rsvp-form"); faq.replaceChildren();
   CONTENT.faq.forEach(([q,a,extra]) => {
-    const body = el("p",{text:a});
-    if (extra === "gifts" || extra === "route" || extra === "presence") {
-      const row = el("div",{style:"display:flex;gap:10px;flex-wrap:wrap;margin:0 4px 16px"});
-      if (extra === "gifts" && state.cagnotte) row.append(el("a",{class:"btn small solid",href:state.cagnotte,target:"_blank",rel:"noopener",text:"Participer à la cagnotte"}));
-      if (extra === "presence") row.append(el("a",{class:"btn small solid",href:"#presence",text:"Confirmer ma présence"}));
-      if (extra === "route") row.append(el("a",{class:"btn small solid",href:"#infos",text:"Voir les itinéraires et parkings"}));
-      faq.append(el("details",{}, el("summary",{text:q}), body, row));
-    } else faq.append(el("details",{}, el("summary",{text:q}), body));
+    const d = el("details",{}, el("summary",{text:q}), el("p",{text:a}));
+    const row = el("div",{style:"display:flex;gap:10px;flex-wrap:wrap;margin:0 4px 16px"});
+    if (extra === "form") { d.id = "q-presence"; d.append(form); }
+    if (extra === "gifts" && state.cagnotte) row.append(el("a",{class:"btn small solid",href:state.cagnotte,target:"_blank",rel:"noopener",text:"Participer à la cagnotte"}));
+    if (extra === "route") row.append(el("a",{class:"btn small solid",href:"#infos",text:"Voir les itinéraires et parkings"}));
+    if (row.children.length) d.append(row);
+    faq.append(d);
   });
 }
 
@@ -629,29 +607,13 @@ async function renderSongs(){
   });
 }
 
-function highlightTabs(){
-  const links = [...document.querySelectorAll(".tabs a")];
-  if (!("IntersectionObserver" in window)) return;
-  const io = new IntersectionObserver(es => es.forEach(e => {
-    if (e.isIntersecting) links.forEach(a => a.setAttribute("aria-current", String(a.getAttribute("href") === "#" + e.target.id)));
-  }), { rootMargin:"-30% 0px -60% 0px" });
-  document.querySelectorAll("main section").forEach(s => io.observe(s));
-}
-
-async function renderGifts(){
-  const pot = $("#gift-pot"); pot.replaceChildren();
-  if (state.cagnotte) pot.append(el("a",{class:"btn solid",href:state.cagnotte,target:"_blank",rel:"noopener",text:"Participer à la cagnotte en ligne"}));
-}
-
 function bindRsvpForm(){
   const form = $("#rsvp-form"), msg = $("#rs-msg"), submit = $("#rs-submit");
   const allergyBox = $("#rs-allergy"), detail = $("#rs-allergy-detail");
   const val = n => (form.querySelector(`input[name="${n}"]:checked`) || {}).value;
   const sync = () => {
-    allergyBox.hidden = val("presence") !== "oui";
-    allergyBox.style.display = allergyBox.hidden ? "none" : "grid";
-    detail.hidden = val("hasallergy") !== "oui";
-    detail.style.display = detail.hidden ? "none" : "grid";
+    allergyBox.style.display = val("presence") === "oui" ? "grid" : "none";
+    detail.style.display = val("hasallergy") === "oui" ? "grid" : "none";
   };
   form.addEventListener("change", sync); sync();
   form.addEventListener("submit", async ev => {
@@ -694,8 +656,22 @@ async function enterAdmin(){
   if (adminSession) { await Promise.all([renderResponses(), renderSongAdmin(), loadPotField()]); }
 }
 function leaveAdmin(){ document.body.classList.remove("is-admin"); }
+const PANELS = ["accueil","programme","infos","tenue","chants","faq"];
+function showPanel(id){
+  PANELS.forEach(p => $("#"+p).classList.toggle("active", p === id));
+  document.querySelectorAll(".tabs a").forEach(a => a.setAttribute("aria-current", String(a.getAttribute("href") === "#" + id)));
+  window.scrollTo(0, 0);
+}
 function route(){
-  if (location.hash === "#admin") enterAdmin(); else leaveAdmin();
+  const h = location.hash.slice(1);
+  if (h === "admin") { enterAdmin(); return; }
+  leaveAdmin();
+  if (h === "presence") {
+    showPanel("faq");
+    const d = $("#q-presence"); if (d) { d.open = true; d.scrollIntoView({ block: "start" }); }
+    return;
+  }
+  showPanel(PANELS.includes(h) ? h : "accueil");
 }
 
 async function renderResponses(){
@@ -744,7 +720,7 @@ function bindAdmin(){
   $("#pot-form").addEventListener("submit", async ev => {
     ev.preventDefault();
     const msg = $("#pot-msg"), url = $("#pot-url").value.trim();
-    try { await store.setSetting("cagnotte_url", url); state.cagnotte = url; renderFaq(); renderGifts(); showMsg(msg, url ? "Cagnotte enregistrée." : "Cagnotte retirée.", "ok"); }
+    try { await store.setSetting("cagnotte_url", url); state.cagnotte = url; renderFaq(); showMsg(msg, url ? "Cagnotte enregistrée." : "Cagnotte retirée.", "ok"); }
     catch { showMsg(msg, "L'enregistrement a échoué. Vérifiez que vous êtes bien connecté(e).", "err"); }
   });
   document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => {
@@ -770,7 +746,7 @@ function showToast(text){
 }
 
 /* ============ DÉMARRAGE ============ */
-renderStatic(); renderFaq(); highlightTabs(); bindRsvpForm(); bindAdmin(); renderSongs(); renderGifts();
-store.getSetting("cagnotte_url").then(u => { if (u) { state.cagnotte = u; renderFaq(); renderGifts(); } }).catch(() => {});
+renderStatic(); renderFaq(); bindRsvpForm(); bindAdmin(); renderSongs();
+store.getSetting("cagnotte_url").then(u => { if (u) { state.cagnotte = u; renderFaq(); } }).catch(() => {});
 window.addEventListener("hashchange", route); route();
 </script>
