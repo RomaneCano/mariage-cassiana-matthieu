@@ -70,6 +70,7 @@ drop policy if exists songs_read on songs;
 drop policy if exists songs_admin on songs;
 create policy songs_read on songs for select to anon, authenticated using (true);
 create policy songs_admin on songs for all to authenticated using (is_admin()) with check (is_admin());
+alter table songs add column if not exists lyrics text check (lyrics is null or char_length(lyrics) <= 6000);
 insert into songs(position, moment, title, author, audio_url)
   select 0, 'Chant de sortie', 'Je suis dans la joie', 'Guy Bahi / Glorious', 'https://www.youtube.com/watch?v=o73hgSR0E_c'
   where not exists (select 1 from songs);

@@ -236,6 +236,13 @@ body.editing [data-ed]:focus{outline:2px solid var(--olive);background:#fffdf3}
 .song{display:grid;gap:10px}
 .song .moment{font-size:.8rem;letter-spacing:.12em;text-transform:uppercase}
 .song .title{font-family:var(--script);font-size:2rem;color:var(--olive-soft);line-height:1.1;margin:0}
+.lyrics{margin-top:4px;border-top:1px solid var(--line)}
+.lyrics summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;padding:10px 0;min-height:44px;font-size:.85rem;letter-spacing:.1em;text-transform:uppercase}
+.lyrics summary::-webkit-details-marker{display:none}
+.lyrics summary::after{content:"▾";font-size:1rem;line-height:1;transition:transform .2s}
+.lyrics[open] summary::after{transform:rotate(180deg)}
+.lyr-text{white-space:pre-line;font-size:.98rem;line-height:1.75;max-height:36vh;overflow-y:auto;padding:2px 6px 10px;animation:unfold .3s ease}
+@keyframes unfold{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
 .listen{display:flex;align-items:center;gap:12px;margin-top:2px}
 .play{flex:none;width:48px;height:48px;border-radius:50%;border:0;background:var(--olive);color:var(--paper);display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 8px rgba(79,80,32,.25)}
 .play:hover{background:var(--olive-soft)}
@@ -542,6 +549,7 @@ body.on-conn #edit-fab{display:none}
             </div>
             <label for="s-author">Auteur ou interprète (facultatif)<input id="s-author" maxlength="100"></label>
             <label for="s-audio">Lien audio (facultatif)<input id="s-audio" type="url" placeholder="Lien YouTube, ou lien direct vers un fichier .mp3"></label>
+            <label for="s-lyrics">Paroles (facultatif)<textarea id="s-lyrics" maxlength="6000" style="min-height:120px" placeholder="Collez les paroles ici. Les invités pourront les afficher en cliquant sur « Voir les paroles »."></textarea></label>
             <p class="hint">Les chants s'affichent sur le site dans l'ordre de la messe. Un nouveau chant se place automatiquement selon son moment (entrée, psaume, communion, sortie...). Utilisez les flèches ▲ ▼ du tableau pour ajuster l'ordre.</p>
         <p class="hint">Un lien YouTube ou un lien direct vers un fichier .mp3 affiche un petit bouton « Écouter » qui joue le son, sans lecteur visible. Sans lien, le chant s'affiche sans bouton.</p>
             <button class="btn solid" type="submit">Ajouter le chant</button>
@@ -782,6 +790,15 @@ const store = {
     if (remote) { const { error } = await remote.from("songs").insert(song); if (error) throw error; return; }
     const l = (await this.listSongs()).filter(x => !String(x.id).startsWith("d")); l.push({ id: uid(), created_at: new Date().toISOString(), ...song }); local.write("songs", l);
   },
+  async updateSong(id, patch){
+    if (remote) {
+      const { data, error } = await remote.from("songs").update(patch).eq("id", id).select();
+      if (error) throw error;
+      if (!data || !data.length) throw { code: "42501", message: "row-level security: chant non modifié" };
+      return;
+    }
+    local.write("songs", (await this.listSongs()).map(x => x.id === id ? { ...x, ...patch, id: String(id).startsWith("d") ? uid() : x.id } : x));
+  },
   async setSongOrder(ids){
     if (remote) {
       const res = await Promise.all(ids.map((id, i) => remote.from("songs").update({ position: i }).eq("id", id).select()));
@@ -942,6 +959,7 @@ async function renderSongs(){
       card.append(el("div",{class:"listen"}, btn, label, el("div",{class:"bar"}, bar)));
       attachAudio({ id, url, isFile, btn, label, bar, card });
     }
+    if (x.lyrics && x.lyrics.trim()) card.append(el("details",{class:"lyrics"}, el("summary",{text:"Voir les paroles"}), el("div",{class:"lyr-text",text:x.lyrics.trim()})));
     host.append(card);
   });
 }
@@ -1061,13 +1079,30 @@ async function renderSongAdmin(){
     try { await store.setSongOrder(ids); renderSongAdmin(); renderSongs(); showToast("Ordre enregistré"); }
     catch (e) { showToast("Ordre non enregistré : " + explainErr(e)); }
   };
-  list.forEach((x, i) => rows.append(el("tr",{},
-    el("td",{style:"white-space:nowrap"},
-      el("button",{class:"btn small",type:"button",text:"▲","aria-label":"Monter " + x.title,disabled:i === 0,onclick:() => move(i, -1)}), " ",
-      el("button",{class:"btn small",type:"button",text:"▼","aria-label":"Descendre " + x.title,disabled:i === list.length - 1,onclick:() => move(i, 1)})),
-    el("td",{text:x.moment}), el("td",{}, el("b",{text:x.title}), x.author ? el("div",{class:"hint",text:x.author}) : ""),
-    el("td",{style:"word-break:break-all",text:x.audio_url || "–"}),
-    el("td",{}, el("button",{class:"btn small danger",type:"button",text:"Supprimer","aria-label":"Supprimer " + x.title,onclick: async () => { await store.deleteSong(x.id); renderSongAdmin(); renderSongs(); }})))));
+  list.forEach((x, i) => {
+    const tr = el("tr",{},
+      el("td",{style:"white-space:nowrap"},
+        el("button",{class:"btn small",type:"button",text:"▲","aria-label":"Monter " + x.title,disabled:i === 0,onclick:() => move(i, -1)}), " ",
+        el("button",{class:"btn small",type:"button",text:"▼","aria-label":"Descendre " + x.title,disabled:i === list.length - 1,onclick:() => move(i, 1)})),
+      el("td",{text:x.moment}), el("td",{}, el("b",{text:x.title}), x.author ? el("div",{class:"hint",text:x.author}) : "", x.lyrics ? el("div",{class:"hint",text:"Paroles ajoutées"}) : ""),
+      el("td",{style:"word-break:break-all",text:x.audio_url || "–"}),
+      el("td",{style:"white-space:nowrap"},
+        el("button",{class:"btn small",type:"button",text:x.lyrics ? "Modifier les paroles" : "Ajouter les paroles",onclick:() => toggleLyricsEditor(tr, x)}), " ",
+        el("button",{class:"btn small danger",type:"button",text:"Supprimer","aria-label":"Supprimer " + x.title,onclick: async () => { await store.deleteSong(x.id); renderSongAdmin(); renderSongs(); }})));
+    rows.append(tr);
+  });
+}
+function toggleLyricsEditor(tr, x){
+  const next = tr.nextElementSibling;
+  if (next && next.classList.contains("lyr-edit")) { next.remove(); return; }
+  const ta = el("textarea",{maxlength:"6000",style:"min-height:160px;width:100%","aria-label":"Paroles de " + x.title}); ta.value = x.lyrics || "";
+  const msg = el("p",{class:"msg",hidden:true,role:"status"});
+  const save = el("button",{class:"btn small solid",type:"button",text:"Enregistrer les paroles",onclick: async () => {
+    try { await store.updateSong(x.id, { lyrics: ta.value.trim() || null }); showMsg(msg, "Paroles enregistrées.", "ok"); renderSongs(); }
+    catch (e) { showMsg(msg, "Non enregistré : " + explainErr(e), "err"); }
+  }});
+  tr.after(el("tr",{class:"lyr-edit"}, el("td",{colspan:"5"}, el("div",{style:"display:grid;gap:8px;padding:6px 0"}, ta, el("div",{style:"display:flex;gap:8px;flex-wrap:wrap"}, save, el("button",{class:"btn small",type:"button",text:"Fermer",onclick:() => tr.nextElementSibling.remove()})), msg))));
+  ta.focus();
 }
 async function renderFaqAdmin(){
   const rows = $("#fq-rows"); rows.replaceChildren();
@@ -1088,7 +1123,7 @@ function bindAdmin(){
       const cur = await store.listSongs(), r = massRank(moment);
       let at = cur.length;
       if (r != null) { const k = cur.findIndex(x => { const rx = massRank(x.moment); return rx != null && rx > r; }); if (k >= 0) at = k; }
-      await store.addSong({ moment, title, author: $("#s-author").value.trim(), audio_url: $("#s-audio").value.trim(), position: cur.length });
+      await store.addSong({ moment, title, author: $("#s-author").value.trim(), audio_url: $("#s-audio").value.trim(), position: cur.length, ...($("#s-lyrics").value.trim() ? { lyrics: $("#s-lyrics").value.trim() } : {}) });
       if (at < cur.length) {
         const all = await store.listSongs(), added = all.find(x => !cur.some(c => c.id === x.id));
         if (added) { const ids = cur.map(x => x.id); ids.splice(at, 0, added.id); await store.setSongOrder(ids); }
@@ -1241,6 +1276,7 @@ async function saveText(n){
 /* --- Explication claire des erreurs d'enregistrement --- */
 function explainErr(e){
   const m = String((e && (e.message || e.details)) || e || ""), c = (e && e.code) || "";
+  if (c === "PGRST204" || c === "42703" || /lyrics/i.test(m)) return "la colonne des paroles n'existe pas : exécutez le SQL « supabase-migration-paroles.sql » dans Supabase.";
   if (c === "PGRST205" || c === "42P01" || /could not find the table|does not exist/i.test(m)) return "la table « textes » n'existe pas dans Supabase : exécutez le fichier supabase-migration-textes.sql dans le SQL Editor.";
   if (c === "42501" || c === "PGRST301" || /row-level security|permission denied|not allowed/i.test(m)) return "ce compte n'a pas le droit d'écrire : vérifiez que votre adresse est dans la table « admins » et que vous êtes connecté(e).";
   if (/jwt|expired|not authenticated|invalid token/i.test(m)) return "votre session a expiré : reconnectez-vous via « Espace mariés ».";
