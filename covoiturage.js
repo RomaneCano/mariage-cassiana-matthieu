@@ -4,7 +4,8 @@
 (function () {
   const LS_MINE = "mariage:covoit-mine";
   const LS_LOCAL = "mariage:covoit";
-  const SENS = { aller: "De l'église au domaine", retour: "Du domaine à l'hébergement (après la soirée, vers 4 h)" };
+  const SENS = { aller: "De l'église au domaine", retour: "Du domaine à l'hébergement" };
+  const SUBS = { aller: "Après la cérémonie, environ 40 min", retour: "Après la soirée, vers 4 h" };
   let list = [], filter = "all", isAdm = false, panelBuilt = false;
 
   const mine = () => { try { return JSON.parse(localStorage.getItem(LS_MINE) || "{}"); } catch { return {}; } };
@@ -120,7 +121,7 @@
     ["aller", "retour"].forEach(s => {
       if (filter !== "all" && filter !== s) return;
       const rows = open.filter(r => r.sens === s || r.sens === "both");
-      const col = el("div", { class: "cv-col" }, el("h3", { class: "cat", text: SENS[s] }));
+      const col = el("div", { class: "cv-col" }, el("h3", { class: "cat", text: SENS[s] }), el("p", { class: "cv-sub", text: SUBS[s] }));
       if (!rows.length) col.append(el("p", { class: "hint cv-empty", text: "Aucune annonce pour l'instant. Soyez le premier à vous proposer !" }));
       else col.append(el("div", { class: "cv-grid" }, ...rows.map(card)));
       cols.append(col);
