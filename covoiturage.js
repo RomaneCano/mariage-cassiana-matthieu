@@ -40,9 +40,10 @@
   const clean = s => String(s || "").replace(/[<>]/g, "").replace(/\s+/g, " ").trim();
   const digits = s => String(s || "").replace(/[^\d+]/g, "");
   function waLink(tel) {
-    let d = digits(tel).replace(/^\+/, "");
-    if (/^0\d{9}$/.test(d)) d = "33" + d.slice(1);
-    return /^\d{9,15}$/.test(d) ? "https://wa.me/" + d : "";
+    let d = String(tel || "").replace(/\(0\)/g, "").replace(/[^\d+]/g, "");
+    if (d.startsWith("+")) d = d.slice(1); else if (d.startsWith("00")) d = d.slice(2); else if (/^0\d{9}$/.test(d)) d = "33" + d.slice(1);
+    d = d.replace(/^330/, "33");
+    return /^\d{9,15}$/.test(d) ? "https://api.whatsapp.com/send?phone=" + d : "";
   }
   const isPhone = s => /^(\+?\d[\d .-]{7,17}\d)$/.test(String(s).trim());
   const isMail = s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s).trim());
