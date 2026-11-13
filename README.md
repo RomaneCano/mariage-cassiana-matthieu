@@ -12,9 +12,9 @@ Site statique (un seul `index.html` + dossier `img/`), publiable sur GitHub Page
 3. Authentication > URL Configuration : ajouter l'adresse GitHub Pages du site.
 4. Sans cette configuration, le site fonctionne en mode démonstration (données stockées dans le navigateur seulement).
 
-## Remplir automatiquement la colonne « Allergie » du Google Sheet
+## Remplir automatiquement les colonnes « Présence » et « Allergie » du Google Sheet
 Coller `google-apps-script.gs` dans le Sheet (Extensions > Apps Script), le déployer en application Web, puis mettre l'URL dans `CONFIG.APPS_SCRIPT_URL`.
-Les réponses sans correspondance dans la liste vont dans l'onglet « Allergies à rattacher ».
+Les réponses sans correspondance dans la liste vont dans l'onglet « Réponses à rattacher ».
 
 ## QR code du carton papier
 Pointer le QR code Canva vers `https://<adresse-du-site>/#infos`.

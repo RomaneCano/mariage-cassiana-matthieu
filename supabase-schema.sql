@@ -8,12 +8,13 @@ create or replace function is_admin() returns boolean language sql stable securi
   select exists (select 1 from admins where email = lower(auth.jwt() ->> 'email'));
 $$;
 
-create table if not exists allergies (
+create table if not exists reponses (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
   nom text not null check (char_length(nom) between 1 and 60),
   prenom text not null check (char_length(prenom) between 1 and 60),
-  allergies text not null check (char_length(allergies) between 1 and 500),
+  presence text not null default 'oui' check (presence in ('oui','non')),
+  allergies text not null default '' check (char_length(allergies) <= 500),
   categories text[] not null default '{}'
 );
 
@@ -29,12 +30,12 @@ create table if not exists gifts (
 );
 
 alter table admins enable row level security;
-alter table allergies enable row level security;
+alter table reponses enable row level security;
 alter table gifts enable row level security;
 
--- Allergies : tout le monde peut envoyer, seuls les mariés peuvent lire ou supprimer.
-create policy allergies_insert on allergies for insert to anon, authenticated with check (true);
-create policy allergies_admin  on allergies for all to authenticated using (is_admin()) with check (is_admin());
+-- Réponses (présence + allergies) : tout le monde peut envoyer, seuls les mariés peuvent lire ou supprimer.
+create policy reponses_insert on reponses for insert to anon, authenticated with check (true);
+create policy reponses_admin  on reponses for all to authenticated using (is_admin()) with check (is_admin());
 
 -- Cadeaux : seuls les mariés accèdent à la table complète.
 create policy gifts_admin on gifts for all to authenticated using (is_admin()) with check (is_admin());
@@ -74,3 +75,10 @@ create table if not exists settings (key text primary key, value text not null d
 alter table settings enable row level security;
 create policy settings_read  on settings for select to anon, authenticated using (true);
 create policy settings_admin on settings for all to authenticated using (is_admin()) with check (is_admin());
+
+-- Droits d'accès
+grant insert on reponses to anon;
+grant select, insert, update, delete on reponses, gifts, songs, settings to authenticated;
+grant select on songs, settings to anon;
+grant select on gifts_public to anon, authenticated;
+grant execute on function reserve_gift(uuid, text) to anon, authenticated;
