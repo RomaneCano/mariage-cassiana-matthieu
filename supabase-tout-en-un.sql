@@ -286,3 +286,76 @@ alter table public.org_budget add column if not exists family numeric;
 -- 14. PLAN DE TABLES : forme des tables
 -- ============================================================
 alter table public.org_tables add column if not exists shape text;
+
+-- ============================================================
+-- 15. INVITÉS (liste des mariés) + confirmation automatique de présence
+-- ============================================================
+create table if not exists public.org_guests (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  position int not null default 0,
+  nom text,
+  prenom text not null,
+  tel text,
+  presence text not null default 'ATT' check (presence in ('ATT','OUI','NON')),
+  allergie text,
+  adresse text,
+  envoi text,
+  age text,
+  notes text,
+  responded_at timestamptz
+);
+alter table public.org_guests enable row level security;
+drop policy if exists org_guests_admin on public.org_guests;
+create policy org_guests_admin on public.org_guests for all to authenticated using (public.is_admin()) with check (public.is_admin());
+revoke all on public.org_guests from anon;
+
+-- normalisation : minuscules, sans accents ni ponctuation
+create or replace function public.norm_letters(t text) returns text language sql immutable as $$
+  select regexp_replace(translate(lower(coalesce(t,'')), 'àâäáãåéèêëíìîïóòôöõúùûüýÿçñœæ', 'aaaaaaeeeeiiiiooooouuuuyycnoa'), '[^a-z0-9]', '', 'g')
+$$;
+create or replace function public.norm_words(t text) returns text language sql immutable as $$
+  select trim(regexp_replace(translate(lower(coalesce(t,'')), 'àâäáãåéèêëíìîïóòôöõúùûüýÿçñœæ', 'aaaaaaeeeeiiiiooooouuuuyycnoa'), '[^a-z0-9]+', ' ', 'g'))
+$$;
+
+-- Appelée par le formulaire du site : retrouve l'invité (nom + prénom) et met à jour sa présence et ses allergies.
+-- Renvoie 'ok', 'ambigu' (plusieurs personnes possibles) ou 'inconnu'. Ne révèle jamais la liste.
+create or replace function public.rsvp_guest(p_nom text, p_prenom text, p_presence text, p_allergies text)
+returns text language plpgsql security definer set search_path = public as $$
+declare
+  n text := public.norm_letters(p_nom);
+  pw text := public.norm_words(p_prenom);
+  pres text := case when lower(coalesce(p_presence,'')) in ('oui','yes') then 'OUI' else 'NON' end;
+  al text := left(trim(coalesce(p_allergies,'')), 300);
+  ids uuid[];
+  gid uuid;
+begin
+  if pw = '' or n = '' then return 'inconnu'; end if;
+  -- 1) nom et prénom identiques
+  select array_agg(id) into ids from public.org_guests where public.norm_letters(nom) = n and public.norm_words(prenom) = pw;
+  if coalesce(array_length(ids,1),0) > 1 then return 'ambigu'; end if;
+  -- 2) prénom contenu dans la ligne (« Papy Robert », « Tata Lydie »…) avec le même nom (ou sans nom de famille)
+  if coalesce(array_length(ids,1),0) = 0 then
+    select array_agg(id) into ids from public.org_guests
+      where (' ' || public.norm_words(prenom) || ' ') like ('% ' || pw || ' %')
+        and (public.norm_letters(nom) = n or coalesce(nom,'') = '' or (length(n) >= 4 and public.norm_letters(nom) like '%' || n || '%'));
+    if coalesce(array_length(ids,1),0) > 1 then
+      select array_agg(id) into ids from public.org_guests where public.norm_words(prenom) = pw and (public.norm_letters(nom) = n or coalesce(nom,'') = '');
+    end if;
+    if coalesce(array_length(ids,1),0) > 1 then return 'ambigu'; end if;
+  end if;
+  if coalesce(array_length(ids,1),0) = 0 then return 'inconnu'; end if;
+  gid := ids[1];
+  update public.org_guests set
+    presence = pres,
+    responded_at = now(),
+    allergie = case
+      when pres = 'OUI' and al <> '' then
+        case when coalesce(allergie,'') = '' then al
+             when position(lower(al) in lower(allergie)) > 0 then allergie
+             else allergie || ', ' || al end
+      else allergie end
+  where id = gid;
+  return 'ok';
+end $$;
+grant execute on function public.rsvp_guest(text, text, text, text) to anon, authenticated;

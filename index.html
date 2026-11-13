@@ -322,6 +322,7 @@ body.editing [data-ed]:focus{outline:2px solid var(--olive);background:#fffdf3}
 .today-head .count .ico{color:var(--paper)}.today-head .count .ico .woolfill circle{fill:var(--olive)}
 h3.cat .ico{vertical-align:-6px;margin-right:2px}
 .empty-ico{display:flex;justify-content:center;margin-top:14px;opacity:.7}
+.pool-chips{max-height:150px;overflow:auto}
 .seat-pool{background:var(--paper-2);border-radius:14px;padding:10px 14px;margin:0 0 14px;display:grid;gap:8px;min-height:64px}
 .seat-pool.drop,.seat-table.drop{outline:2px dashed var(--olive);outline-offset:3px}
 .pool-chips{display:flex;gap:8px;flex-wrap:wrap}
@@ -375,6 +376,10 @@ details[open]>.org-sum-row::before{transform:translateY(-50%) rotate(90deg)}
 .slot.empty{width:28px;height:28px;min-height:0;padding:0;border-radius:50%;border:1.5px dashed var(--olive-soft);background:none;color:var(--olive-soft);cursor:pointer;font-size:.9rem;line-height:1}
 .add-guest{display:flex;gap:6px}.add-guest input{flex:1;min-width:0}
 .add-guest .btn{min-height:30px;padding:2px 12px;font-size:.8rem}
+.org-table.guests tr.p-OUI select[aria-label="Présence"]{background:#cfdcb4}.org-table.guests tr.p-NON select[aria-label="Présence"]{background:#e9cfc6}.org-table.guests tr.p-ATT select[aria-label="Présence"]{background:#efe2b9}
+#panel-connexion.wide .org-table.guests td:nth-child(2){width:auto;min-width:0}#panel-connexion.wide .org-table.guests th:nth-child(1),#panel-connexion.wide .org-table.guests th{white-space:nowrap}
+body.post .pre{display:none}
+#panel-connexion.wide .org-table.guests select[aria-label="Présence"],#panel-connexion.wide .org-table.guests select[aria-label="Invitation"]{min-width:124px}
 .org-fold{display:flex;gap:6px;justify-content:flex-end;margin:0 0 6px}
 @media(max-width:640px){.org-sum-row{grid-template-columns:minmax(0,1fr) auto}.org-sum-row .sm,.org-sum-row .num:nth-of-type(2){display:none}}
 .org-grp{margin:10px 0 0;font-size:.95rem;color:var(--olive)}
@@ -413,7 +418,6 @@ details[open]>.org-sum-row::before{transform:translateY(-50%) rotate(90deg)}
 .lb-close,.lb-nav{position:absolute;background:rgba(255,255,255,.14);color:#fff;border:0;border-radius:999px;width:48px;height:48px;font-size:2rem;line-height:1;cursor:pointer}
 .lb-close{top:14px;right:14px}.lb-nav{top:50%;transform:translateY(-50%)}.lb-nav.prev{left:12px}.lb-nav.next{right:12px}
 body.lb-open{overflow:hidden}
-body.post .pre{display:none}
 
 /* Chants */
 .song{display:grid;gap:10px}
@@ -1185,11 +1189,16 @@ const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 const store = {
   demo: !(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY),
   async addResponse(rec){
-    if (remote) { const { error } = await remote.from("reponses").insert(rec); if (error) throw error; }
+    let match = null;
+    if (remote) {
+      const { error } = await remote.from("reponses").insert(rec); if (error) throw error;
+      try { const r = await remote.rpc("rsvp_guest", { p_nom: rec.nom, p_prenom: rec.prenom, p_presence: rec.presence, p_allergies: rec.allergies || "" }); if (!r.error) match = r.data; } catch {}
+    }
     else { const l = local.read("reponses"); l.unshift({ id: uid(), created_at: new Date().toISOString(), ...rec }); local.write("reponses", l); }
     if (CONFIG.APPS_SCRIPT_URL) {
       try { await fetch(CONFIG.APPS_SCRIPT_URL, { method:"POST", mode:"no-cors", headers:{"Content-Type":"text/plain"}, body: JSON.stringify(rec) }); } catch {}
     }
+    return match;
   },
   async listResponses(){
     if (remote) { const { data, error } = await remote.from("reponses").select("*").order("created_at",{ascending:false}); if (error) throw error; return data; }
@@ -1453,9 +1462,10 @@ function bindRsvpForm(){
     }
     submit.disabled = true;
     try {
-      await store.addResponse({ prenom, nom, presence, allergies: [...picked, ...(autre ? [autre] : [])].join(", "), categories: picked });
+      const match = await store.addResponse({ prenom, nom, presence, allergies: [...picked, ...(autre ? [autre] : [])].join(", "), categories: picked });
       form.reset(); sync();
-      showMsg(msg, presence === "oui" ? "Merci, votre présence est bien enregistrée. Nous avons hâte de vous voir !" : "Merci de nous avoir prévenus. Vous nous manquerez.", "ok");
+      const lost = match === "inconnu" || match === "ambigu";
+      showMsg(msg, (presence === "oui" ? "Merci, votre présence est bien enregistrée. Nous avons hâte de vous voir !" : "Merci de nous avoir prévenus. Vous nous manquerez.") + (lost ? " Nous n'avons pas pu retrouver votre ligne automatiquement dans la liste des invités : pas d'inquiétude, votre réponse est conservée et les mariés feront le lien." : ""), "ok");
     } catch { showMsg(msg, "L'envoi n'a pas fonctionné. Vérifiez votre connexion et réessayez, ou écrivez-nous par e-mail.", "err"); }
     submit.disabled = false;
   });

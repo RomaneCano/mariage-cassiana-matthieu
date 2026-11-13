@@ -101,6 +101,11 @@ const ORG = {
     { k: "price", l: "Prix (€)", t: "number" }, { k: "distance", l: "Distance", t: "text" },
     { k: "contact", l: "Contact", t: "text" }, { k: "phone", l: "Téléphone", t: "text" }, { k: "email", l: "E-mail", t: "text" },
     { k: "availability", l: "Disponibilité", t: "text" }, { k: "deposit", l: "Acompte (€)", t: "number" }, { k: "notes", l: "Notes", t: "long", wide: true }] },
+  guests: { table: "org_guests", label: "Invités", order: "position", defaults: { presence: "ATT" }, fields: [
+    { k: "nom", l: "Nom", t: "text" }, { k: "prenom", l: "Prénom", t: "text", req: true }, { k: "tel", l: "Téléphone", t: "text" },
+    { k: "presence", l: "Présence", t: "select", o: ["ATT", "OUI", "NON"], labels: { ATT: "En attente", OUI: "Présent(e)", NON: "Absent(e)" } },
+    { k: "allergie", l: "Allergie", t: "text" }, { k: "adresse", l: "Adresse", t: "text" },
+    { k: "envoi", l: "Invitation", t: "select", o: ["Courrier", "QR code", "Remise en main"] }, { k: "age", l: "Âge", t: "text" }, { k: "notes", l: "Notes", t: "text" }] },
   games: { table: "org_games", label: "Jeux", order: "created_at", defaults: { chosen: false }, fields: [
     { k: "chosen", l: "Retenu", t: "check" }, { k: "name", l: "Idée de jeu", t: "text", req: true, wide: true }, { k: "people", l: "Nb de personnes", t: "text" },
     { k: "material", l: "Matériel", t: "text" }, { k: "price", l: "Prix (€)", t: "number" }, { k: "notes", l: "Notes", t: "text" }] },
@@ -206,10 +211,11 @@ const orgStore = {
 const orgErr = e => "Non enregistré : " + explainErr(e) + (/table|relation|schema/i.test(String((e && e.message) || "")) || (e && e.code === "PGRST205") ? " Exécutez supabase-tout-en-un.sql dans Supabase." : "");
 
 const orgOpen = new Set();
-const orgState = { key: "tasks", filter: { status: "todo", cat: "" } };
+const orgState = { key: "tasks", filter: { status: "todo", cat: "", gp: "", gq: "" } };
 
 function sortRows(key, rows) {
   const by = (f) => rows.slice().sort(f);
+  if (key === "guests") return by((a, b) => (a.position || 0) - (b.position || 0) || String(a.nom || "").localeCompare(String(b.nom || ""), "fr") || String(a.prenom || "").localeCompare(String(b.prenom || ""), "fr"));
   if (key === "tasks") return by((a, b) => (a.done - b.done) || String(a.due || "9999").localeCompare(String(b.due || "9999")) || String(a.title).localeCompare(String(b.title)));
   if (key === "budget") return by((a, b) => CATS_BUDGET.indexOf(a.cat) - CATS_BUDGET.indexOf(b.cat) || String(a.item).localeCompare(String(b.item)));
   if (key === "vendors") return by((a, b) => { const ia = ROLES.indexOf(a.role), ib = ROLES.indexOf(b.role); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || String(a.created_at || "").localeCompare(String(b.created_at || "")); });
@@ -241,7 +247,7 @@ function fieldInput(f, value, row) {
   let inp;
   if (f.t === "select") {
     const opts = ["", ...f.o]; if (value && !opts.includes(value)) opts.push(value);
-    inp = el("select", {}, ...opts.map(o => el("option", { value: o, text: o || "—" })));
+    inp = el("select", {}, ...opts.map(o => el("option", { value: o, text: (f.labels && f.labels[o]) || o || "—" })));
     if (f.newable) inp.append(el("option", { value: "__new__", text: "➕ Nouvelle catégorie…" }));
     inp.value = value || ""; inp.dataset.prev = inp.value;
     if (f.newable) inp.addEventListener("change", () => {
@@ -282,6 +288,11 @@ function orgSummary(key, rows) {
     const c = st => rows.filter(r => st.includes(r.status)).length;
     chip("à contacter", String(c(["À contacter"]))); chip("en attente", String(c(["En attente de devis", "En attente de réponse", "Réponse finale à donner", "Réponse négative à donner"]))); chip("retenus", String(c(RETAINED))); chip("refusés", String(c(["Refusé (NON)"])));
     chip("prix des retenus", eur(rows.filter(r => RETAINED.includes(r.status)).reduce((a, r) => a + (Number(r.price) || 0), 0)));
+  } else if (key === "guests") {
+    const c = f => rows.filter(f).length;
+    chip("invités", String(rows.length)); chip("présents", String(c(r => r.presence === "OUI")), ""); chip("absents", String(c(r => r.presence === "NON")));
+    chip("en attente", String(c(r => !r.presence || r.presence === "ATT"))); chip("allergies", String(c(r => r.allergie && r.allergie.trim())));
+    chip("enfants", String(c(r => r.age && r.age.trim()))); chip("courrier", String(c(r => r.envoi === "Courrier"))); chip("QR code", String(c(r => r.envoi === "QR code"))); chip("remise en main", String(c(r => r.envoi === "Remise en main")));
   } else if (key === "games") {
     chip("idées", String(rows.length)); chip("retenues", String(rows.filter(r => r.chosen).length)); chip("coût des retenues", eur(rows.filter(r => r.chosen).reduce((a, r) => a + (Number(r.price) || 0), 0)));
   } else if (key === "seating") {
@@ -370,8 +381,9 @@ async function seatPlan(rows) {
     zone(t, r.id, null); plan.append(t);
   });
   // invités ayant répondu « oui » mais pas encore placés
-  let rep = []; try { rep = await store.listResponses(); } catch {}
-  const names = [...new Set(rep.filter(x => x.presence !== "non").map(x => ((x.prenom || "") + " " + (x.nom || "")).trim()).filter(Boolean))];
+  let names = [];
+  try { const gl = await orgStore.list("org_guests"); names = [...new Set(sortRows("guests", gl).filter(x => x.presence !== "NON").map(x => ((x.prenom || "") + " " + (x.nom || "")).trim()).filter(Boolean))]; } catch {}
+  if (!names.length) { let rep = []; try { rep = await store.listResponses(); } catch {} names = [...new Set(rep.filter(x => x.presence !== "non").map(x => ((x.prenom || "") + " " + (x.nom || "")).trim()).filter(Boolean))]; }
   const left = names.filter(n => !placed.has(norm(n)));
   const chips = el("div", { class: "pool-chips" }, ...left.map(n => avatar(n, null)));
   pool.append(chips, left.length ? "" : el("small", { text: names.length ? "Tout le monde est placé 🎉" : "Les invités qui confirment leur présence apparaîtront ici." }));
@@ -403,6 +415,14 @@ async function renderOrg(key) {
     st.addEventListener("change", () => { orgState.filter.status = st.value; renderOrg(key); }); ct.addEventListener("change", () => { orgState.filter.cat = ct.value; renderOrg(key); });
     bar.append(st, ct);
   }
+  let guestFilter = () => {};
+  if (key === "guests") {
+    const gp = el("select", { "aria-label": "Présence" }, ...[["", "Tous les invités"], ["ATT", "En attente"], ["OUI", "Présents"], ["NON", "Absents"], ["ALL", "Avec allergie"]].map(([v, t]) => el("option", { value: v, text: t }))); gp.value = orgState.filter.gp;
+    const gq = el("input", { type: "search", placeholder: "Rechercher un invité…", "aria-label": "Rechercher un invité", style: "max-width:260px;min-height:38px;padding:4px 10px;font-size:var(--fs-small)" }); gq.value = orgState.filter.gq;
+    guestFilter = () => { orgState.filter.gp = gp.value; orgState.filter.gq = gq.value; const q = norm(gq.value); document.querySelectorAll("#org-body tr[data-q]").forEach(tr => { const okP = !gp.value || (gp.value === "ALL" ? tr.dataset.a === "1" : tr.dataset.p === gp.value), okQ = !q || tr.dataset.q.includes(q); tr.hidden = !(okP && okQ); }); };
+    gp.addEventListener("change", guestFilter); gq.addEventListener("input", guestFilter);
+    bar.append(gp, gq);
+  }
   host.append(bar);
 
   if (key === "seating" && rows.length) { const sp = await seatPlan(rows); if (tok !== orgTok) return; host.append(sp); }
@@ -421,6 +441,7 @@ async function renderOrg(key) {
     const miss = M.fields.find(f => f.req && (row[f.k] == null || row[f.k] === ""));
     if (miss) return showMsg(msg, "Renseignez : " + miss.l + ".", "err");
     if (key === "seating") row.position = rows.length;
+    if (key === "guests") row.position = rows.reduce((m, r) => Math.max(m, r.position || 0), 0) + 1;
     try { await orgStore.insert(M.table, row); renderOrg(key); } catch (e) { showMsg(msg, orgErr(e), "err"); }
   });
   const addBox = el("details", { class: "org-addbox" }, el("summary", {}, icon("Plus", 22), " Ajouter (" + M.label.toLowerCase() + ")"), form);
@@ -471,7 +492,7 @@ async function renderOrg(key) {
     host.append(list);
     return;
   }
-  const table = el("table", { class: "org-table" });
+  const table = el("table", { class: "org-table" + (key === "guests" ? " guests" : "") });
   table.append(el("thead", {}, el("tr", {}, ...M.fields.map(f => el("th", { text: f.l })), ...(key === "seating" ? [el("th", { text: "Ordre" })] : []), el("th", {}))));
   const tb = el("tbody");
   let lastCat = null;
@@ -481,12 +502,13 @@ async function renderOrg(key) {
       tb.append(el("tr", { class: "grp" }, el("td", { colspan: String(M.fields.length + 1), text: r.cat + " · " + eur(sub) })));
     }
     const late = key === "tasks" && !r.done && r.due && r.due < todayISO();
-    const tr = el("tr", { class: (late ? "late " : "") + (key === "tasks" && r.done ? "done" : "") });
+    const tr = el("tr", { class: (late ? "late " : "") + (key === "tasks" && r.done ? "done" : "") + (key === "guests" ? " p-" + (r.presence || "ATT") : "") });
+    if (key === "guests") { tr.dataset.q = norm((r.nom || "") + " " + (r.prenom || "")); tr.dataset.p = r.presence || "ATT"; tr.dataset.a = r.allergie && r.allergie.trim() ? "1" : "0"; }
     M.fields.forEach(f => {
       const inp = fieldInput(f, r[f.k]);
       inp.addEventListener("change", async () => {
         const v = readInput(f, inp);
-        try { await orgStore.update(M.table, r.id, { [f.k]: v }); r[f.k] = v; if (key === "tasks" || key === "budget" || key === "seating") renderOrg(key); else showToast("Enregistré"); }
+        try { await orgStore.update(M.table, r.id, { [f.k]: v }); r[f.k] = v; if (key === "tasks" || key === "budget" || key === "seating" || (key === "guests" && (f.k === "presence" || f.k === "allergie" || f.k === "envoi" || f.k === "age"))) renderOrg(key); else showToast("Enregistré"); }
         catch (e) { showToast(orgErr(e)); }
       });
       tr.append(el("td", { "data-label": f.l }, inp));
@@ -500,7 +522,7 @@ async function renderOrg(key) {
     } })));
     tb.append(tr);
   });
-  table.append(tb);
+  table.append(tb); guestFilter();
   host.append(el("div", { class: "tbl org-wrap" }, table));
 }
 
@@ -645,7 +667,8 @@ const ICONS = {
   "Agneau": WOOL(LAMB_BODY) + LEGS + HEAD,
   "Agneau pascal": WOOL(LAMB_BODY.map(([x, y, r]) => [x, y + 4, r])) + '<path d="M22 53V61M32 54V61M40 53V61M47 50V61" class="ln"/><ellipse cx="55" cy="35" rx="5.5" ry="7" class="ln"/><circle cx="57" cy="33" r="1.1" class="dot"/><path d="M46 8V32" class="ln"/><path d="M46 9l14 3-14 5z" class="ln"/><path d="M53 11v4M51 13h4" class="ln thin"/>',
   "Agneau couché": WOOL([[14, 44, 7], [22, 38, 8], [32, 36, 9], [43, 40, 8], [43, 48, 6], [32, 49, 8], [21, 50, 6]]) + '<path d="M16 56h34M44 54c3 1 5 2 8 2" class="ln"/><ellipse cx="54" cy="40" rx="5.5" ry="6.5" class="ln"/><path d="M51 35c-5-2-7 2-6 5" class="ln"/><circle cx="56" cy="38" r="1.1" class="dot"/>',
-  "Dé": '<rect x="10" y="10" width="44" height="44" rx="9" class="ln"/><circle cx="23" cy="23" r="3" class="dot"/><circle cx="41" cy="23" r="3" class="dot"/><circle cx="32" cy="32" r="3" class="dot"/><circle cx="23" cy="41" r="3" class="dot"/><circle cx="41" cy="41" r="3" class="dot"/>',
+  "Cartes": '<rect x="9" y="14" width="30" height="42" rx="4" transform="rotate(-12 24 35)" class="ln"/><rect x="25" y="9" width="30" height="42" rx="4" transform="rotate(9 40 30)" class="ln"/><path d="M40 37c-6-4-9-7-9-10a4.5 4.5 0 0 1 9-1 4.5 4.5 0 0 1 9 1c0 3-3 6-9 10z" class="ln thin" transform="rotate(9 40 30)"/>',
+  "Alliances": '<circle cx="24" cy="40" r="15" class="ln"/><circle cx="40" cy="40" r="15" class="ln"/><circle cx="24" cy="40" r="11.5" class="ln thin"/><circle cx="40" cy="40" r="11.5" class="ln thin"/><path d="M32 14l5 6-5 6-5-6z" class="ln"/><path d="M27 20h10" class="ln thin"/>',
   "Musique": '<path d="M24 46V16l26-6v30" class="ln"/><path d="M24 24l26-6" class="ln"/><ellipse cx="18" cy="47" rx="7" ry="5.5" transform="rotate(-18 18 47)" class="ln"/><ellipse cx="44" cy="41" rx="7" ry="5.5" transform="rotate(-18 44 41)" class="ln"/>',
   "Soleil": '<circle cx="32" cy="32" r="9" class="ln"/><circle cx="32" cy="32" r="5.5" class="ln thin"/><path d="M32 6v10M32 48v10M6 32h10M48 32h10M13.6 13.6l7 7M43.4 43.4l7 7M50.4 13.6l-7 7M20.6 43.4l-7 7" class="ln"/><path d="M19 10.5l3.5 6M45 10.5l-3.5 6M19 53.5l3.5-6M45 53.5l-3.5-6M10.5 19l6 3.5M53.5 19l-6 3.5M10.5 45l6-3.5M53.5 45l-6-3.5" class="ln thin"/>',  "Croix": '<path d="M27 6h10v18h18v10H37v26H27V34H9V24h18z" class="ln"/><path d="M32 12v40M16 29h32" class="ln thin"/>',
   "Calice": '<path d="M16 14h32c0 14-5 22-16 22S16 28 16 14z" class="ln"/><path d="M32 36v12M22 56h20c0-5-4-8-10-8s-10 3-10 8z" class="ln"/><circle cx="32" cy="7" r="4.5" class="ln"/><path d="M32 4.5v5M29.5 7h5" class="ln thin"/>',
@@ -678,15 +701,16 @@ async function renderToday() {
   const cols = el("div", { class: "today-cols" }); host.append(cols);
   try {
     const tasks = sortRows("tasks", await orgStore.list("org_tasks")).filter(t => !t.done).slice(0, 6);
-    const rep = await store.listResponses().catch(() => []);
-    const oui = rep.filter(r => r.presence !== "non").length, non = rep.filter(r => r.presence === "non").length;
+    const gl = await orgStore.list("org_guests").catch(() => []);
+    const rep = gl.length ? [] : await store.listResponses().catch(() => []);
+    const oui = gl.length ? gl.filter(r => r.presence === "OUI").length : rep.filter(r => r.presence !== "non").length, non = gl.length ? gl.filter(r => r.presence === "NON").length : rep.filter(r => r.presence === "non").length, att = gl.filter(r => !r.presence || r.presence === "ATT").length;
     cols.append(
       el("div", { class: "card" }, el("h3", { text: "À faire bientôt" }), tasks.length
         ? el("ul", { class: "today-list" }, ...tasks.map(t => el("li", { class: t.due && t.due < todayISO() ? "late" : "" }, el("span", { text: t.title }), el("small", { text: t.due ? frDate(t.due) : "sans date" }))))
         : el("p", { class: "hint", text: "Aucune tâche en attente. Chargez le rétroplanning type dans Organisation." }),
         el("button", { class: "btn small", type: "button", text: "Ouvrir les tâches", onclick: () => { showMain("org"); renderOrg("tasks"); } })),
-      el("div", { class: "card" }, el("h3", { text: "Réponses des invités" }), el("p", { class: "bignum", text: oui + " présent" + (oui > 1 ? "s" : "") }), el("p", { class: "hint", text: non + " absent" + (non > 1 ? "s" : "") + " · date limite : 9 juillet 2027" }),
-        el("button", { class: "btn small", type: "button", text: "Voir les réponses", onclick: () => { showMain("site"); document.querySelector('[data-tab="al"]').click(); } })));
+      el("div", { class: "card" }, el("h3", { text: "Réponses des invités" }), el("p", { class: "bignum", text: oui + " présent" + (oui > 1 ? "s" : "") }), el("p", { class: "hint", text: non + " absent" + (non > 1 ? "s" : "") + (gl.length ? " · " + att + " en attente" : "") + " · date limite : 9 juillet 2027" }),
+        el("button", { class: "btn small", type: "button", text: "Voir les invités", onclick: () => { showMain("org"); renderOrg("guests"); } })));
   } catch {}
 }
 
@@ -715,13 +739,13 @@ function buildAdminShell() {
   const today = el("section", { "data-main-sec": "today" }, el("div", { id: "today-body" }));
   const org = el("section", { "data-main-sec": "org", hidden: true },
     el("div", { class: "admin-tabs", role: "group", "aria-label": "Organisation" },
-      ...[["tasks", "Tâches"], ["budget", "Budget"], ["games", "Jeux"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["notes", "Notes"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
+      ...[["tasks", "Tâches"], ["guests", "Invités"], ["budget", "Budget"], ["games", "Jeux"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["notes", "Notes"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
     el("div", { id: "org-body" }));
   const photos = el("section", { "data-main-sec": "photos", hidden: true }, titled("h3", "cat", "Rameau d'olivier", "Photos du mariage", 28), el("div", { id: "photos-admin" }));
   const pray = el("section", { "data-main-sec": "pray", hidden: true }, titled("h3", "cat", "Calice", "Prière du jour", 28), el("div", { id: "pray-body" }));
   const ICO = { today: "Soleil", site: "Croix", org: "Agneau", photos: "Rameau d'olivier", pray: "Calice" };
   nav.querySelectorAll("[data-main]").forEach(b => b.prepend(icon(ICO[b.dataset.main], 24)));
-  const OICO = { tasks: "Bougie", budget: "Épi de blé", games: "Dé", seating: "Agneau couché", timeline: "Croix", notes: "Rameau d'olivier" };
+  const OICO = { tasks: "Bougie", budget: "Épi de blé", games: "Cartes", guests: "Alliances", seating: "Agneau couché", timeline: "Croix", notes: "Rameau d'olivier" };
   org.querySelectorAll("[data-org]").forEach(b => b.prepend(icon(OICO[b.dataset.org], 22)));
   const SICO = { al: "Épi de blé", so: "Musique", fq: "Bougie", gi: "Poisson" };
   site.querySelectorAll("[data-tab]").forEach(b => { if (SICO[b.dataset.tab]) b.prepend(icon(SICO[b.dataset.tab], 22)); });
