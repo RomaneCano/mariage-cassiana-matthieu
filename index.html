@@ -1,4 +1,13 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Cassiana & Matthieu</title>
+<link rel="icon" type="image/svg+xml" href="img/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<meta name="theme-color" content="#f5f2eb">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,8 +27,9 @@
   color-scheme:light;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:var(--paper);color:var(--olive);font-family:var(--serif);font-size:17px;line-height:1.7;
+html{scroll-behavior:smooth;font-size:clamp(14px,calc(1.7vh + 4px),18px)}
+[hidden]{display:none!important}
+body{margin:0;background:var(--paper);color:var(--olive);font-family:var(--serif);font-size:1rem;line-height:1.6;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
 img{max-width:100%;height:auto;display:block}
@@ -29,46 +39,66 @@ a{color:var(--olive)}
 
 /* Fleurs d'angle : fixes aux quatre coins de l'écran, celles du haut débordent sur le bandeau d'onglets */
 .corner{position:fixed;pointer-events:none;user-select:none;height:auto}
-.c-tl,.c-tr{top:0;width:clamp(84px,18vw,200px);z-index:40}
+.c-tl,.c-tr{top:0;width:clamp(70px,min(18vw,22vh),190px);z-index:40}
 .c-tl{left:0}
 .c-tr{right:0;transform:scaleX(-1)}
-.c-bl,.c-br{bottom:0;width:clamp(80px,16vw,180px);z-index:0}
+.c-bl,.c-br{bottom:0;width:clamp(64px,min(16vw,19vh),170px);z-index:0}
 .c-br{right:0}
 .c-bl{left:0;transform:scaleX(-1)}
 
-/* Onglets (en haut de page) */
-.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--paper);border-bottom:1px solid var(--line);
-  margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--paper);z-index:30}
-.tabs ul{list-style:none;margin:0 auto;padding:6px clamp(70px,15vw,170px);display:flex;gap:4px;overflow-x:auto;max-width:960px;scrollbar-width:none;justify-content:safe center}
-.tabs ul::-webkit-scrollbar{display:none}
-.tabs a{display:block;white-space:nowrap;text-decoration:none;padding:10px 14px;border-radius:999px;font-size:.9rem;letter-spacing:.04em;min-height:44px;line-height:24px}
+/* Onglets : bandeau fixe, tous visibles, ne bouge jamais */
+:root{--tabs-h:56px}
+@media(max-width:640px){:root{--tabs-h:100px}}
+body{padding-top:calc(var(--tabs-h) + env(safe-area-inset-top,0px))}
+.tabs{position:fixed;top:0;left:0;right:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--line);
+  padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-left,0px)) 0 max(16px,env(safe-area-inset-right,0px))}
+.tabs ul{list-style:none;margin:0 auto;padding:6px clamp(60px,min(15vw,18vh),160px);display:flex;gap:4px;max-width:960px;justify-content:center;height:var(--tabs-h)}
+.tabs li{display:flex}
+.tabs a{display:flex;align-items:center;justify-content:center;white-space:nowrap;text-decoration:none;padding:0 14px;border-radius:999px;font-size:.9rem;letter-spacing:.04em;min-height:44px;color:var(--olive)}
 .tabs a:hover,.tabs a[aria-current="true"]{background:var(--paper-2)}
+@media(max-width:640px){
+  .tabs ul{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:44px;gap:0 2px;padding:6px 52px;align-content:start}
+  .tabs li{display:block}
+  .tabs a{width:100%;padding:0 4px;font-size:.88rem;letter-spacing:.02em}
+}
 
-main.stage{position:relative;z-index:1;max-width:860px;margin:0 auto;min-height:calc(100dvh - 60px)}
-.panel{display:none;padding-block:28px 24px}
+main.stage{position:relative;z-index:1;width:100%;max-width:1100px;margin:0 auto;min-height:calc(100dvh - var(--tabs-h) - env(safe-area-inset-top,0px))}
+.stage{display:flex;flex-direction:column;justify-content:center}
+.panel{display:none;padding-block:min(28px,3vh) 32px}
 .panel.active{display:block}
-.foot{text-align:center;margin:8px 0 40px;font-size:.8rem;opacity:.7}
+.panel:not(.hero){width:100%;max-width:860px;margin-inline:auto}
+.foot{position:fixed;left:50%;transform:translateX(-50%);bottom:max(4px,env(safe-area-inset-bottom,0px));z-index:5;margin:0;font-size:.7rem;white-space:nowrap;background:var(--paper);padding:2px 12px;border-radius:999px;color:var(--olive)}
 
 /* Accueil */
+html:has(body.home),body.home{overflow:hidden}
 .hero{text-align:center}
+.hero.active{display:flex;flex-direction:column;height:calc(100dvh - var(--tabs-h) - env(safe-area-inset-top,0px));padding-block:min(18px,2.4vh) 28px}
+.hero-text{flex:none}
+.hero-art{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;margin-top:.4rem}
+.hero .cta{margin:.5rem 0 0}
+@media(min-aspect-ratio:5/4) and (min-width:900px){
+  .hero.active{flex-direction:row;align-items:center;gap:2vw;padding-inline:3vw}
+  .hero-text{flex:1.3}
+  .hero-art{flex:1;height:100%;margin:0}
+}
 .kicker{font-size:clamp(.95rem,2.6vw,1.2rem);letter-spacing:.16em;text-transform:uppercase;margin:0 0 .4rem;text-wrap:balance}
-.names{font-family:var(--script);font-weight:400;color:var(--olive-soft);margin:.1rem 0;line-height:1.05;font-size:clamp(3.6rem,15vw,7.5rem)}
+.names{font-family:var(--script);font-weight:400;color:var(--olive-soft);margin:.1rem 0;line-height:1.05;font-size:clamp(2.5rem,min(13.5vw,8.6vh),5.6rem)}
 .names .amp{display:block;font-size:.55em;color:var(--olive);line-height:1}
-.lead{text-transform:uppercase;letter-spacing:.1em;font-size:clamp(.95rem,2.8vw,1.25rem);max-width:30em;margin:1rem auto;text-wrap:balance}
-.when{font-size:clamp(1.05rem,3.2vw,1.5rem);letter-spacing:.08em;text-transform:uppercase;margin:1rem 0 0}
-.where{font-family:var(--script);font-size:clamp(1.9rem,6.5vw,3rem);color:var(--olive-soft);margin:.8rem 0 0;line-height:1.15}
+.lead{text-transform:uppercase;letter-spacing:.1em;font-size:clamp(.95rem,2.8vw,1.25rem);max-width:30em;margin:.7rem auto;text-wrap:balance}
+.when{display:grid;gap:0;justify-items:center;max-width:24em;margin:.8rem auto 0;padding:.35rem 0;border-block:1px solid var(--line)}
+.when .d{text-wrap:balance;font-size:clamp(1.15rem,min(5.4vw,3.7vh),2.1rem);font-weight:700;letter-spacing:.06em;text-transform:uppercase;line-height:1.25}
+.when .t{font-family:var(--script);font-size:clamp(1.5rem,min(6vw,4.2vh),2.5rem);color:var(--olive-soft);line-height:1.15}
+.where{font-family:var(--script);font-size:clamp(1.5rem,min(6.5vw,4.6vh),2.6rem);color:var(--olive-soft);margin:.8rem 0 0;line-height:1.15}
 .where small{display:block;font-family:var(--serif);font-size:clamp(.9rem,2.4vw,1.1rem);letter-spacing:.08em;color:var(--olive);margin-top:.2rem}
 .watercolor{height:auto;display:block;margin-inline:auto;-webkit-mask-image:radial-gradient(ellipse 66% 66% at 50% 50%,#000 42%,transparent 100%);mask-image:radial-gradient(ellipse 66% 66% at 50% 50%,#000 42%,transparent 100%)}
-.hero-art{margin-top:.6rem}
-.hero-art .watercolor{width:min(100%,440px)}
+.hero-art .watercolor{width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain}
 
 /* Sections */
-h2{font-family:var(--script);font-weight:400;color:var(--olive-soft);font-size:clamp(2.4rem,9vw,3.2rem);text-align:center;margin:0 0 .4rem;line-height:1.1}
+h2{font-family:var(--script);font-weight:400;color:var(--olive-soft);font-size:clamp(1.9rem,min(9vw,6vh),2.8rem);text-align:center;margin:0 0 .4rem;line-height:1.1}
 .sub{text-align:center;margin:0 auto 1.4rem;max-width:30em;text-wrap:balance}
 .rule{display:flex;align-items:center;gap:14px;margin:0 auto 1.4rem;max-width:320px}
 .rule::before,.rule::after{content:"";flex:1;border-top:1px solid var(--line)}
-.rule img{width:44px}
+.rule img{width:34px}
 h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
 .card{background:var(--paper-2);border-radius:14px;padding:22px}
 .stack{display:grid;gap:18px}
@@ -86,12 +116,12 @@ h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
 .step.rev{grid-template-columns:minmax(0,1fr) minmax(0,42%)}
 .step.rev .watercolor{order:2}
 .step.rev .txt{text-align:right}
-.step .watercolor{width:100%}
+.step .watercolor{width:auto;max-width:100%;max-height:19vh;justify-self:center}
 .step .hour{font-size:1.15rem;letter-spacing:.04em;margin:0}
-.step .what{font-family:var(--script);font-size:clamp(1.8rem,6vw,2.4rem);color:var(--olive-soft);line-height:1.1;margin:0}
+.step .what{font-family:var(--script);font-size:clamp(1.5rem,min(6vw,4.2vh),2.2rem);color:var(--olive-soft);line-height:1.1;margin:0}
 .step .place{margin:0;font-size:.92rem;line-height:1.45}
 .step .place em{display:block;font-family:var(--script);font-style:normal;font-size:1.2rem;color:var(--olive-soft)}
-.zig{display:block;width:min(60%,280px);height:auto;margin:0 auto;overflow:visible}
+.zig{display:block;width:min(60%,calc(7vh * 3.6));height:auto;margin:0 auto;overflow:visible}
 .zig.flip{transform:scaleX(-1)}
 .zig path{fill:none;stroke:var(--olive-soft);stroke-width:1.3;stroke-linecap:round}
 .zig .leaf{fill:var(--olive-soft);stroke:none}
@@ -124,11 +154,22 @@ h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
 .swatch.no::after{content:"";position:absolute;inset:0;border-radius:50%;background:linear-gradient(to top right,transparent calc(50% - .7px),rgba(138,59,43,.85) calc(50% - .7px),rgba(138,59,43,.85) calc(50% + .7px),transparent calc(50% + .7px))}
 @media(min-width:760px){.dress{grid-template-columns:1.4fr 1fr 1fr}.dress .tile.wide{grid-column:auto}}
 
+/* Mode édition des textes (mariés) */
+#edit-fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:60;box-shadow:0 4px 14px rgba(79,80,32,.3);background:var(--olive);color:var(--paper)}
+#edit-bar{position:fixed;left:0;right:0;bottom:0;z-index:60;background:var(--olive);color:var(--paper);display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;font-size:.85rem;
+  padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+#edit-bar .btn{border-color:var(--paper);color:var(--paper);min-height:38px}
+#edit-bar .btn.solid{background:var(--paper);color:var(--olive)}
+body.editing [data-ed]{outline:1.5px dashed var(--olive-soft);outline-offset:3px;border-radius:3px;cursor:text}
+body.editing [data-ed]:focus{outline:2px solid var(--olive);background:#fffdf3}
+body.is-admin #edit-fab,body.is-admin #edit-bar{display:none}
+
 /* Chants */
 .song{display:grid;gap:10px}
 .song .moment{font-size:.8rem;letter-spacing:.12em;text-transform:uppercase}
 .song .title{font-family:var(--script);font-size:2rem;color:var(--olive-soft);line-height:1.1;margin:0}
 .song audio{width:100%}
+.song .yt{width:100%;aspect-ratio:16/9;max-height:26vh;border:0;border-radius:10px;background:var(--paper-2)}
 .song .row{display:flex;gap:10px;flex-wrap:wrap}
 
 /* Cadeaux */
@@ -160,7 +201,7 @@ textarea{min-height:110px;resize:vertical}
 /* FAQ */
 details{border-top:1px solid var(--line);padding:4px 0}
 details:last-of-type{border-bottom:1px solid var(--line)}
-summary{cursor:pointer;padding:14px 4px;font-weight:700;list-style:none;display:flex;justify-content:space-between;gap:12px;min-height:48px;align-items:center}
+summary{cursor:pointer;padding:9px 4px;font-size:.95rem;font-weight:700;list-style:none;display:flex;justify-content:space-between;gap:12px;min-height:48px;align-items:center}
 summary::-webkit-details-marker{display:none}
 summary::after{content:"+";font-size:1.4rem;line-height:1;flex:none}
 details[open] summary::after{content:"–"}
@@ -185,6 +226,8 @@ body.is-admin .public{display:none}
 .tag{display:inline-block;padding:1px 10px;border-radius:999px;background:var(--paper-2);border:1px solid var(--line);font-size:.8rem;margin:2px 4px 2px 0}
 .demo-note{background:#f6ead0;border-radius:10px;padding:12px 16px;font-size:.88rem;margin:0 0 18px}
 </style>
+</head>
+<body>
 
 <div class="public" id="public">
   <img class="corner c-tl" src="img/coin-haut.png" alt="" width="483" height="441">
@@ -206,13 +249,15 @@ body.is-admin .public{display:none}
   <main class="stage">
     <!-- ACCUEIL -->
     <section class="panel hero active" id="accueil">
+      <div class="hero-text">
       <p class="kicker">Avec joie et bonheur</p>
       <h1 class="names">Cassiana<span class="amp">&amp;</span>Matthieu</h1>
       <p class="lead">ont le plaisir de vous inviter à la célébration de leur mariage</p>
-      <p class="when">Le samedi 09 octobre 2027<br>à 13h30</p>
+      <p class="when"><span class="d">Le samedi 09 octobre 2027</span><span class="t">à 13h30</span></p>
       <p class="where">Église Notre-Dame des Ardents<small>LAGNY-SUR-MARNE • FRANCE</small></p>
+      <p class="cta"><a class="btn solid" href="#presence">Confirmer ma présence</a></p>
+      </div>
       <div class="hero-art"><img class="watercolor" src="img/domaine-hero.png" alt="Aquarelle du Clos du Colombier, le domaine de la réception" width="794" height="608"></div>
-      <p style="margin:.4rem 0 0"><a class="btn solid" href="#presence">Confirmer ma présence</a></p>
     </section>
 
     <!-- PROGRAMME -->
@@ -310,7 +355,7 @@ body.is-admin .public{display:none}
       <div id="faq-list"></div>
     </section>
 
-    <p class="foot"><a href="#admin">Espace mariés</a></p>
+    <p class="foot"><a href="#admin">Connexion des mariés</a></p>
   </main>
 
   <div id="rsvp-store" hidden>
@@ -354,19 +399,29 @@ body.is-admin .public{display:none}
 <!-- ESPACE MARIÉS -->
 <div class="admin wrap" id="admin-area">
   <div class="admin-bar">
-    <h1 style="font-family:var(--script);font-weight:400;font-size:2.4rem;color:var(--olive-soft);margin:0">Espace mariés</h1>
+    <h1 style="font-family:var(--script);font-weight:400;font-size:2.4rem;color:var(--olive-soft);margin:0">Espace des mariés</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn small solid" id="goto-edit" type="button">Modifier les textes du site</button>
       <a class="btn small" href="#accueil" id="back-site">Retour au site</a>
       <button class="btn small" id="logout" type="button" hidden>Se déconnecter</button>
     </div>
   </div>
   <p class="demo-note" id="demo-note" hidden>Mode démonstration : les données ne sont enregistrées que dans ce navigateur. Branchez la base de données (voir README) pour recevoir les vraies réponses des invités.</p>
 
-  <form class="card" id="login-form" hidden novalidate>
-    <p style="margin:0">Entrez l'adresse e-mail de Cassiana ou Matthieu. Vous recevrez un lien de connexion.</p>
-    <label for="admin-email">Adresse e-mail<input id="admin-email" type="email" autocomplete="email" required></label>
-    <button class="btn solid" type="submit">Recevoir le lien</button>
+  <form class="card" id="login-form" hidden novalidate style="max-width:420px;margin-inline:auto">
+    <p style="margin:0">Espace réservé à Cassiana et Matthieu. Connectez-vous avec votre compte pour modifier les textes, les chants, la cagnotte et consulter les réponses des invités.</p>
+    <label for="admin-email">Adresse e-mail<input id="admin-email" type="email" autocomplete="username" required></label>
+    <label for="admin-pass">Mot de passe<input id="admin-pass" type="password" autocomplete="current-password" required></label>
+    <button class="btn solid" type="submit">Se connecter</button>
+    <button class="btn small" type="button" id="forgot" style="justify-self:start">Mot de passe oublié</button>
     <p class="msg" id="login-msg" role="status" hidden></p>
+  </form>
+
+  <form class="card" id="newpass-form" hidden novalidate style="max-width:420px;margin-inline:auto">
+    <p style="margin:0">Choisissez votre nouveau mot de passe (8 caractères minimum).</p>
+    <label for="new-pass">Nouveau mot de passe<input id="new-pass" type="password" autocomplete="new-password" minlength="8" required></label>
+    <button class="btn solid" type="submit">Enregistrer</button>
+    <p class="msg" id="newpass-msg" role="status" hidden></p>
   </form>
 
   <div id="admin-panel" hidden>
@@ -421,6 +476,13 @@ body.is-admin .public{display:none}
   </div>
 </div>
 
+<button class="btn" id="edit-fab" type="button" hidden>&#9998; Modifier les textes</button>
+<div id="edit-bar" role="region" aria-label="Mode édition" hidden>
+  <span>Mode édition : cliquez sur un texte pour le modifier. Enregistrement automatique.</span>
+  <button class="btn small" id="edit-reset" type="button">Rétablir ce texte</button>
+  <button class="btn small solid" id="edit-done" type="button">Terminer</button>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 /* ============ CONFIGURATION ============ */
@@ -450,7 +512,7 @@ const CONTENT = {
   // Couleurs à éviter (pastilles de la rubrique Dress code)
   avoid: [["Blanc","#ffffff"],["Noir","#141414"],["Vert foncé","#3f6a3a"],["Vert clair","#a9c48a"]],
   songs: [
-    { moment: "Chant de sortie", title: "Je suis dans la joie", author: "Guy Bahi / Glorious", audio: "", query: "Je suis dans la joie chant mariage" }
+    { moment: "Chant de sortie", title: "Je suis dans la joie", author: "Guy Bahi / Glorious", audio: "https://www.youtube.com/watch?v=o73hgSR0E_c", query: "Je suis dans la joie chant mariage" }
     // Ajoutez les autres chants ici : { moment, title, author, audio: "lien mp3 ou YouTube", query: "recherche YouTube" }
   ],
   allergens: ["Arachides","Fruits à coque","Gluten","Lactose / lait","Œufs","Poisson","Crustacés","Mollusques","Soja","Sésame","Moutarde","Céleri","Sulfites","Fruits exotiques","Végétarien","Sans porc"],
@@ -495,7 +557,7 @@ const local = {
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
 const store = {
-  demo: !remote,
+  demo: !(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY),
   async addResponse(rec){
     if (remote) { const { error } = await remote.from("reponses").insert(rec); if (error) throw error; }
     else { const l = local.read("reponses"); l.unshift({ id: uid(), created_at: new Date().toISOString(), ...rec }); local.write("reponses", l); }
@@ -551,6 +613,18 @@ const store = {
     if (remote) { const { error } = await remote.from("settings").upsert({ key, value }); if (error) throw error; return; }
     mem["set:"+key] = value; try { localStorage.setItem("mariage:set:"+key, value); } catch {}
   },
+  async loadTexts(){
+    if (remote) { const { data, error } = await remote.from("textes").select("key,value"); if (error) throw error; return Object.fromEntries(data.map(r => [r.key, r.value])); }
+    try { return JSON.parse(localStorage.getItem("mariage:textes") || "{}"); } catch { return {}; }
+  },
+  async setText(key, value){
+    if (remote) { const { error } = await remote.from("textes").upsert({ key, value, updated_at: new Date().toISOString() }); if (error) throw error; return; }
+    const t = await this.loadTexts(); t[key] = value; try { localStorage.setItem("mariage:textes", JSON.stringify(t)); } catch {}
+  },
+  async deleteText(key){
+    if (remote) { const { error } = await remote.from("textes").delete().eq("key", key); if (error) throw error; return; }
+    const t = await this.loadTexts(); delete t[key]; try { localStorage.setItem("mariage:textes", JSON.stringify(t)); } catch {}
+  },
   async reserveGift(id, who){
     if (remote) { const { error } = await remote.rpc("reserve_gift", { gift_id: id, who }); if (error) throw error; }
     else await this.setGiftReserved(id, true, who);
@@ -587,6 +661,7 @@ function renderFaq(){
     if (row.children.length) d.append(row);
     faq.append(d);
   });
+  if (typeof prepareTexts === "function") { prepareTexts(faq); if (editing) faq.querySelectorAll("details").forEach(d => d.open = true); }
 }
 
 async function renderSongs(){
@@ -597,12 +672,14 @@ async function renderSongs(){
   list.forEach(x => {
     const url = x.audio_url || "";
     const isFile = /\.(mp3|m4a|ogg|wav)(\?.*)?$/i.test(url);
+    const yt = ((url.match(/(?:youtube\.com\/watch\?(?:[^#]*&)?v=|youtu\.be\/)([\w-]{11})/) || [])[1]) || "";
     const href = isFile ? url : (url || "https://www.youtube.com/results?search_query=" + encodeURIComponent(x.title));
     host.append(el("article",{class:"card song"},
       el("span",{class:"moment",text:x.moment}),
       el("p",{class:"title",text:x.title}),
       x.author ? el("span",{class:"hint",text:x.author}) : "",
       isFile ? el("audio",{controls:true,preload:"none",src:url,"aria-label":"Écouter " + x.title}) : "",
+      yt ? el("iframe",{class:"yt",src:"https://www.youtube-nocookie.com/embed/" + yt,title:"Écouter " + x.title,loading:"lazy",allow:"encrypted-media; picture-in-picture",allowfullscreen:true,referrerpolicy:"strict-origin-when-cross-origin"}) : "",
       el("div",{class:"row"}, el("a",{class:"btn small solid",href,target:"_blank",rel:"noopener",text: isFile ? "Ouvrir le fichier audio" : (url ? "Écouter sur YouTube" : "Chercher sur YouTube")}))));
   });
 }
@@ -649,8 +726,8 @@ async function enterAdmin(){
   if (store.demo) { adminSession = true; }
   else {
     const { data } = await remote.auth.getSession();
-    adminSession = !!data.session;
-    $("#logout").hidden = !adminSession;
+    adminSession = !!data.session && await checkAdmin();
+    $("#logout").hidden = !data.session;
   }
   login.hidden = adminSession; panel.hidden = !adminSession;
   if (adminSession) { await Promise.all([renderResponses(), renderSongAdmin(), loadPotField()]); }
@@ -660,6 +737,7 @@ const PANELS = ["accueil","programme","infos","tenue","chants","faq"];
 function showPanel(id){
   PANELS.forEach(p => $("#"+p).classList.toggle("active", p === id));
   document.querySelectorAll(".tabs a").forEach(a => a.setAttribute("aria-current", String(a.getAttribute("href") === "#" + id)));
+  document.body.classList.toggle("home", id === "accueil");
   window.scrollTo(0, 0);
 }
 function route(){
@@ -729,11 +807,26 @@ function bindAdmin(){
   }));
   $("#login-form").addEventListener("submit", async ev => {
     ev.preventDefault();
+    const msg = $("#login-msg"), email = $("#admin-email").value.trim(), password = $("#admin-pass").value;
+    if (!email || !password) return showMsg(msg, "Saisissez votre adresse e-mail et votre mot de passe.", "err");
+    if (!remote) return showMsg(msg, "La connexion n'est pas encore configurée.", "err");
+    const { error } = await remote.auth.signInWithPassword({ email, password });
+    if (error) return showMsg(msg, "Adresse ou mot de passe incorrect.", "err");
+    $("#admin-pass").value = ""; msg.hidden = true; enterAdmin();
+  });
+  $("#forgot").addEventListener("click", async () => {
     const msg = $("#login-msg"), email = $("#admin-email").value.trim();
-    if (!email) return showMsg(msg, "Saisissez votre adresse e-mail.", "err");
-    const { error } = await remote.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href.split("#")[0] + "#admin" } });
-    if (error) showMsg(msg, "Le lien n'a pas pu être envoyé. Vérifiez l'adresse.", "err");
-    else showMsg(msg, "Lien envoyé. Ouvrez votre boîte mail et cliquez dessus.", "ok");
+    if (!email) return showMsg(msg, "Saisissez d'abord votre adresse e-mail ci-dessus.", "err");
+    const { error } = await remote.auth.resetPasswordForEmail(email, { redirectTo: location.href.split("#")[0] + "#admin" });
+    showMsg(msg, error ? "L'e-mail n'a pas pu être envoyé. Réessayez dans un instant." : "Si ce compte existe, un e-mail de réinitialisation vient d'être envoyé.", error ? "err" : "ok");
+  });
+  $("#newpass-form").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const msg = $("#newpass-msg"), password = $("#new-pass").value;
+    if (password.length < 8) return showMsg(msg, "Le mot de passe doit contenir au moins 8 caractères.", "err");
+    const { error } = await remote.auth.updateUser({ password });
+    if (error) return showMsg(msg, "Le mot de passe n'a pas pu être changé. Réessayez.", "err");
+    $("#new-pass").value = ""; $("#newpass-form").hidden = true; enterAdmin();
   });
   $("#logout").addEventListener("click", async () => { await remote.auth.signOut(); enterAdmin(); });
 }
@@ -745,8 +838,90 @@ function showToast(text){
   t.textContent = text; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 3500);
 }
 
+/* ============ MODIFICATION DES TEXTES PAR LES MARIÉS ============ */
+// Chaque texte est repéré par une clé calculée à partir de son texte d'origine.
+// Les textes modifiés sont stockés dans la table « textes » et remplacent l'original à l'affichage.
+const TEXT_SEL = "h1,h2,h3,p,summary,small,em,b,li,legend,.when span";
+const TEXT_SKIP = ".tabs,#songs,.foot,#rsvp-form,#rsvp-store,.pk,.palette,.msg,.btn";
+const CE = (() => { const d = document.createElement("div"); d.contentEditable = "plaintext-only"; return d.contentEditable === "plaintext-only" ? "plaintext-only" : "true"; })();
+let texts = {}, editing = false, editorAllowed = false, lastEd = null;
+const hashKey = t => { let h = 5381; for (const c of t) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0; return "t" + h.toString(36); };
+const wsOf = t => [(t.match(/^\s*/) || [""])[0], (t.match(/\s*$/) || [""])[0]];
+
+function prepareTexts(root = $("#public")){
+  root.querySelectorAll(TEXT_SEL).forEach(n => {
+    if (n.closest(TEXT_SKIP) || !n.children.length) return;
+    [...n.childNodes].forEach(c => {
+      if (c.nodeType === 3 && c.textContent.trim()) { const w = document.createElement("span"); w.dataset.w = "1"; w.textContent = c.textContent; c.replaceWith(w); }
+    });
+  });
+  root.querySelectorAll(TEXT_SEL + ",span[data-w]").forEach(n => {
+    if (n.closest(TEXT_SKIP) || n.children.length) return;
+    const raw = n.textContent, txt = raw.trim(); if (!txt) return;
+    if (!n.dataset.orig) { n.dataset.orig = txt; n.dataset.key = hashKey(txt); n.dataset.ed = "1"; [n.dataset.pre, n.dataset.post] = wsOf(raw); }
+    if (n !== document.activeElement) { const v = texts[n.dataset.key]; n.textContent = n.dataset.pre + (v != null ? v : n.dataset.orig) + n.dataset.post; }
+    if (editing) n.setAttribute("contenteditable", CE);
+  });
+}
+
+function setEditing(on){
+  editing = on; document.body.classList.toggle("editing", on);
+  document.querySelectorAll("[data-ed]").forEach(n => { if (on) n.setAttribute("contenteditable", CE); else n.removeAttribute("contenteditable"); });
+  document.querySelectorAll("#faq-list details").forEach(d => { d.open = on; });
+  $("#edit-bar").hidden = !on; $("#edit-fab").hidden = on || !editorAllowed;
+}
+
+async function saveText(n){
+  const key = n.dataset.key, cur = texts[key] != null ? texts[key] : n.dataset.orig;
+  const v = n.textContent.replace(/\s+/g, " ").trim();
+  const show = val => { n.textContent = n.dataset.pre + val + n.dataset.post; };
+  if (v === cur) { show(cur); return; }
+  if (!v) { show(cur); showToast("Un texte ne peut pas être vide. Utilisez « Rétablir ce texte » pour revenir à l'original."); return; }
+  try {
+    if (v === n.dataset.orig) { await store.deleteText(key); delete texts[key]; } else { await store.setText(key, v); texts[key] = v; }
+    show(v); prepareTexts(); showToast("Enregistré");
+  } catch { show(cur); showToast("L'enregistrement a échoué. Vérifiez que vous êtes connecté(e) avec l'adresse des mariés."); }
+}
+
+function bindEditor(){
+  document.addEventListener("focusout", ev => { const n = ev.target.closest && ev.target.closest("[data-ed]"); if (editing && n) saveText(n); });
+  document.addEventListener("focusin", ev => { const n = ev.target.closest && ev.target.closest("[data-ed]"); if (n) lastEd = n; });
+  document.addEventListener("keydown", ev => { if (editing && ev.key === "Enter" && ev.target.closest && ev.target.closest("[data-ed]")) { ev.preventDefault(); ev.target.blur(); } });
+  document.addEventListener("click", ev => { if (editing && ev.target.closest && ev.target.closest("#faq-list summary")) ev.preventDefault(); }, true);
+  $("#edit-fab").addEventListener("click", () => setEditing(true));
+  $("#edit-done").addEventListener("click", () => setEditing(false));
+  $("#edit-reset").addEventListener("click", async () => {
+    if (!lastEd) return showToast("Cliquez d'abord sur le texte à rétablir.");
+    try { await store.deleteText(lastEd.dataset.key); delete texts[lastEd.dataset.key]; prepareTexts(); showToast("Texte d'origine rétabli."); }
+    catch { showToast("Le rétablissement a échoué."); }
+  });
+  $("#goto-edit").addEventListener("click", () => { location.hash = "#accueil"; setTimeout(() => setEditing(true), 80); });
+}
+
+async function checkAdmin(){
+  if (store.demo) return true;
+  if (!remote) return false;
+  const { data: s } = await remote.auth.getSession();
+  if (!s.session) return false;
+  const { data, error } = await remote.rpc("is_admin");
+  return !error && data === true;
+}
+async function refreshEditorAccess(){
+  try { editorAllowed = await checkAdmin(); } catch { editorAllowed = false; }
+  $("#edit-fab").hidden = !editorAllowed || editing;
+  if (!editorAllowed && editing) setEditing(false);
+}
+
 /* ============ DÉMARRAGE ============ */
-renderStatic(); renderFaq(); bindRsvpForm(); bindAdmin(); renderSongs();
+renderStatic(); renderFaq(); bindRsvpForm(); bindAdmin(); renderSongs(); bindEditor(); prepareTexts();
+store.loadTexts().then(t => { texts = t; prepareTexts(); }).catch(() => {});
+refreshEditorAccess();
+if (remote) remote.auth.onAuthStateChange(ev => {
+  setTimeout(refreshEditorAccess, 0);
+  if (ev === "PASSWORD_RECOVERY") setTimeout(() => { location.hash = "#admin"; enterAdmin().then(() => { $("#login-form").hidden = true; $("#newpass-form").hidden = false; }); }, 0);
+});
 store.getSetting("cagnotte_url").then(u => { if (u) { state.cagnotte = u; renderFaq(); } }).catch(() => {});
 window.addEventListener("hashchange", route); route();
 </script>
+</body>
+</html>

@@ -18,3 +18,12 @@ Les réponses sans correspondance dans la liste vont dans l'onglet « Réponses 
 
 ## QR code du carton papier
 Pointer le QR code Canva vers `https://<adresse-du-site>/#infos`.
+
+## Espace des mariés (connexion e-mail + mot de passe)
+1. Supabase > Authentication > Users > Add user > Create new user : e-mail + mot de passe, cocher « Auto Confirm User ». Un compte par personne (Cassiana, Matthieu) ou un compte commun.
+2. Supabase > Authentication > Sign In / Providers > Email : désactiver « Allow new users to sign up » pour que personne d'autre ne puisse créer de compte.
+3. Chaque e-mail autorisé doit être dans la table `admins` : `insert into admins(email) values ('adresse@exemple.fr');`
+4. Une fois connecté (lien « Connexion des mariés » en bas de page), le bouton « Modifier les textes » permet de changer n'importe quel texte du site directement sur la page.
+
+## Scripts SQL
+`supabase-schema.sql` crée tout d'un coup. Si une version plus ancienne est déjà installée, exécuter dans l'ordre : `supabase-migration-reponses.sql`, `supabase-migration-textes.sql`, `supabase-migration-chant.sql`.
