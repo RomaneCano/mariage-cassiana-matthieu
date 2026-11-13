@@ -93,7 +93,7 @@ const ORG = {
     { k: "due", l: "Échéance", t: "date" }, { k: "who", l: "Qui", t: "select", o: WHO }, { k: "notes", l: "Notes", t: "text" }] },
   budget: { table: "org_budget", label: "Budget", order: "cat", defaults: { cat: CATS_BUDGET[0] }, fields: [
     { k: "cat", l: "Poste", t: "select", o: CATS_BUDGET, newable: true }, { k: "item", l: "Dépense", t: "text", req: true, wide: true },
-    { k: "estimated", l: "Prévu (€)", t: "number" }, { k: "family", l: "Pris en charge par la famille (€)", t: "number" }, { k: "paid", l: "Payé (€)", t: "number" },
+    { k: "estimated", l: "Prévu (€)", t: "number" }, { k: "family", l: "Pris en charge par la famille (€)", t: "number" }, { k: "link", l: "Lien", t: "text", wide: true, ph: "https://… (si c'est à acheter sur internet)" }, { k: "paid", l: "Payé (€)", t: "number" },
     { k: "notes", l: "Notes", t: "text" }] },
   vendors: { table: "org_vendors", label: "Prestataires", order: "role", defaults: { status: "À contacter", role: "Autre" }, fields: [
     { k: "name", l: "Prestataire", t: "text", req: true, wide: true }, { k: "role", l: "Catégorie", t: "select", o: ROLES, newable: true },
@@ -105,7 +105,7 @@ const ORG = {
     { k: "nom", l: "Nom", t: "text" }, { k: "prenom", l: "Prénom", t: "text", req: true }, { k: "tel", l: "Téléphone", t: "text" },
     { k: "presence", l: "Présence", t: "select", o: ["ATT", "OUI", "NON"], labels: { ATT: "En attente", OUI: "Présent(e)", NON: "Absent(e)" } },
     { k: "allergie", l: "Allergie", t: "text" }, { k: "adresse", l: "Adresse", t: "text" },
-    { k: "envoi", l: "Invitation", t: "select", o: ["Courrier", "QR code", "Remise en main"] }, { k: "age", l: "Âge", t: "text" }, { k: "notes", l: "Notes", t: "text" }] },
+    { k: "envoi", l: "Invitation", t: "select", o: ["Courrier", "Lien", "Remise en main"] }, { k: "age", l: "Âge", t: "text" }, { k: "notes", l: "Notes", t: "text" }] },
   games: { table: "org_games", label: "Jeux", order: "created_at", defaults: { chosen: false }, fields: [
     { k: "chosen", l: "Retenu", t: "check" }, { k: "name", l: "Idée de jeu", t: "text", req: true, wide: true }, { k: "people", l: "Nb de personnes", t: "text" },
     { k: "material", l: "Matériel", t: "text" }, { k: "price", l: "Prix (€)", t: "number" }, { k: "notes", l: "Notes", t: "text" }] },
@@ -272,6 +272,8 @@ function fieldInput(f, value, row) {
   if (f.ph && inp.tagName === "INPUT") inp.placeholder = f.ph;
   return inp;
 }
+const cleanUrl = v => { v = String(v || "").trim(); if (!v) return null; if (!/^https?:\/\//i.test(v)) v = "https://" + v; try { const u = new URL(v); return /^https?:$/.test(u.protocol) && u.hostname.includes(".") ? u.href : false; } catch { return false; } };
+const isUrl = v => typeof v === "string" && /^https?:\/\//i.test(v);
 const readInput = (f, inp) => f.t === "check" ? inp.checked : f.t === "number" ? (inp.value === "" ? null : Number(inp.value)) : (inp.value.trim() === "" ? null : inp.value.trim());
 
 function orgSummary(key, rows) {
@@ -292,7 +294,7 @@ function orgSummary(key, rows) {
     const c = f => rows.filter(f).length;
     chip("invités", String(rows.length)); chip("présents", String(c(r => r.presence === "OUI")), ""); chip("absents", String(c(r => r.presence === "NON")));
     chip("en attente", String(c(r => !r.presence || r.presence === "ATT"))); chip("allergies", String(c(r => r.allergie && r.allergie.trim())));
-    chip("enfants", String(c(r => r.age && r.age.trim()))); chip("courrier", String(c(r => r.envoi === "Courrier"))); chip("QR code", String(c(r => r.envoi === "QR code"))); chip("remise en main", String(c(r => r.envoi === "Remise en main")));
+    chip("enfants", String(c(r => r.age && r.age.trim()))); chip("courrier", String(c(r => r.envoi === "Courrier"))); chip("lien", String(c(r => r.envoi === "Lien"))); chip("remise en main", String(c(r => r.envoi === "Remise en main")));
   } else if (key === "games") {
     chip("idées", String(rows.length)); chip("retenues", String(rows.filter(r => r.chosen).length)); chip("coût des retenues", eur(rows.filter(r => r.chosen).reduce((a, r) => a + (Number(r.price) || 0), 0)));
   } else if (key === "seating") {
@@ -406,8 +408,15 @@ async function seatPlan(rows) {
 }
 
 
-let orgTok = 0;
+let orgTok = 0, lastOrgKey = null;
+/* Redessine l'onglet en gardant la position de défilement (sinon la page remontait en haut à chaque modification) */
 async function renderOrg(key) {
+  const keep = key === lastOrgKey, y = window.scrollY; lastOrgKey = key;
+  const r = await renderOrgInner(key);
+  if (keep) { window.scrollTo(0, y); requestAnimationFrame(() => window.scrollTo(0, y)); setTimeout(() => window.scrollTo(0, y), 120); }
+  return r;
+}
+async function renderOrgInner(key) {
   const tok = ++orgTok;
   orgState.key = key;
   document.querySelectorAll("[data-org]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.org === key)));
@@ -417,6 +426,7 @@ async function renderOrg(key) {
   try { rows = await orgStore.list(M.table); } catch (e) { host.append(el("p", { class: "msg err", text: "Impossible de charger : " + explainErr(e) + " Exécutez supabase-tout-en-un.sql dans Supabase." })); return; }
   if (tok !== orgTok) return;
   rows = sortRows(key, rows);
+  if (key === "guests") rows.filter(r => r.envoi === "QR code").forEach(r => { r.envoi = "Lien"; orgStore.update(M.table, r.id, { envoi: "Lien" }).catch(() => {}); });   // ancien libellé
   M.fields.filter(f => f.t === "select").forEach(f => rows.forEach(r => { if (r[f.k] && !f.o.includes(r[f.k])) f.o.push(r[f.k]); }));
   host.append(orgSummary(key, rows));
 
@@ -451,6 +461,7 @@ async function renderOrg(key) {
     ev.preventDefault();
     const row = { ...M.defaults };
     for (const f of M.fields) if (inputs[f.k]) row[f.k] = readInput(f, inputs[f.k]);
+    if (key === "budget" && row.link) { const u = cleanUrl(row.link); if (u === false) return showMsg(msg, "Ce lien n'est pas valide : collez l'adresse complète de la page.", "err"); row.link = u; }
     const miss = M.fields.find(f => f.req && (row[f.k] == null || row[f.k] === ""));
     if (miss) return showMsg(msg, "Renseignez : " + miss.l + ".", "err");
     if (key === "seating") row.position = rows.length;
@@ -474,7 +485,7 @@ async function renderOrg(key) {
     const badge = st => { const c = RETAINED.includes(st) ? "ok" : st === "Refusé (NON)" ? "no" : /attente|donner/i.test(st || "") ? "wait" : ""; return el("span", { class: "st-badge " + c, text: st || "—" }); };
     const sumFor = r => {
       if (key === "vendors") return [el("b", { text: r.name }), badge(r.status), el("span", { class: "num", text: r.price != null ? eur(r.price) : "" }), el("span", { class: "sm", text: r.phone || r.email || r.contact || r.location || "" })];
-      if (key === "budget") return [el("b", { text: r.item }), el("span", { class: "sm", text: r.family ? "famille " + eur(r.family) : "" }), el("span", { class: "num", text: "prévu " + eur(r.estimated || 0) }), el("span", { class: "num", text: "payé " + eur(r.paid || 0) })];
+      if (key === "budget") { const sm = el("span", { class: "sm" }); if (r.family) sm.append("famille " + eur(r.family) + " "); if (isUrl(r.link)) sm.append(el("a", { class: "lnk", href: r.link, target: "_blank", rel: "noopener noreferrer", title: r.link, text: "Voir le lien ↗", onclick: e => e.stopPropagation() })); return [el("b", { text: r.item }), sm, el("span", { class: "num", text: "prévu " + eur(r.estimated || 0) }), el("span", { class: "num", text: "payé " + eur(r.paid || 0) })]; }
       const g = guestsOf(r).length; return [el("b", { text: r.name }), el("span", { class: "sm", text: r.shape || "Ronde" }), el("span", { class: "num", text: g + " / " + (r.capacity || "?") }), el("span", { class: "sm", text: "" })];
     };
     shown.forEach((r, i) => {
@@ -488,7 +499,8 @@ async function renderOrg(key) {
       M.fields.forEach(f => {
         const inp = fieldInput(f, r[f.k], r);
         inp.addEventListener("change", async () => {
-          const v = readInput(f, inp);
+          let v = readInput(f, inp);
+          if (f.k === "link") { const u = cleanUrl(v); if (u === false) { showToast("Ce lien n'est pas valide : collez l'adresse complète de la page."); inp.value = r.link || ""; return; } v = u; inp.value = u || ""; }
           try { await orgStore.update(M.table, r.id, { [f.k]: v }); r[f.k] = v; fill(); setTimeout(() => { if (!card.contains(document.activeElement)) renderOrg(key); }, 200); } catch (e) { showToast(orgErr(e)); }
         });
         g.append(el("label", { class: f.wide ? "wide" : "" }, el("span", { text: f.l }), inp));

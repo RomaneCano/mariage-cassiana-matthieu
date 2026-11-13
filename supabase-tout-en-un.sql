@@ -359,3 +359,8 @@ begin
   return 'ok';
 end $$;
 grant execute on function public.rsvp_guest(text, text, text, text) to anon, authenticated;
+
+-- ============================================================
+-- 16. BUDGET : lien d'achat
+-- ============================================================
+alter table public.org_budget add column if not exists link text;
