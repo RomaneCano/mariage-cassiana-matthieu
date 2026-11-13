@@ -196,14 +196,15 @@ h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
 .lg{padding:14px 16px}
 .lg h3{margin:0 0 .3rem;font-size:1.05rem}
 .lg ul{list-style:none;margin:0;padding:0}
-.lg li{display:flex;justify-content:space-between;align-items:center;gap:6px 12px;flex-wrap:wrap;padding:7px 0;border-top:1px solid var(--line)}
+.lg li{display:flex;justify-content:space-between;align-items:center;gap:2px 12px;flex-wrap:wrap;padding:4px 0;border-top:1px solid var(--line)}
 .lg li:first-child{border-top:0}
 .lg-main{display:flex;flex-direction:column;min-width:0}
 .lg-n{font-weight:700;font-size:.95rem;line-height:1.3}
 .lg-t{font-size:.82rem;opacity:.85}
 .lg-tag{align-self:flex-start;font-style:normal;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;background:var(--olive);color:var(--paper);padding:1px 9px;border-radius:999px;margin-top:3px}
-.lg-links{display:flex;gap:12px;flex:none}
-.lg-links a{font-size:.85rem;padding:8px 2px;min-height:40px;display:inline-flex;align-items:center}
+.lg-links{display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+#panel-logement .sub{max-width:64em}
+.lg-links a{font-size:.85rem;padding:6px 2px;min-height:36px;display:inline-flex;align-items:center}
 .lg .hint{margin:.5rem 0 0}
 
 /* Dress code */
@@ -728,25 +729,25 @@ const CONTENT = {
     { name: "Parking place du Maréchal Foch", where: "Place du Maréchal Foch, Lagny-sur-Marne" }
   ],
   // Couleurs à éviter (pastilles de la rubrique Dress code)
-  // Logements recommandés. « t » = commune ; « tag » = étiquette ; « url » = site officiel (facultatif).
+  // Logements recommandés. « t » = commune ; « tag » = étiquette ; « url » = site officiel ; « page » = annonce ou fiche (tourisme, plateforme) ; « tel » = téléphone.
   lodging: [
     { title: "Hôtels", cls: "lg-hotels", items: [
-      { n: "Le Royaume des Lions", t: "Lumigny-Nesles-Ormeaux" },
+      { n: "Le Royaume des Lions", t: "Lumigny-Nesles-Ormeaux", url: "https://lumigny-safari-reserve.com/", tel: "01 64 51 33 30" },
       { n: "Kyriad", t: "Fontenay-Trésigny", url: "https://fontenay-tresigny.kyriad.com/" },
-      { n: "Le Relais", t: "Fontenay-Trésigny", tag: "Petit budget" },
+      { n: "Le Relais", t: "Fontenay-Trésigny", tag: "Petit budget", page: "https://www.kayak.com/Fontenay-Tresigny-Hotels-le-relais.5969795.ksp" },
       { n: "Grande Maison Briarde", t: "Presles-en-Brie", tag: "Petit budget" } ] },
     { title: "Chambres d'hôtes", cls: "lg-bb", items: [
-      { n: "Chez Françoise et Michel", t: "Chaumes-en-Brie" },
-      { n: "Chez Christine côté jardin", t: "Chaumes-en-Brie" },
+      { n: "Chez Françoise et Michel", t: "Chaumes-en-Brie", page: "https://ie.hotels.com/ho1049152032/chez-francoise-et-michel-piscine-chaumes-en-brie-france" },
+      { n: "Chez Christine côté jardin", t: "Chaumes-en-Brie", page: "https://www.tourisme-seine-et-marne.fr/en/explore-the-area/6292803-chez-christine-cote-jardin/" },
       { n: "La Maison d'Emilie", t: "Chaumes-en-Brie", url: "https://www.la-maison-demilie.com/" },
       { n: "La maison de Pascale et Daniel", t: "" },
-      { n: "Manoir de Beaumarchais", t: "Les Chapelles-Bourbon" },
-      { n: "La Briarde Médiévale", t: "Châtres" },
+      { n: "Manoir de Beaumarchais", t: "Les Chapelles-Bourbon", page: "https://www.hotels.com/ho393743" },
+      { n: "La Briarde Médiévale", t: "Châtres", page: "https://www.kayak.com/Fontenay-Tresigny-Hotels-La-Briarde-Medievale.489232.ksp" },
       { n: "Le domaine de Guerlande", t: "" },
-      { n: "Les lodges de Bonfruit", t: "Aubepierre-Ozouer-le-Repos" } ] },
-    { title: "Gîtes", cls: "lg-gites", items: [ { n: "Le Limodin", t: "La Houssaye-en-Brie" } ] },
+      { n: "Les lodges de Bonfruit", t: "Aubepierre-Ozouer-le-Repos", page: "https://www.gites.fr/gites_la-cabane-du-pecheur---lodges-de-bonfruit_aubepierre-ozouer-le-repos_h7553372_en.htm" } ] },
+    { title: "Gîtes", cls: "lg-gites", items: [ { n: "Le Limodin", t: "La Houssaye-en-Brie", page: "https://www.gites-de-france.com/fr/ile-de-france/seine-et-marne/manoir-du-limodin-2-77g605" } ] },
     { title: "Campings", cls: "lg-camps", note: "Vérifiez les dates d'ouverture avant de réserver.", items: [
-      { n: "Les 4 Vents", t: "Crèvecœur-en-Brie" },
+      { n: "Les 4 Vents", t: "Crèvecœur-en-Brie", url: "https://www.caravaning-4vents.fr/" },
       { n: "Les Étangs Fleuris", t: "Touquin" } ] }
   ],
   avoid: [["Blanc","#ffffff"],["Noir","#141414"],["Vert foncé","#3f6a3a"],["Vert clair","#a9c48a"]],
@@ -918,7 +919,9 @@ function renderStatic(){
     el("ul",{}, cat.items.map(it => el("li",{},
       el("span",{class:"lg-main"}, el("span",{class:"lg-n",text:it.n}), it.t ? el("small",{class:"lg-t",text:it.t}) : "", it.tag ? el("em",{class:"lg-tag",text:it.tag}) : ""),
       el("span",{class:"lg-links"},
+        it.tel ? el("a",{href:"tel:" + it.tel.replace(/\s/g,""),text:it.tel}) : "",
         it.url ? el("a",{href:it.url,target:"_blank",rel:"noopener",text:"Site"}) : "",
+        it.page ? el("a",{href:it.page,target:"_blank",rel:"noopener",text:"Annonce"}) : "",
         el("a",{href:"https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(it.n + " " + (it.t || "Seine-et-Marne")),target:"_blank",rel:"noopener",text:"Carte"}))))),
     cat.note ? el("p",{class:"hint",text:cat.note}) : "")));
   lg.append(col);
