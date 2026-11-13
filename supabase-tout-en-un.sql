@@ -276,3 +276,8 @@ begin
 end $$;
 grant execute on function public.covoit_prendre(uuid, text, text) to anon, authenticated;
 grant execute on function public.covoit_passagers(uuid, text) to anon, authenticated;
+
+-- ============================================================
+-- 13. BUDGET : part prise en charge par la famille
+-- ============================================================
+alter table public.org_budget add column if not exists family numeric;

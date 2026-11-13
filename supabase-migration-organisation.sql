@@ -82,3 +82,8 @@ create table if not exists public.org_games (
 alter table public.org_games enable row level security;
 drop policy if exists org_games_admin on public.org_games;
 create policy org_games_admin on public.org_games for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+-- ============================================================
+-- 13. BUDGET : part prise en charge par la famille
+-- ============================================================
+alter table public.org_budget add column if not exists family numeric;

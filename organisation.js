@@ -93,7 +93,7 @@ const ORG = {
     { k: "due", l: "Échéance", t: "date" }, { k: "who", l: "Qui", t: "select", o: WHO }, { k: "notes", l: "Notes", t: "text" }] },
   budget: { table: "org_budget", label: "Budget", order: "cat", defaults: { cat: CATS_BUDGET[0] }, fields: [
     { k: "cat", l: "Poste", t: "select", o: CATS_BUDGET, newable: true }, { k: "item", l: "Dépense", t: "text", req: true, wide: true },
-    { k: "estimated", l: "Prévu (€)", t: "number" }, { k: "paid", l: "Payé (€)", t: "number" },
+    { k: "estimated", l: "Prévu (€)", t: "number" }, { k: "family", l: "Pris en charge par la famille (€)", t: "number" }, { k: "paid", l: "Payé (€)", t: "number" },
     { k: "notes", l: "Notes", t: "text" }] },
   vendors: { table: "org_vendors", label: "Prestataires", order: "role", defaults: { status: "À contacter", role: "Autre" }, fields: [
     { k: "name", l: "Prestataire", t: "text", req: true, wide: true }, { k: "role", l: "Catégorie", t: "select", o: ROLES, newable: true },
@@ -277,7 +277,7 @@ function orgSummary(key, rows) {
     if (rows.length) box.append(el("div", { class: "bar big" }, el("i", { style: "width:" + Math.round(done / rows.length * 100) + "%" })));
   } else if (key === "budget") {
     const s = f => rows.reduce((a, r) => a + (Number(r[f]) || 0), 0), est = s("estimated"), paid = s("paid"), total = est;
-    chip("prévu", eur(est)); chip("payé", eur(paid)); chip("reste à payer", eur(Math.max(0, total - paid)), total - paid > 0 ? "warn" : "");
+    const fam = s("family"); chip("prévu", eur(est)); chip("pris en charge par la famille", eur(fam)); chip("à notre charge", eur(Math.max(0, est - fam))); chip("payé", eur(paid)); chip("reste à payer", eur(Math.max(0, total - paid)), total - paid > 0 ? "warn" : "");
   } else if (key === "vendors") {
     const c = st => rows.filter(r => st.includes(r.status)).length;
     chip("à contacter", String(c(["À contacter"]))); chip("en attente", String(c(["En attente de devis", "En attente de réponse", "Réponse finale à donner", "Réponse négative à donner"]))); chip("retenus", String(c(RETAINED))); chip("refusés", String(c(["Refusé (NON)"])));
@@ -436,11 +436,11 @@ async function renderOrg(key) {
     const badge = st => { const c = RETAINED.includes(st) ? "ok" : st === "Refusé (NON)" ? "no" : /attente|donner/i.test(st || "") ? "wait" : ""; return el("span", { class: "st-badge " + c, text: st || "—" }); };
     const sumFor = r => {
       if (key === "vendors") return [el("b", { text: r.name }), badge(r.status), el("span", { class: "num", text: r.price != null ? eur(r.price) : "" }), el("span", { class: "sm", text: r.phone || r.email || r.contact || r.location || "" })];
-      if (key === "budget") return [el("b", { text: r.item }), el("span", { class: "sm", text: "" }), el("span", { class: "num", text: "prévu " + eur(r.estimated || 0) }), el("span", { class: "num", text: "payé " + eur(r.paid || 0) })];
+      if (key === "budget") return [el("b", { text: r.item }), el("span", { class: "sm", text: r.family ? "famille " + eur(r.family) : "" }), el("span", { class: "num", text: "prévu " + eur(r.estimated || 0) }), el("span", { class: "num", text: "payé " + eur(r.paid || 0) })];
       const g = guestsOf(r).length; return [el("b", { text: r.name }), el("span", { class: "sm", text: "" }), el("span", { class: "num", text: g + " / " + (r.capacity || "?") }), el("span", { class: "sm", text: "" })];
     };
     shown.forEach((r, i) => {
-      if (key === "budget" && r.cat !== lastCat) { lastCat = r.cat; const sub = rows.filter(x => x.cat === r.cat).reduce((a, x) => a + (Number(x.estimated) || 0), 0); list.append(el("h3", { class: "org-grp", text: (r.cat || "Sans poste") + " · " + eur(sub) })); }
+      if (key === "budget" && r.cat !== lastCat) { lastCat = r.cat; const inCat = rows.filter(x => x.cat === r.cat), sub = inCat.reduce((a, x) => a + (Number(x.estimated) || 0), 0), fam = inCat.reduce((a, x) => a + (Number(x.family) || 0), 0); list.append(el("h3", { class: "org-grp", text: (r.cat || "Sans poste") + " · " + eur(sub) + (fam ? " · dont famille " + eur(fam) : "") })); }
       if (key === "vendors" && r.role !== lastCat) { lastCat = r.role; list.append(el("h3", { class: "org-grp", text: (r.role || "Autre") + " · " + rows.filter(x => x.role === r.role).length })); }
       const card = el("details", { class: "card org-card" });
       if (orgOpen.has(r.id)) card.open = true;
@@ -641,7 +641,8 @@ const ICONS = {
   "Agneau": WOOL(LAMB_BODY) + LEGS + HEAD,
   "Agneau pascal": WOOL(LAMB_BODY.map(([x, y, r]) => [x, y + 4, r])) + '<path d="M22 53V61M32 54V61M40 53V61M47 50V61" class="ln"/><ellipse cx="55" cy="35" rx="5.5" ry="7" class="ln"/><circle cx="57" cy="33" r="1.1" class="dot"/><path d="M46 8V32" class="ln"/><path d="M46 9l14 3-14 5z" class="ln"/><path d="M53 11v4M51 13h4" class="ln thin"/>',
   "Agneau couché": WOOL([[14, 44, 7], [22, 38, 8], [32, 36, 9], [43, 40, 8], [43, 48, 6], [32, 49, 8], [21, 50, 6]]) + '<path d="M16 56h34M44 54c3 1 5 2 8 2" class="ln"/><ellipse cx="54" cy="40" rx="5.5" ry="6.5" class="ln"/><path d="M51 35c-5-2-7 2-6 5" class="ln"/><circle cx="56" cy="38" r="1.1" class="dot"/>',
-  "Colombe": '<path d="M47 29C41 28 31 30 23 36L7 42l16 2c12 2 22-4 26-13" class="ln"/><path d="M39 33C34 22 40 12 55 7 53 18 49 26 44 31" class="ln"/><path d="M43 24c-3 1-6 4-7 8M48 17c-3 1-6 3-8 6" class="ln thin"/><circle cx="51" cy="27" r="4.3" class="ln"/><path d="M55 26.4l6 2-6 1.4" class="ln"/><circle cx="52.2" cy="26" r="1" class="dot"/><path d="M13 41l-6 4M18 43l-4 5M24 44l-2 5" class="ln thin"/>',
+  "Dé": '<rect x="10" y="10" width="44" height="44" rx="9" class="ln"/><circle cx="23" cy="23" r="3" class="dot"/><circle cx="41" cy="23" r="3" class="dot"/><circle cx="32" cy="32" r="3" class="dot"/><circle cx="23" cy="41" r="3" class="dot"/><circle cx="41" cy="41" r="3" class="dot"/>',
+  "Musique": '<path d="M24 46V16l26-6v30" class="ln"/><path d="M24 24l26-6" class="ln"/><ellipse cx="18" cy="47" rx="7" ry="5.5" transform="rotate(-18 18 47)" class="ln"/><ellipse cx="44" cy="41" rx="7" ry="5.5" transform="rotate(-18 44 41)" class="ln"/>',
   "Soleil": '<circle cx="32" cy="32" r="9" class="ln"/><circle cx="32" cy="32" r="5.5" class="ln thin"/><path d="M32 6v10M32 48v10M6 32h10M48 32h10M13.6 13.6l7 7M43.4 43.4l7 7M50.4 13.6l-7 7M20.6 43.4l-7 7" class="ln"/><path d="M19 10.5l3.5 6M45 10.5l-3.5 6M19 53.5l3.5-6M45 53.5l-3.5-6M10.5 19l6 3.5M53.5 19l-6 3.5M10.5 45l6-3.5M53.5 45l-6-3.5" class="ln thin"/>',  "Croix": '<path d="M27 6h10v18h18v10H37v26H27V34H9V24h18z" class="ln"/><path d="M32 12v40M16 29h32" class="ln thin"/>',
   "Calice": '<path d="M16 14h32c0 14-5 22-16 22S16 28 16 14z" class="ln"/><path d="M32 36v12M22 56h20c0-5-4-8-10-8s-10 3-10 8z" class="ln"/><circle cx="32" cy="7" r="4.5" class="ln"/><path d="M32 4.5v5M29.5 7h5" class="ln thin"/>',
   "Poisson": '<path d="M6 32C20 12 38 14 46 32 38 50 20 52 6 32z" class="ln"/><path d="M46 32l14-12v24z" class="ln"/><circle cx="18" cy="29" r="1.6" class="dot"/><path d="M26 22c4 6 4 14 0 20M33 24c3 5 3 11 0 16" class="ln thin"/>',
@@ -667,7 +668,7 @@ async function renderToday() {
   const host = $("#today-body"); host.replaceChildren();
   const days = daysBetween(todayISO(), WEDDING_ISO);
   host.append(el("div", { class: "today-head" },
-    el("div", { class: "count" }, iconRow(["Agneau", "Colombe", "Croix"], 34), el("b", { text: days > 0 ? "J-" + days : days === 0 ? "C'est aujourd'hui !" : "Jour " + Math.abs(days) + " de vie à deux" }), el("span", { text: days > 0 ? "avant le mariage, le samedi 9 octobre 2027" : days === 0 ? "Que cette journée soit belle" : "depuis le mariage" })),
+    el("div", { class: "count" }, iconRow(["Agneau", "Soleil", "Croix"], 34), el("b", { text: days > 0 ? "J-" + days : days === 0 ? "C'est aujourd'hui !" : "Jour " + Math.abs(days) + " de vie à deux" }), el("span", { text: days > 0 ? "avant le mariage, le samedi 9 octobre 2027" : days === 0 ? "Que cette journée soit belle" : "depuis le mariage" })),
     el("div", { class: "verse-card" })));
   renderVerse($(".verse-card", host));
   const cols = el("div", { class: "today-cols" }); host.append(cols);
@@ -716,9 +717,9 @@ function buildAdminShell() {
   const pray = el("section", { "data-main-sec": "pray", hidden: true }, titled("h3", "cat", "Calice", "Prière du jour", 28), el("div", { id: "pray-body" }));
   const ICO = { today: "Soleil", site: "Croix", org: "Agneau", photos: "Rameau d'olivier", pray: "Calice" };
   nav.querySelectorAll("[data-main]").forEach(b => b.prepend(icon(ICO[b.dataset.main], 24)));
-  const OICO = { tasks: "Bougie", budget: "Épi de blé", games: "Colombe", seating: "Agneau couché", timeline: "Croix", notes: "Rameau d'olivier" };
+  const OICO = { tasks: "Bougie", budget: "Épi de blé", games: "Dé", seating: "Agneau couché", timeline: "Croix", notes: "Rameau d'olivier" };
   org.querySelectorAll("[data-org]").forEach(b => b.prepend(icon(OICO[b.dataset.org], 22)));
-  const SICO = { al: "Épi de blé", so: "Colombe", fq: "Bougie", gi: "Poisson" };
+  const SICO = { al: "Épi de blé", so: "Musique", fq: "Bougie", gi: "Poisson" };
   site.querySelectorAll("[data-tab]").forEach(b => { if (SICO[b.dataset.tab]) b.prepend(icon(SICO[b.dataset.tab], 22)); });
   panel.replaceChildren(el("div", { class: "admin-orn" }, iconRow(["Croix"], 34)), top, today, site, org, photos, pray);
 }
