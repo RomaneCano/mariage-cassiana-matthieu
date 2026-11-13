@@ -320,6 +320,12 @@ body.editing [data-ed]:focus{outline:2px solid var(--olive);background:#fffdf3}
 .org-grid label{font-size:var(--fs-label);font-weight:400;gap:3px}.org-grid label.wide{grid-column:span 2}
 .org-grid input,.org-grid select,.org-grid textarea{min-height:38px;padding:5px 9px;font-size:var(--fs-small);border-radius:8px}
 .org-wrap{max-width:100%}
+.org-cards{display:grid;gap:10px}.org-card{padding:12px 14px;display:grid;gap:8px}.org-card .org-grid{margin:0}
+.org-grp{margin:10px 0 0;font-size:1.02rem;color:var(--olive)}
+.org-card-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+.org-table td:nth-child(2){min-width:240px}.org-table td:nth-child(3){min-width:150px}
+.org-table input[type=text],.org-table select,.org-table input[type=date],.org-table input[type=time]{min-width:130px}
+.org-table input[type=number]{min-width:96px}
 .org-table{border-collapse:collapse;width:100%;min-width:780px;font-size:var(--fs-small)}
 .org-table th,.org-table td{padding:4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 .org-table th{font-size:var(--fs-label);letter-spacing:.05em;text-transform:uppercase;background:var(--paper-2);padding:7px 6px;position:sticky;top:0}

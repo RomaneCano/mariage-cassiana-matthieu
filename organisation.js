@@ -396,6 +396,28 @@ async function renderOrg(key) {
   let shown = rows;
   if (key === "tasks") shown = rows.filter(r => (orgState.filter.status === "all" || (orgState.filter.status === "done" ? r.done : !r.done)) && (!orgState.filter.cat || r.cat === orgState.filter.cat));
   if (!shown.length) { host.append(el("p", { class: "empty", text: rows.length ? "Aucune ligne avec ce filtre." : "Rien pour l'instant. Utilisez « Charger le modèle type » ou ajoutez une première ligne." })); return; }
+  if (key === "vendors" || key === "seating" || key === "budget") {
+    const list = el("div", { class: "org-cards" });
+    let lastCat = null;
+    shown.forEach((r, i) => {
+      if (key === "budget" && r.cat !== lastCat) { lastCat = r.cat; const sub = rows.filter(x => x.cat === r.cat).reduce((a, x) => a + (Number(x.actual) || Number(x.estimated) || 0), 0); list.append(el("h3", { class: "org-grp", text: (r.cat || "Sans poste") + " · " + eur(sub) })); }
+      const g = el("div", { class: "org-grid" });
+      M.fields.forEach(f => {
+        const inp = fieldInput(f, r[f.k]);
+        inp.addEventListener("change", async () => { const v = readInput(f, inp); try { await orgStore.update(M.table, r.id, { [f.k]: v }); r[f.k] = v; if (key === "seating" || key === "budget") renderOrg(key); else showToast("Enregistré"); } catch (e) { showToast(orgErr(e)); } });
+        g.append(el("label", { class: f.wide ? "wide" : "" }, el("span", { text: f.l }), inp));
+      });
+      const acts = el("div", { class: "org-card-actions" });
+      if (key === "seating") {
+        const swap = async d => { const o = shown[i + d]; if (!o) return; try { await orgStore.update(M.table, r.id, { position: o.position }); await orgStore.update(M.table, o.id, { position: r.position }); renderOrg(key); } catch (e) { showToast(orgErr(e)); } };
+        acts.append(el("button", { class: "btn small", type: "button", text: "▲", "aria-label": "Monter la table", disabled: i === 0, onclick: () => swap(-1) }), el("button", { class: "btn small", type: "button", text: "▼", "aria-label": "Descendre la table", disabled: i === shown.length - 1, onclick: () => swap(1) }));
+      }
+      acts.append(el("button", { class: "btn small danger", type: "button", text: "Supprimer", "aria-label": "Supprimer", onclick: async () => { try { await orgStore.remove(M.table, r.id); renderOrg(key); } catch (e) { showToast(orgErr(e)); } } }));
+      list.append(el("div", { class: "card org-card" }, g, acts));
+    });
+    host.append(list);
+    return;
+  }
   const table = el("table", { class: "org-table" });
   table.append(el("thead", {}, el("tr", {}, ...M.fields.map(f => el("th", { text: f.l })), ...(key === "seating" ? [el("th", { text: "Ordre" })] : []), el("th", {}))));
   const tb = el("tbody");
