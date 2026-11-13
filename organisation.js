@@ -102,7 +102,7 @@ const ORG = {
     { k: "contact", l: "Contact", t: "text" }, { k: "phone", l: "Téléphone", t: "text" }, { k: "email", l: "E-mail", t: "text" },
     { k: "availability", l: "Disponibilité", t: "text" }, { k: "deposit", l: "Acompte (€)", t: "number" }, { k: "notes", l: "Notes", t: "long", wide: true }] },
   guests: { table: "org_guests", label: "Invités", order: "position", defaults: { presence: "ATT" }, fields: [
-    { k: "nom", l: "Nom", t: "text" }, { k: "prenom", l: "Prénom", t: "text", req: true }, { k: "tel", l: "Téléphone", t: "text" },
+    { k: "nom", l: "Nom", t: "text" }, { k: "prenom", l: "Prénom", t: "text", req: true }, { k: "tel", l: "Téléphone", t: "text" }, { k: "email", l: "E-mail", t: "text" },
     { k: "presence", l: "Présence", t: "select", o: ["ATT", "OUI", "NON"], labels: { ATT: "En attente", OUI: "Présent(e)", NON: "Absent(e)" } },
     { k: "allergie", l: "Allergie", t: "text" }, { k: "adresse", l: "Adresse", t: "text" },
     { k: "envoi", l: "Invitation", t: "select", o: ["Courrier", "Lien", "Remise en main"] }, { k: "age", l: "Âge", t: "text" }, { k: "notes", l: "Notes", t: "text" }] },
@@ -273,6 +273,25 @@ function fieldInput(f, value, row) {
   return inp;
 }
 const cleanUrl = v => { v = String(v || "").trim(); if (!v) return null; if (!/^https?:\/\//i.test(v)) v = "https://" + v; try { const u = new URL(v); return /^https?:$/.test(u.protocol) && u.hostname.includes(".") ? u.href : false; } catch { return false; } };
+const isMail = v => typeof v === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+const INVITE_KEY_LS = "mariage:invite-key";
+/* Envoi du lien d'invitation par e-mail : le script Google envoie le message depuis le Gmail des mariés (clé d'envoi requise) */
+async function sendInvite(g) {
+  const url = (typeof CONFIG !== "undefined" && CONFIG.APPS_SCRIPT_URL) || "";
+  if (!url) throw new Error("Le script Google n'est pas relié au site.");
+  let key = ""; try { key = sessionStorage.getItem(INVITE_KEY_LS) || ""; } catch {}
+  if (!key) throw new Error("Saisissez d'abord la clé d'envoi (bloc « Envoi du lien par e-mail »).");
+  const body = JSON.stringify({ action: "invite", key, to: g.email.trim(), prenom: g.prenom || "", site: location.origin + location.pathname });
+  try {
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "Envoi refusé par le script.");
+    return "ok";
+  } catch (e) {
+    if (e instanceof TypeError) return "envoyé, réponse non lisible";   // le message est parti ; ne jamais renvoyer automatiquement
+    throw e;
+  }
+}
 const isUrl = v => typeof v === "string" && /^https?:\/\//i.test(v);
 const readInput = (f, inp) => f.t === "check" ? inp.checked : f.t === "number" ? (inp.value === "" ? null : Number(inp.value)) : (inp.value.trim() === "" ? null : inp.value.trim());
 
@@ -294,7 +313,7 @@ function orgSummary(key, rows) {
     const c = f => rows.filter(f).length;
     chip("invités", String(rows.length)); chip("présents", String(c(r => r.presence === "OUI")), ""); chip("absents", String(c(r => r.presence === "NON")));
     chip("en attente", String(c(r => !r.presence || r.presence === "ATT"))); chip("allergies", String(c(r => r.allergie && r.allergie.trim())));
-    chip("enfants (0 à 12 ans)", String(c(r => { const n = parseInt(String(r.age || "").replace(/[^\d]/g, ""), 10); return !isNaN(n) && n <= 12; }))); chip("courrier", String(c(r => r.envoi === "Courrier"))); chip("lien", String(c(r => r.envoi === "Lien"))); chip("remise en main", String(c(r => r.envoi === "Remise en main")));
+    chip("enfants (0 à 12 ans)", String(c(r => { const n = parseInt(String(r.age || "").replace(/[^\d]/g, ""), 10); return !isNaN(n) && n <= 12; }))); chip("courrier", String(c(r => r.envoi === "Courrier"))); chip("lien", String(c(r => r.envoi === "Lien"))); chip("remise en main", String(c(r => r.envoi === "Remise en main"))); chip("e-mails renseignés", String(c(r => isMail(r.email)))); chip("liens envoyés", String(c(r => r.invite_sent_at)));
   } else if (key === "games") {
     chip("idées", String(rows.length)); chip("retenues", String(rows.filter(r => r.chosen).length)); chip("coût des retenues", eur(rows.filter(r => r.chosen).reduce((a, r) => a + (Number(r.price) || 0), 0)));
   } else if (key === "seating") {
@@ -408,6 +427,32 @@ async function seatPlan(rows) {
 }
 
 
+function invitePanel(rows) {
+  const box = el("details", { class: "card org-invite" }, el("summary", {}, icon("Alliances", 22), " Envoi du lien d'invitation par e-mail (depuis votre Gmail)"));
+  const eligible = () => rows.filter(r => r.envoi === "Lien" && isMail(r.email) && !r.invite_sent_at);
+  const keyIn = el("input", { type: "password", autocomplete: "off", placeholder: "Clé d'envoi (celle du script Google)", "aria-label": "Clé d'envoi", style: "max-width:320px" });
+  try { keyIn.value = sessionStorage.getItem(INVITE_KEY_LS) || ""; } catch {}
+  keyIn.addEventListener("input", () => { try { sessionStorage.setItem(INVITE_KEY_LS, keyIn.value); } catch {} });
+  const status = el("p", { class: "hint", role: "status" });
+  const btn = el("button", { type: "button", class: "btn solid small" });
+  const n0 = eligible().length; btn.textContent = n0 ? "Envoyer le lien aux " + n0 + " invité" + (n0 > 1 ? "s" : "") + " « Lien » avec e-mail, pas encore contactés" : "Aucun invité « Lien » à contacter (ajoutez une adresse e-mail)"; btn.disabled = !n0;
+  btn.addEventListener("click", async () => {
+    const list = eligible(); if (!list.length) return;
+    if (!window.confirm("Envoyer le lien d'invitation à " + list.length + " personne(s) depuis votre Gmail ? Chacune ne le recevra qu'une fois.")) return;
+    btn.disabled = true; let ok = 0;
+    for (const g of list) {
+      status.textContent = "Envoi " + (ok + 1) + " / " + list.length + " : " + (g.prenom || "") + " " + (g.nom || "") + "…";
+      try { await sendInvite(g); const when = new Date().toISOString(); await orgStore.update("org_guests", g.id, { invite_sent_at: when }); g.invite_sent_at = when; ok++; }
+      catch (e) { status.textContent = "⚠ Arrêt à " + (g.prenom || "") + " : " + (e.message || e) + " (" + ok + " envoi(s) réussi(s))."; btn.disabled = false; return; }
+      await new Promise(r => setTimeout(r, 700));
+    }
+    showToast(ok + " invitation(s) envoyée(s)"); renderOrg("guests");
+  });
+  box.append(
+    el("p", { class: "hint", text: "Le message contient le lien du site et un bouton pour confirmer la présence (avant le 9 juillet 2027). Il part du Gmail des mariés, via votre script Google. Ajoutez les adresses dans la colonne « E-mail », choisissez « Lien » dans « Invitation », puis envoyez : à tous d'un coup ici, ou ligne par ligne avec le bouton « Envoyer le lien ». Chacun ne reçoit le message qu'une fois." }),
+    el("div", { style: "display:flex;gap:10px;flex-wrap:wrap;align-items:center" }, keyIn, btn), status);
+  return box;
+}
 let orgTok = 0, lastOrgKey = null;
 /* Redessine l'onglet en gardant la position de défilement (sinon la page remontait en haut à chaque modification) */
 async function renderOrg(key) {
@@ -447,6 +492,7 @@ async function renderOrgInner(key) {
     bar.append(gp, gq);
   }
   host.append(bar);
+  if (key === "guests") host.append(invitePanel(rows));
 
   if (key === "seating" && rows.length) { const sp = await seatPlan(rows); if (tok !== orgTok) return; host.append(sp); }
 
@@ -518,7 +564,7 @@ async function renderOrgInner(key) {
     return;
   }
   const table = el("table", { class: "org-table" + (key === "guests" ? " guests" : "") });
-  table.append(el("thead", {}, el("tr", {}, ...M.fields.map(f => el("th", { text: f.l })), ...(key === "seating" ? [el("th", { text: "Ordre" })] : []), el("th", {}))));
+  table.append(el("thead", {}, el("tr", {}, ...M.fields.map(f => el("th", { text: f.l })), ...(key === "seating" ? [el("th", { text: "Ordre" })] : []), ...(key === "guests" ? [el("th", { text: "Lien d'invitation" })] : []), el("th", {}))));
   const tb = el("tbody");
   let lastCat = null;
   shown.forEach(r => {
@@ -541,6 +587,16 @@ async function renderOrgInner(key) {
     if (key === "seating") {
       const i = shown.indexOf(r), swap = async d => { const o = shown[i + d]; if (!o) return; try { await orgStore.update(M.table, r.id, { position: o.position }); await orgStore.update(M.table, o.id, { position: r.position }); renderOrg(key); } catch (e) { showToast(orgErr(e)); } };
       tr.append(el("td", {}, el("button", { class: "btn small", type: "button", text: "▲", "aria-label": "Monter la table", disabled: i === 0, onclick: () => swap(-1) }), " ", el("button", { class: "btn small", type: "button", text: "▼", "aria-label": "Descendre la table", disabled: i === shown.length - 1, onclick: () => swap(1) })));
+    }
+    if (key === "guests") {
+      const send = el("button", { class: "btn small", type: "button", text: r.invite_sent_at ? "Renvoyer" : "Envoyer le lien", title: r.invite_sent_at ? "Envoyé le " + frDate(String(r.invite_sent_at).slice(0, 10)) : "Envoyer le lien d'invitation par e-mail", disabled: !isMail(r.email),
+        onclick: async () => {
+          if (r.invite_sent_at && !window.confirm("Le lien a déjà été envoyé à " + (r.prenom || "cette personne") + ". Le renvoyer ?")) return;
+          send.disabled = true; send.textContent = "Envoi…";
+          try { const res = await sendInvite(r); const when = new Date().toISOString(); await orgStore.update("org_guests", r.id, { invite_sent_at: when }); r.invite_sent_at = when; showToast("Lien envoyé à " + (r.prenom || "") + (res === "ok" ? "" : " (vérifiez dans Gmail > Envoyés)")); renderOrg("guests"); }
+          catch (e) { showToast(e.message || String(e)); send.disabled = false; send.textContent = "Envoyer le lien"; }
+        } });
+      tr.append(el("td", { class: "sendcell" }, send, el("small", { class: "sentat", text: r.invite_sent_at ? "✓ " + frDate(String(r.invite_sent_at).slice(0, 10)) : "" })));
     }
     tr.append(el("td", {}, el("button", { class: "btn small danger", type: "button", text: "Supprimer", "aria-label": "Supprimer la ligne", onclick: async () => {
       try { await orgStore.remove(M.table, r.id); renderOrg(key); } catch (e) { showToast(orgErr(e)); }

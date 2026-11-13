@@ -399,6 +399,8 @@ body.post .pre{display:none}
 body.sorting .mv{display:inline-flex}
 body.sorting .admin-main button,body.sorting .admin-tabs button{outline:1.5px dashed var(--olive-soft);outline-offset:2px}
 .sort-hint{text-align:center;margin:-6px 0 10px}
+.org-invite{margin-bottom:12px;padding:10px 14px}.org-invite>summary{cursor:pointer;font-weight:700;display:flex;align-items:center;gap:8px;min-height:0;font-size:.9rem}.org-invite>summary::after{content:none}.org-invite .hint{margin:8px 0}
+.sendcell{white-space:nowrap}.sendcell small{display:block;opacity:.75;font-size:.72rem}
 .org-fold{display:flex;gap:6px;justify-content:flex-end;margin:0 0 6px}
 @media(max-width:640px){.org-sum-row{grid-template-columns:minmax(0,1fr) auto}.org-sum-row .sm,.org-sum-row .num:nth-of-type(2){display:none}}
 .org-grp{margin:10px 0 0;font-size:.95rem;color:var(--olive)}
@@ -549,6 +551,7 @@ body.on-conn #edit-fab{display:none}
 @media(max-width:760px){.cv-cols{grid-template-columns:minmax(0,1fr)}}
 .cv-bar{display:flex;justify-content:space-between;align-items:center;gap:10px 14px;flex-wrap:wrap;margin:0 0 14px}
 .cv-filter{display:flex;gap:6px}
+.cv-cta{display:flex;gap:8px;flex-wrap:wrap}
 .cv-filter .btn[aria-pressed="true"]{background:var(--olive);color:var(--paper)}
 .cv-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 14px;margin:0 0 18px;position:relative}
 .cv-form .cv-ok,.cv-form .msg,.cv-form .btn{grid-column:1/-1}
@@ -817,7 +820,10 @@ details[open] > :not(summary){animation:unfold .45s ease-out backwards}
           <button class="btn small" type="button" data-cv="aller" aria-pressed="false">Aller</button>
           <button class="btn small" type="button" data-cv="retour" aria-pressed="false">Retour</button>
         </div>
-        <button class="btn small solid" type="button" id="cv-open" aria-expanded="false" aria-controls="cv-form">Publier une annonce</button>
+        <div class="cv-cta">
+          <button class="btn small solid" type="button" id="cv-ask" data-cvt="demande" aria-expanded="false" aria-controls="cv-form">Je cherche une place</button>
+          <button class="btn small" type="button" id="cv-offer" data-cvt="offre" aria-expanded="false" aria-controls="cv-form">Je propose des places</button>
+        </div>
       </div>
       <form class="card cv-form" id="cv-form" hidden novalidate>
         <label>Je…<select name="type"><option value="offre">propose des places</option><option value="demande">cherche une place</option></select></label>

@@ -137,8 +137,15 @@
     document.querySelectorAll("[data-cv]").forEach(b => b.addEventListener("click", () => {
       filter = b.dataset.cv; document.querySelectorAll("[data-cv]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); renderList();
     }));
-    const form = $("#cv-form"), msg = $("#cv-msg"), toggle = $("#cv-open");
-    toggle.addEventListener("click", () => { form.hidden = !form.hidden; toggle.setAttribute("aria-expanded", String(!form.hidden)); if (!form.hidden) form.querySelector("input").focus(); });
+    const form = $("#cv-form"), msg = $("#cv-msg"), btns = document.querySelectorAll("[data-cvt]"), typeSel0 = form.querySelector("[name=type]");
+    const closeForm = () => { form.hidden = true; btns.forEach(x => x.setAttribute("aria-expanded", "false")); };
+    btns.forEach(b => b.addEventListener("click", () => {
+      const same = !form.hidden && typeSel0.value === b.dataset.cvt;
+      if (same) return closeForm();
+      typeSel0.value = b.dataset.cvt; typeSel0.dispatchEvent(new Event("change"));
+      form.hidden = false; btns.forEach(x => x.setAttribute("aria-expanded", String(x === b)));
+      form.scrollIntoView({ block: "nearest", behavior: "smooth" }); form.querySelector("[name=prenom]").focus({ preventScroll: true });
+    }));
     form.addEventListener("submit", async e => {
       e.preventDefault(); msg.hidden = true;
       const f = new FormData(form); if (f.get("website")) return; // piège à robots
@@ -154,7 +161,7 @@
       try {
         await api.add({ id, type, sens, prenom, lieu, heure: heure || null, places, contact, note: note || null, edit_code });
         const m = mine(); m[id] = edit_code; saveMine(m); try { localStorage.setItem("mariage:covoit-last", String(Date.now())); } catch {}
-        form.reset(); form.hidden = true; toggle.setAttribute("aria-expanded", "false");
+        form.reset(); closeForm();
         toast("Annonce publiée. Merci ! Vous pourrez la retirer depuis cet appareil."); load();
       } catch (err) {
         showMsg(msg, /covoiturage/i.test(String(err && err.message)) || (err && err.code === "PGRST205") ? "Le covoiturage n'est pas encore activé sur le site. Revenez plus tard." : "Publication impossible pour le moment. Réessayez dans un instant.", "err");
