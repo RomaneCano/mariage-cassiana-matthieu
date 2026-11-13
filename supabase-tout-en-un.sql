@@ -115,3 +115,6 @@ end $$;
 drop trigger if exists only_admin_signup on auth.users;
 create trigger only_admin_signup before insert on auth.users
   for each row execute function public.only_admin_signup();
+
+-- 6. Nettoyage : efface d'éventuels textes contenant un lien collé par erreur
+delete from textes where value ilike '%google.com/maps%';
