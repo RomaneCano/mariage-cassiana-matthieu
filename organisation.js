@@ -456,9 +456,13 @@ function invitePanel(rows) {
 let orgTok = 0, lastOrgKey = null;
 /* Redessine l'onglet en gardant la position de défilement (sinon la page remontait en haut à chaque modification) */
 async function renderOrg(key) {
-  const keep = key === lastOrgKey, y = window.scrollY; lastOrgKey = key;
+  const keep = key === lastOrgKey, y = window.scrollY, host = $("#org-body"); lastOrgKey = key;
+  if (keep && host) { host.style.minHeight = host.offsetHeight + "px"; host.dataset.re = "1"; }   // la page garde sa hauteur pendant le redessin : aucun saut vers le haut
   const r = await renderOrgInner(key);
-  if (keep) { window.scrollTo(0, y); requestAnimationFrame(() => window.scrollTo(0, y)); setTimeout(() => window.scrollTo(0, y), 120); }
+  if (keep && host) {
+    window.scrollTo(0, y);
+    requestAnimationFrame(() => { window.scrollTo(0, y); host.style.minHeight = ""; delete host.dataset.re; });
+  }
   return r;
 }
 async function renderOrgInner(key) {
