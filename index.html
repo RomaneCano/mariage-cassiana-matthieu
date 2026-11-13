@@ -329,6 +329,11 @@ h3.cat .ico{vertical-align:-6px;margin-right:2px}
 .seat-plan{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:18px 10px;justify-items:center;margin-bottom:18px}
 .seat-table{position:relative;max-width:100%}
 .t-disc{position:absolute;left:50%;top:50%;width:132px;height:132px;transform:translate(-50%,-50%);border-radius:50%;background:var(--paper-2);border:2px solid var(--olive-soft);display:grid;place-content:center;text-align:center;gap:2px;padding:10px;font-size:var(--fs-small);line-height:1.15}
+.seat-table.honneur{grid-column:1/-1;max-width:100%;overflow-x:auto;overflow-y:hidden}
+.seat-table.honneur .t-disc{left:50%;top:98px;width:calc(100% - 24px);height:58px;transform:translateX(-50%);border-radius:16px;grid-auto-flow:column;gap:10px;place-content:center;align-items:center}
+.seat.marie{pointer-events:none}.av.marie{cursor:default}
+.av.marie i{background:linear-gradient(135deg,#caa94f,#8a6a1f);box-shadow:0 0 0 2px #e4d08c,0 0 0 4px rgba(217,194,122,.35)}
+.av.marie span{font-weight:700;color:var(--olive)}
 .seat-table.rect .t-disc{width:calc(100% - 64px);height:80px;border-radius:16px}
 .seat.top .av span{order:-1}
 .seat-plan{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}

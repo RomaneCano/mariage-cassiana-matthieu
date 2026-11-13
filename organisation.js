@@ -364,6 +364,19 @@ async function seatPlan(rows) {
   };
   const placed = new Set();
   rows.forEach(r => {
+    if (/honneur/i.test(r.name || "")) {   // table d'honneur : les mariés au centre, côte à côte, invités de part et d'autre
+      const g = rawSeats(r), count = g.filter(Boolean).length, cap = Math.max(Number(r.capacity) || 0, 2), slots = Math.max(cap - 2, g.length), m = slots + 2, sp = 60, W = Math.max(320, m * sp + 40), H = 180;
+      g.filter(Boolean).forEach(x => placed.add(norm(x)));
+      const Lc = Math.ceil(slots / 2), x0 = W / 2 - (m - 1) * sp / 2, X = pos => x0 + pos * sp, posOfSlot = k => (k % 2 === 0 ? Lc - 1 - k / 2 : Lc + 2 + (k - 1) / 2);
+      const t = el("div", { class: "seat-table honneur" + (count + 2 > cap ? " full" : ""), style: "width:" + W + "px;height:" + H + "px" }, el("div", { class: "t-disc" }, el("b", { text: r.name }), el("span", { text: (count + 2) + " / " + cap })));
+      [["Cassiana", Lc], ["Matthieu", Lc + 1]].forEach(([nm, pos]) => t.append(el("div", { class: "seat marie", style: "left:" + X(pos) + "px;top:42px" }, el("div", { class: "av marie", title: nm }, el("i", { text: nm[0] }), el("span", { text: nm })))));
+      for (let k = 0; k < slots; k++) {
+        const seat = el("div", { class: "seat", style: "left:" + X(posOfSlot(k)) + "px;top:42px" });
+        if (g[k]) seat.append(avatar(g[k], r.id, false, k)); else seat.append(el("i", { class: "empty-seat", "aria-hidden": "true" }));
+        zone(seat, r.id, k); t.append(seat);
+      }
+      zone(t, r.id, null); plan.append(t); return;
+    }
     const g = rawSeats(r), cap = Number(r.capacity) || 0, n = Math.max(cap, g.length), R = 96, rect = r.shape === "Rectangulaire", W = rect ? 336 : 280, H = rect ? 232 : 280, count = g.filter(Boolean).length;
     g.filter(Boolean).forEach(x => placed.add(norm(x)));
     const t = el("div", { class: "seat-table" + (rect ? " rect" : "") + (count > cap && cap ? " full" : ""), style: "width:" + W + "px;height:" + H + "px" },
