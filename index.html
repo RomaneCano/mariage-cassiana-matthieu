@@ -25,6 +25,11 @@
   --script:"Parisienne","Snell Roundhand",cursive;
   --serif:"Libre Baskerville",Georgia,"Times New Roman",serif;
   color-scheme:light;
+  --fs-body:.92rem;    /* texte courant (même taille que la page « S'y rendre ») */
+  --fs-small:.9rem;    /* texte secondaire des cartes */
+  --fs-label:.82rem;   /* petites mentions, boutons secondaires */
+  --fs-card:1.1rem;    /* titre de carte */
+  --fs-script:1.7rem;    /* titres en écriture manuscrite dans les cartes et étapes */
 }
 *{box-sizing:border-box}
 html{scrollbar-gutter:stable;scroll-behavior:smooth;font-size:clamp(14px,calc(1.7vh + 4px),24px)}
@@ -52,11 +57,11 @@ a{color:var(--olive)}
 body{padding-top:calc(var(--tabs-h) + env(safe-area-inset-top,0px))}
 .tabs{position:fixed;top:0;left:0;right:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--line);
   padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-left,0px)) 0 max(16px,env(safe-area-inset-right,0px))}
-.tabs ul{list-style:none;margin:0 auto;padding:6px calc(var(--flower-w) + 135px) 6px calc(var(--flower-w) + 12px);display:flex;gap:2px;max-width:none;justify-content:center;height:var(--tabs-h)}
+.tabs ul{list-style:none;margin:0 auto;padding:6px calc(var(--flower-w) + 120px) 6px calc(var(--flower-w) + 8px);display:flex;gap:2px;max-width:none;justify-content:center;height:var(--tabs-h)}
 .tabs li{display:flex}
 .tabs a{display:flex;align-items:center;justify-content:center;white-space:nowrap;text-decoration:none;padding:0 14px;border-radius:999px;font-size:.9rem;letter-spacing:.04em;min-height:44px;color:var(--olive)}
 .tabs a:hover,.tabs a[aria-current="true"]{background:var(--paper-2)}
-@media(min-width:1231px){.tabs a{font-size:clamp(12px,1.15vw,15px);padding:0 clamp(7px,.9vw,14px)}.tabs .tab-conn a{font-size:clamp(11px,.95vw,13px)}}
+@media(min-width:1231px){.tabs a{font-size:clamp(11.5px,.98vw,14px);letter-spacing:.02em;padding:0 clamp(6px,.75vw,12px)}.tabs .tab-conn a{font-size:clamp(11px,.9vw,13px)}}
 /* Espace mariés : petit onglet tout à droite de la barre */
 .tabs .tab-conn{position:absolute;right:calc(var(--flower-w) + 12px);top:calc(env(safe-area-inset-top,0px) + 6px)}
 .tabs .tab-conn a{font-size:.8rem;padding:0 10px}
@@ -117,11 +122,11 @@ html:has(body.home),body.home{overflow:hidden}
 
 /* Sections */
 h2{font-family:var(--script);font-weight:400;color:var(--olive-soft);font-size:clamp(1.9rem,min(9vw,6vh),2.8rem);text-align:center;margin:0 0 .4rem;line-height:1.1}
-.sub{text-align:center;margin:0 auto 1.4rem;max-width:30em;text-wrap:balance}
+.sub{font-size:var(--fs-body);text-align:center;margin:0 auto 1.4rem;max-width:30em;text-wrap:balance}
 .rule{display:flex;align-items:center;gap:14px;margin:0 auto 1.4rem;max-width:320px}
 .rule::before,.rule::after{content:"";flex:1;border-top:1px solid var(--line)}
 .rule img{width:34px}
-h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
+h3{font-size:var(--fs-card);margin:0 0 .3rem;font-weight:700}
 .card{background:var(--paper-2);border-radius:14px;padding:22px}
 .stack{display:grid;gap:18px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5em;min-height:48px;padding:10px 22px;border-radius:999px;border:1.5px solid var(--olive);background:transparent;color:var(--olive);
@@ -140,10 +145,10 @@ h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
 .step.rev .txt{text-align:right}
 .step .watercolor{width:auto;max-width:100%;max-height:23vh;justify-self:center}
 .step .road{display:none}
-.step .hour{font-size:1.15rem;letter-spacing:.04em;margin:0}
-.step .what{font-family:var(--script);font-size:clamp(1.5rem,min(6vw,4.2vh),2.2rem);color:var(--olive-soft);line-height:1.1;margin:0}
-.step .place{margin:0;font-size:.92rem;line-height:1.45}
-.step .place em{display:block;font-family:var(--script);font-style:normal;font-size:1.2rem;color:var(--olive-soft)}
+.step .hour{font-size:1.2rem;letter-spacing:.04em;margin:0}
+.step .what{font-family:var(--script);font-size:var(--fs-script);color:var(--olive-soft);line-height:1.1;margin:0}
+.step .place{margin:0;font-size:var(--fs-small);line-height:1.45}
+.step .place em{display:block;font-family:var(--script);font-style:normal;font-size:1.25rem;color:var(--olive-soft)}
 .zig{display:block;width:auto;height:min(15vh,140px);margin:0 auto;}
 .transit{text-align:center;font-style:italic;font-size:.88rem;margin:0}
 .timeline{position:relative}
@@ -151,7 +156,6 @@ h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
 .loops img.arrow{position:absolute;height:auto;max-width:none}
 @media(min-aspect-ratio:5/4) and (min-width:900px){
   .panel#panel-programme{max-width:min(97vw,2000px);padding:1.5vh 2vw 12px}
-  #panel-programme h2{font-size:clamp(1.8rem,min(5vw,5.2vh),2.6rem)}
   #panel-programme .rule{margin-bottom:1vh}
   .timeline{grid-template-columns:repeat(3,1fr);gap:clamp(150px,13.5vw,270px);align-items:start}
   .step,.step.rev{grid-template-columns:1fr;gap:8px;text-align:center;justify-items:center}
@@ -163,57 +167,61 @@ h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
   .step .road{display:none}
   .step .txt{align-self:start}
   .arrow-note{position:absolute;transform:translateX(-50%);font-style:italic;font-size:.9rem;line-height:1.3;text-align:center}
-  .step .hour{font-size:1.4rem}
-  .step .what{font-size:clamp(1.8rem,3vw,2.6rem)}
-  .step .place{font-size:1.05rem}
 }
 
 /* Infos pratiques : tout sur un seul écran, réparti en grille */
 .route{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .route .card{padding:14px;display:grid;gap:8px;align-content:start;min-width:0}
-.route h3{font-size:1rem;margin:0}
-.route p{margin:0;font-size:.85rem;line-height:1.5}
+.route h3{margin:0}
+.route p{margin:0;font-size:var(--fs-small);line-height:1.5}
 .route .wide{grid-column:1/-1}
 .route-time{display:flex;align-items:center;justify-content:center;gap:10px;text-align:center;font-style:italic;font-size:.92rem}
 .route-time::before,.route-time::after{content:"";flex:1;max-width:90px;border-top:1.3px dashed var(--olive-soft)}
 .pk{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0}
 @media(min-width:760px){.pk{grid-template-columns:repeat(4,1fr)}}
 .pk .btn{min-height:44px;padding:6px 10px;border-radius:14px;font-size:.8rem;line-height:1.25;text-align:center}
-.route .btn.small{padding:6px 10px;font-size:.8rem;line-height:1.25;text-align:center}
+.route .btn.small{padding:6px 10px;font-size:var(--fs-label);line-height:1.25;text-align:center}
 
 /* Logement */
 .lodging{display:grid;gap:14px}
 .lg-col{display:grid;gap:14px;align-content:start}
-@media(min-width:900px){.lodging{grid-template-columns:1fr 1fr;align-items:start}.lodging .lg-hotels{grid-column:1;grid-row:1}.lodging .lg-bb{grid-column:2;grid-row:1 / span 2}.lodging .lg-col{grid-column:1;grid-row:2}}
+@media(min-width:900px){.lodging{grid-template-columns:1fr 1fr;align-items:start}.lodging .lg-hotels{grid-column:1;grid-row:2}.lodging .lg-bb{grid-column:2;grid-row:2 / span 2}.lodging .lg-col{grid-column:1;grid-row:3}}
 @media(min-width:1100px){
   .panel#panel-logement{max-width:min(96vw,1400px)}
   .lodging{grid-template-columns:1fr 1.15fr 1fr}
-  .lodging .lg-hotels{grid-column:1;grid-row:1}
-  .lodging .lg-bb{grid-column:2;grid-row:1}
-  .lodging .lg-col{grid-column:3;grid-row:1}
+  .lodging .lg-hotels{grid-column:1;grid-row:2}
+  .lodging .lg-bb{grid-column:2;grid-row:2}
+  .lodging .lg-col{grid-column:3;grid-row:2}
 }
 }
 .lg{padding:14px 16px}
-.lg h3{margin:0 0 .3rem;font-size:1.05rem}
+.lg h3{margin:0 0 .3rem}
 .lg ul{list-style:none;margin:0;padding:0}
-.lg li{display:flex;justify-content:space-between;align-items:center;gap:2px 12px;flex-wrap:wrap;padding:4px 0;border-top:1px solid var(--line)}
+.lg li{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:nowrap;min-height:54px;padding:3px 0;border-top:1px solid var(--line)}
+@media(max-width:560px){.lg li{flex-wrap:wrap;gap:0 12px}}
 .lg li:first-child{border-top:0}
-.lg-main{display:flex;flex-direction:column;min-width:0}
-.lg-n{font-weight:700;font-size:.95rem;line-height:1.3}
-.lg-t{font-size:.82rem;opacity:.85}
+.lg-avail{grid-column:1/-1;grid-row:1;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 16px;padding:12px 16px;background:var(--olive);color:var(--paper)}
+.lg-avail-t{display:grid;gap:2px}
+.lg-avail-t span{font-size:var(--fs-small);opacity:.92}
+.lg-avail-b{display:flex;gap:8px;flex-wrap:wrap}
+.lg-avail .btn.solid{background:var(--paper);color:var(--olive);border-color:var(--paper)}
+.lg-avail .btn.solid:hover{background:var(--paper-2)}
+.lg-main{display:flex;flex-direction:column;flex:1;min-width:0}
+.lg-n{font-weight:700;font-size:var(--fs-body);line-height:1.3}
+.lg-t{font-size:var(--fs-label);opacity:.85}
 .lg-tag{align-self:flex-start;font-style:normal;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;background:var(--olive);color:var(--paper);padding:1px 9px;border-radius:999px;margin-top:3px}
-.lg-links{display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+.lg-links{display:flex;gap:9px;flex:none;white-space:nowrap;justify-content:flex-end}
 #panel-logement .sub{max-width:64em}
-.lg-links a{font-size:.85rem;padding:6px 2px;min-height:36px;display:inline-flex;align-items:center}
+.lg-links a{font-size:var(--fs-label);padding:6px 2px;min-height:36px;display:inline-flex;align-items:center}
 .lg .hint{margin:.5rem 0 0}
 
 /* Dress code */
 .dress{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .dress .tile{border:1px solid var(--line);border-radius:16px;padding:16px 14px;display:grid;gap:8px;justify-items:center;text-align:center;align-content:start;min-width:0}
 .dress .tile.wide{grid-column:1/-1;background:var(--paper-2);border-color:transparent;padding:18px 14px}
-.dress .tile h3{margin:0;font-size:1rem}
+.dress .tile h3{margin:0}
 .dress .tile.wide h3{color:var(--alert)}
-.dress .tile p{margin:0;font-size:.88rem;line-height:1.5}
+.dress .tile p{margin:0;font-size:var(--fs-small);line-height:1.5}
 .dress .ico{width:40px;height:40px;fill:none;stroke:var(--olive-soft);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
 .palette{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;max-width:420px;margin:.4rem 0 0;padding:0;list-style:none}
 .palette li{display:grid;justify-items:center;gap:6px;font-size:.78rem;line-height:1.2}
@@ -255,14 +263,14 @@ body.editing [data-ed]:focus{outline:2px solid var(--olive);background:#fffdf3}
 
 /* Chants */
 .song{display:grid;gap:10px}
-.song .moment{font-size:.8rem;letter-spacing:.12em;text-transform:uppercase}
-.song .title{font-family:var(--script);font-size:2rem;color:var(--olive-soft);line-height:1.1;margin:0}
+.song .moment{font-size:var(--fs-label);letter-spacing:.12em;text-transform:uppercase}
+.song .title{font-family:var(--script);font-size:var(--fs-script);color:var(--olive-soft);line-height:1.1;margin:0}
 .lyrics{margin-top:4px;border-top:1px solid var(--line)}
 .lyrics summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;padding:10px 0;min-height:44px;font-size:.85rem;letter-spacing:.1em;text-transform:uppercase}
 .lyrics summary::-webkit-details-marker{display:none}
 .lyrics summary::after{content:"▾";font-size:1rem;line-height:1;transition:transform .2s}
 .lyrics[open] summary::after{transform:rotate(180deg)}
-.lyr-text{white-space:pre-line;font-size:.98rem;line-height:1.75;max-height:36vh;overflow-y:auto;padding:2px 6px 10px;animation:unfold .3s ease}
+.lyr-text{white-space:pre-line;font-size:var(--fs-body);line-height:1.75;max-height:36vh;overflow-y:auto;padding:2px 6px 10px;animation:unfold .3s ease}
 @keyframes unfold{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
 .listen{display:flex;align-items:center;gap:12px;margin-top:2px}
 .play{flex:none;width:48px;height:48px;border-radius:50%;border:0;background:var(--olive);color:var(--paper);display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 8px rgba(79,80,32,.25)}
@@ -307,11 +315,11 @@ textarea{min-height:110px;resize:vertical}
 /* FAQ */
 details{border-top:1px solid var(--line);padding:4px 0}
 details:last-of-type{border-bottom:1px solid var(--line)}
-summary{cursor:pointer;padding:9px 4px;font-size:.95rem;font-weight:700;list-style:none;display:flex;justify-content:space-between;gap:12px;min-height:48px;align-items:center}
+summary{cursor:pointer;padding:9px 4px;font-size:var(--fs-body);font-weight:700;list-style:none;display:flex;justify-content:space-between;gap:12px;min-height:48px;align-items:center}
 summary::-webkit-details-marker{display:none}
 summary::after{content:"+";font-size:1.4rem;line-height:1;flex:none}
 details[open] summary::after{content:"–"}
-details p{margin:0 4px 16px}
+details p{margin:0 4px 16px;font-size:var(--fs-body)}
 
 /* Pied de page */
 footer{position:relative;text-align:center;padding-block:80px 120px;margin-top:56px;overflow:hidden;margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
@@ -730,11 +738,18 @@ const CONTENT = {
   ],
   // Couleurs à éviter (pastilles de la rubrique Dress code)
   // Logements recommandés. « t » = commune ; « tag » = étiquette ; « url » = site officiel ; « page » = annonce ou fiche (tourisme, plateforme) ; « tel » = téléphone.
+  // Recherches en direct pour la nuit du mariage, dans un rayon d'environ 15 minutes de route autour du domaine.
+  availability: {
+    night: "Nuit du 9 au 10 octobre 2027",
+    airbnb: "https://www.airbnb.fr/s/Fontenay-Tr%C3%A9signy--France/homes?checkin=2027-10-09&checkout=2027-10-10&adults=2&search_by_map=true&ne_lat=48.84&ne_lng=3.05&sw_lat=48.60&sw_lng=2.71&zoom=11",
+    booking: "https://www.booking.com/searchresults.fr.html?ss=Fontenay-Tr%C3%A9signy&checkin=2027-10-09&checkout=2027-10-10&group_adults=2&no_rooms=1&group_children=0"
+  },
   lodging: [
     { title: "Hôtels", cls: "lg-hotels", items: [
       { n: "Le Royaume des Lions", t: "Lumigny-Nesles-Ormeaux", url: "https://lumigny-safari-reserve.com/", tel: "01 64 51 33 30" },
       { n: "Kyriad", t: "Fontenay-Trésigny", url: "https://fontenay-tresigny.kyriad.com/" },
       { n: "Le Relais", t: "Fontenay-Trésigny", page: "https://www.kayak.com/Fontenay-Tresigny-Hotels-le-relais.5969795.ksp" },
+      { n: "Classic Hôtel", t: "Fontenay-Trésigny" },
       { n: "Grande Maison Briarde", t: "Presles-en-Brie" } ] },
     { title: "Chambres d'hôtes", cls: "lg-bb", items: [
       { n: "Chez Françoise et Michel", t: "Chaumes-en-Brie", page: "https://ie.hotels.com/ho1049152032/chez-francoise-et-michel-piscine-chaumes-en-brie-france" },
@@ -917,7 +932,7 @@ function renderStatic(){
   CONTENT.lodging.forEach(cat => (cat.cls === "lg-gites" || cat.cls === "lg-camps" ? col : lg).append(el("div",{class:"card lg " + cat.cls},
     el("h3",{text:cat.title}),
     el("ul",{}, cat.items.map(it => el("li",{},
-      el("span",{class:"lg-main"}, el("span",{class:"lg-n",text:it.n}), it.t ? el("small",{class:"lg-t",text:it.t}) : "", it.tag ? el("em",{class:"lg-tag",text:it.tag}) : ""),
+      el("span",{class:"lg-main"}, el("span",{class:"lg-n",text:it.n}), el("small",{class:"lg-t",text:it.t || "Seine-et-Marne"})),
       el("span",{class:"lg-links"},
         it.tel ? el("a",{href:"tel:" + it.tel.replace(/\s/g,""),text:it.tel}) : "",
         it.url ? el("a",{href:it.url,target:"_blank",rel:"noopener",text:"Site"}) : "",
@@ -925,6 +940,12 @@ function renderStatic(){
         el("a",{href:"https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(it.n + " " + (it.t || "Seine-et-Marne")),target:"_blank",rel:"noopener",text:"Carte"}))))),
     cat.note ? el("p",{class:"hint",text:cat.note}) : "")));
   lg.append(col);
+  const av = CONTENT.availability;
+  lg.prepend(el("div",{class:"card lg-avail"},
+    el("div",{class:"lg-avail-t"}, el("b",{text:av.night}), el("span",{text:"Annonces disponibles en direct, à moins de 15 minutes de route du domaine"})),
+    el("div",{class:"lg-avail-b"},
+      el("a",{class:"btn small solid",href:av.airbnb,target:"_blank",rel:"noopener",text:"Voir les Airbnb"}),
+      el("a",{class:"btn small solid",href:av.booking,target:"_blank",rel:"noopener",text:"Voir les hôtels (Booking)"}))));
 
   const chips = $("#al-chips");
   CONTENT.allergens.forEach((a,i) => chips.append(el("label",{for:"al-c"+i}, el("input",{type:"checkbox",id:"al-c"+i,name:"allergen",value:a}), el("span",{text:a}))));
@@ -1086,14 +1107,20 @@ async function renderConnexion(){
 }
 const PANELS = ["accueil","programme","infos","logement","tenue","chants","faq","connexion"];
 /* Agrandit les pages courtes pour qu'elles occupent tout l'écran (jamais plus que le facteur indiqué, jamais plus large que l'écran) */
-const FIT = { infos: 1.8, logement: 1.5, tenue: 1.9, chants: 1.6, faq: 1.2 };
+const FIT = ["infos", "logement", "tenue", "chants", "faq"];
 function fitPanel(){
   const act = document.querySelector(".panel.active"); if (!act) return;
-  Object.keys(FIT).forEach(k => { const e = $("#panel-" + k); if (e) e.style.zoom = ""; });
-  const maxZ = FIT[act.id.replace("panel-", "")]; if (!maxZ) return;
-  const r = act.getBoundingClientRect(), tabsH = $(".tabs").getBoundingClientRect().height;
-  const z = Math.min(maxZ, (innerHeight - tabsH - 28) / r.height, (innerWidth * .95) / r.width);
-  act.style.zoom = z > 1.05 ? z.toFixed(3) : "";
+  FIT.forEach(k => { const e = $("#panel-" + k); if (e) e.style.zoom = ""; });
+  if (!FIT.includes(act.id.replace("panel-", ""))) return;
+  // Facteur unique, calculé sur la page « S'y rendre » (référence) : tous les onglets gardent la même taille de texte.
+  const ref = $("#panel-infos"), shown = ref.classList.contains("active");
+  if (!shown) ref.style.cssText = "display:block;visibility:hidden;position:absolute;left:0;right:0";
+  const refH = ref.getBoundingClientRect().height;
+  if (!shown) ref.style.cssText = "";
+  const tabsH = $(".tabs").getBoundingClientRect().height;
+  const z = Math.min(1.3, (innerHeight - tabsH - 28) / refH, (innerWidth * .95) / 860);
+  const v = z > 1.05 ? z.toFixed(3) : "";
+  FIT.forEach(k => { const e = $("#panel-" + k); if (e) e.style.zoom = v; });
 }
 function showPanel(id){
   PANELS.forEach(p => $("#panel-" + p).classList.toggle("active", p === id));
