@@ -228,7 +228,8 @@ body.editing{padding-bottom:calc(150px)}
 body.editing.home{overflow:auto}
 html:has(body.editing.home){overflow:auto}
 body.editing [data-ed].ed-active{outline:2px solid var(--olive);background:#fffdf3}
-body.editing [data-ed]{outline:1.5px dashed var(--olive-soft);outline-offset:3px;border-radius:3px;cursor:text}
+[data-ed]{white-space:pre-line}
+body.editing [data-ed]{white-space:pre-wrap;outline:1.5px dashed var(--olive-soft);outline-offset:3px;border-radius:3px;cursor:text}
 body.editing [data-ed]:focus{outline:2px solid var(--olive);background:#fffdf3}
 
 /* Chants */
@@ -615,7 +616,7 @@ body.on-conn #edit-fab{display:none}
 <button class="btn" id="edit-fab" type="button" hidden>&#9998; Modifier les textes</button>
 <div id="edit-bar" role="region" aria-label="Éditeur de texte" hidden>
   <div class="ed-row">
-    <span id="ed-target" class="ed-target">Cliquez sur un texte de la page pour le modifier</span>
+    <span id="ed-target" class="ed-target">Cliquez sur un texte de la page pour le modifier (Entrée = nouvelle ligne)</span>
     <span id="ed-status" class="ed-status" role="status"></span>
     <span class="ed-spacer"></span>
     <button class="btn small" id="edit-reset" type="button">Rétablir</button>
@@ -1208,8 +1209,8 @@ function prepareTexts(root = $("#public")){
   });
   root.querySelectorAll(TEXT_SEL + ",span[data-w]").forEach(n => {
     if (n.closest(TEXT_SKIP) || n.children.length) return;
-    const raw = n.textContent, txt = raw.trim(); if (!txt) return;
-    if (!n.dataset.orig) { n.dataset.orig = txt; n.dataset.key = hashKey(txt); n.dataset.ed = "1"; [n.dataset.pre, n.dataset.post] = wsOf(raw); }
+    const raw = n.textContent, txt = raw.trim().replace(/\s+/g, " "); if (!txt) return;
+    if (!n.dataset.orig) { n.dataset.orig = txt; n.dataset.key = hashKey(txt); n.dataset.ed = "1"; [n.dataset.pre, n.dataset.post] = wsOf(raw).map(x => x.replace(/\s+/g, " ")); }
     if (n !== document.activeElement) { const v = texts[n.dataset.key]; n.textContent = n.dataset.pre + (v != null ? v : n.dataset.orig) + n.dataset.post; }
     applyStyle(n, getStyle(n.dataset.key));
     if (editing) n.setAttribute("contenteditable", CE);
@@ -1221,12 +1222,13 @@ function setEditing(on){
   document.querySelectorAll("[data-ed]").forEach(n => { if (on) n.setAttribute("contenteditable", CE); else n.removeAttribute("contenteditable"); });
   document.querySelectorAll("#faq-list details").forEach(d => { d.open = on; });
   $("#edit-bar").hidden = !on; $("#edit-fab").hidden = on || !editorAllowed;
-  if (!on && lastEd) { lastEd.classList.remove("ed-active"); lastEd = null; $("#ed-tools").disabled = true; $("#ed-target").textContent = "Cliquez sur un texte de la page pour le modifier"; }
+  if (!on && lastEd) { lastEd.classList.remove("ed-active"); lastEd = null; $("#ed-tools").disabled = true; $("#ed-target").textContent = "Cliquez sur un texte de la page pour le modifier (Entrée = nouvelle ligne)"; }
 }
 
 async function saveText(n){
   const key = n.dataset.key, cur = texts[key] != null ? texts[key] : n.dataset.orig;
-  const v = n.textContent.replace(/\s+/g, " ").trim();
+  // espaces multiples réduits, mais les retours à la ligne saisis sont conservés
+  const v = n.innerText.replace(/\u00a0/g, " ").replace(/[ \t]+/g, " ").replace(/ ?\n ?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
   const show = val => { n.textContent = n.dataset.pre + val + n.dataset.post; };
   if (v === cur) { show(cur); return; }
   if (!v) { show(cur); showToast("Un texte ne peut pas être vide. Utilisez « Rétablir ce texte » pour revenir à l'original."); return; }
@@ -1335,7 +1337,14 @@ async function runDiag(){
 function bindEditor(){
   document.addEventListener("focusout", ev => { const n = ev.target.closest && ev.target.closest("[data-ed]"); if (editing && n) saveText(n); });
   document.addEventListener("focusin", ev => { const n = ev.target.closest && ev.target.closest("[data-ed]"); if (editing && n) setTarget(n); });
-  document.addEventListener("keydown", ev => { if (editing && ev.key === "Enter" && ev.target.closest && ev.target.closest("[data-ed]")) { ev.preventDefault(); ev.target.blur(); } });
+  // Espace et Entrée : sur un titre de question (balise <summary>) le navigateur les détourne pour ouvrir/fermer la réponse.
+  // On les gère nous-mêmes pour que l'espace et le retour à la ligne soient bien saisis.
+  document.addEventListener("keydown", ev => {
+    if (!editing) return; const n = ev.target.closest && ev.target.closest("[data-ed]"); if (!n) return;
+    if (ev.key === " " || ev.key === "Spacebar") { ev.preventDefault(); document.execCommand("insertText", false, " "); }
+    else if (ev.key === "Enter") { ev.preventDefault(); document.execCommand("insertText", false, "\n"); }
+  });
+  document.addEventListener("keyup", ev => { if (editing && ev.key === " " && ev.target.closest && ev.target.closest("[data-ed]")) ev.preventDefault(); });
   document.addEventListener("click", ev => { if (editing && ev.target.closest && ev.target.closest("#faq-list summary")) ev.preventDefault(); }, true);
   $("#edit-fab").addEventListener("click", () => setEditing(true));
   $("#edit-done").addEventListener("click", () => setEditing(false));
