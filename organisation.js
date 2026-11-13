@@ -81,8 +81,10 @@ async function renderVerse(host, opts = {}) {
    2. Organisation : modules (tâches, budget, prestataires, plan de tables, jour J, notes)
    --------------------------------------------------------------------------- */
 const CATS_TASK = ["Administratif & église", "Lieu & réception", "Prestataires", "Tenues & beauté", "Cérémonie religieuse", "Invités & faire-part", "Budget", "Jour J & logistique", "Après le mariage"];
-const CATS_BUDGET = ["Lieu & réception", "Traiteur & boissons", "Cérémonie", "Tenues & beauté", "Décoration & fleurs", "Photo & vidéo", "Musique & animation", "Papeterie", "Transport", "Imprévus"];
-const ROLES = ["Lieu", "Église", "Traiteur", "Photographe", "Vidéaste", "DJ / Musiciens", "Fleuriste", "Pâtissier", "Coiffure / Maquillage", "Voiture", "Hébergement", "Autre"];
+const CATS_BUDGET = ["Lieu", "Traiteur", "Photographe", "DJ", "Musicien", "Fleuriste", "Coiffure / Maquillage", "Jeux & animations", "Cérémonie", "Tenues", "Décoration", "Papeterie", "Transport", "Imprévus"];
+const ROLES = ["Lieu", "Traiteur", "Photographe", "DJ", "Musicien", "Fleuriste", "Coiffure / Maquillage", "Autre"];
+const STATUS = ["À contacter", "En attente de devis", "En attente de réponse", "Réponse finale à donner", "Réponse négative à donner", "Retenu (OUI)", "Refusé (NON)", "Réservé", "Acompte versé", "Soldé"];
+const RETAINED = ["Retenu (OUI)", "Réservé", "Acompte versé", "Soldé"];
 const WHO = ["Cassiana", "Matthieu", "Les deux", "Autre"];
 
 const ORG = {
@@ -93,11 +95,15 @@ const ORG = {
     { k: "cat", l: "Poste", t: "select", o: CATS_BUDGET, newable: true }, { k: "item", l: "Dépense", t: "text", req: true, wide: true },
     { k: "estimated", l: "Prévu (€)", t: "number" }, { k: "actual", l: "Réel (€)", t: "number" }, { k: "paid", l: "Payé (€)", t: "number" },
     { k: "vendor", l: "Prestataire", t: "text" }, { k: "notes", l: "Notes", t: "text" }] },
-  vendors: { table: "org_vendors", label: "Prestataires", order: "created_at", defaults: { status: "À contacter", role: "Autre" }, fields: [
-    { k: "name", l: "Nom", t: "text", req: true, wide: true }, { k: "role", l: "Rôle", t: "select", o: ROLES, newable: true },
-    { k: "status", l: "Statut", t: "select", o: ["À contacter", "Devis demandé", "Réservé", "Acompte versé", "Soldé"] },
+  vendors: { table: "org_vendors", label: "Prestataires", order: "role", defaults: { status: "À contacter", role: "Autre" }, fields: [
+    { k: "name", l: "Prestataire", t: "text", req: true, wide: true }, { k: "role", l: "Catégorie", t: "select", o: ROLES, newable: true },
+    { k: "status", l: "Statut", t: "select", o: STATUS }, { k: "location", l: "Localisation", t: "text" },
+    { k: "price", l: "Prix (€)", t: "number" }, { k: "distance", l: "Distance", t: "text" },
     { k: "contact", l: "Contact", t: "text" }, { k: "phone", l: "Téléphone", t: "text" }, { k: "email", l: "E-mail", t: "text" },
-    { k: "price", l: "Prix (€)", t: "number" }, { k: "deposit", l: "Acompte (€)", t: "number" }, { k: "notes", l: "Notes", t: "text" }] },
+    { k: "availability", l: "Disponibilité", t: "text" }, { k: "deposit", l: "Acompte (€)", t: "number" }, { k: "notes", l: "Notes", t: "long", wide: true }] },
+  games: { table: "org_games", label: "Jeux", order: "created_at", defaults: { chosen: false }, fields: [
+    { k: "chosen", l: "Retenu", t: "check" }, { k: "name", l: "Idée de jeu", t: "text", req: true, wide: true }, { k: "people", l: "Nb de personnes", t: "text" },
+    { k: "material", l: "Matériel", t: "text" }, { k: "price", l: "Prix (€)", t: "number" }, { k: "notes", l: "Notes", t: "text" }] },
   seating: { table: "org_tables", label: "Plan de tables", order: "position", defaults: { capacity: 10 }, fields: [
     { k: "name", l: "Table", t: "text", req: true }, { k: "capacity", l: "Places", t: "number" },
     { k: "guests", l: "Invités (un par ligne)", t: "long", wide: true }, { k: "notes", l: "Notes", t: "text" }] },
@@ -126,22 +132,63 @@ const TPL = {
     [-1, 8, "Rendre les tenues de location et récupérer la décoration"], [-7, 8, "Remercier les invités (cartes ou message)"], [-14, 8, "Déposer les photos sur le site (Espace mariés > Photos)"], [-30, 8, "Faire le bilan du budget et solder les prestataires"]
   ].map(([d, c, title]) => ({ title, cat: CATS_TASK[c], due: addDays(WEDDING_ISO, -d), who: "Les deux", done: false })),
   budget: () => [
-    ["Lieu & réception", "Location du Clos du Colombier"], ["Lieu & réception", "Hébergement des mariés"],
-    ["Traiteur & boissons", "Cocktail"], ["Traiteur & boissons", "Dîner"], ["Traiteur & boissons", "Boissons et vins"], ["Traiteur & boissons", "Pièce montée / gâteau"],
+    ["Lieu", "Location du Clos du Colombier", 3950, "Clos du Colombier"], ["Lieu", "Ménage", 260, "Clos du Colombier"], ["Lieu", "Chambre de la mariée", 80, "Clos du Colombier"], ["Lieu", "Hébergement des mariés"],
+    ["Traiteur", "Dîner et cocktail (110 adultes)", 10428, "La graine d'envie"], ["Traiteur", "Boissons et vins"], ["Traiteur", "Pièce montée / gâteau"],
+    ["Photographe", "Photographe", 1100, "Thomas Vallette"], ["DJ", "DJ", 990, "L'onirique"], ["DJ", "Photobooth", 400, "L'onirique"],
+    ["Musicien", "Saxophoniste (cocktail, 2 h)", 380, "Alexandre Adler"], ["Fleuriste", "Fleurs (pose facturée 40 €/h)", 500, "L'onirique"], ["Coiffure / Maquillage", "Coiffure et maquillage"],
+    ["Jeux & animations", "Matériel des jeux"],
     ["Cérémonie", "Offrande à la paroisse"], ["Cérémonie", "Livrets de messe"], ["Cérémonie", "Chorale / musiciens"], ["Cérémonie", "Fleurs de l'église"],
-    ["Tenues & beauté", "Robe de la mariée"], ["Tenues & beauté", "Costume du marié"], ["Tenues & beauté", "Alliances"], ["Tenues & beauté", "Coiffure et maquillage"],
-    ["Décoration & fleurs", "Décoration de la salle"], ["Décoration & fleurs", "Bouquet de la mariée"], ["Photo & vidéo", "Photographe"], ["Photo & vidéo", "Vidéaste"],
-    ["Musique & animation", "DJ / orchestre"], ["Papeterie", "Faire-part et enveloppes"], ["Papeterie", "Timbres"], ["Transport", "Voiture des mariés"], ["Transport", "Navettes invités"],
-    ["Imprévus", "Imprévus (environ 5 % du budget)"]
-  ].map(([cat, item]) => ({ cat, item })),
-  vendors: () => [
-    { name: "Le Clos du Colombier", role: "Lieu", status: "Réservé", notes: "Ferme de Malassise, D402, 77610 Fontenay-Trésigny" },
-    { name: "Paroisse Notre-Dame des Ardents", role: "Église", status: "Réservé", notes: "1 rue du Docteur-Nodier, 77400 Lagny-sur-Marne" },
-    { name: "Traiteur à choisir", role: "Traiteur", status: "À contacter" }, { name: "Photographe à choisir", role: "Photographe", status: "À contacter" },
-    { name: "DJ ou musiciens à choisir", role: "DJ / Musiciens", status: "À contacter" }, { name: "Fleuriste à choisir", role: "Fleuriste", status: "À contacter" },
-    { name: "Pâtissier à choisir", role: "Pâtissier", status: "À contacter" }, { name: "Coiffure et maquillage à choisir", role: "Coiffure / Maquillage", status: "À contacter" },
-    { name: "Voiture des mariés à choisir", role: "Voiture", status: "À contacter" }
-  ],
+    ["Tenues", "Robe de la mariée"], ["Tenues", "Costume du marié"], ["Tenues", "Alliances"], ["Décoration", "Décoration de la salle"],
+    ["Papeterie", "Faire-part et enveloppes"], ["Transport", "Voiture des mariés"], ["Imprévus", "Imprévus (environ 5 % du budget)"]
+  ].map(([cat, item, estimated, vendor]) => ({ cat, item, ...(estimated ? { estimated, vendor } : {}) })),
+  vendors: () => {
+    const V = (role, status, name, location, price, extra) => ({ role, status, name, location, price, ...extra });
+    const OUI = "Retenu (OUI)", DEV = "En attente de devis", REP = "En attente de réponse", FIN = "Réponse finale à donner", NEG = "Réponse négative à donner", CON = "À contacter", NON = "Refusé (NON)";
+    return [
+      V("Lieu", CON, "Domaine de Champigny (nom à confirmer)", "Champigny", null, { distance: "40 min", phone: "01.64.38.89.42", email: "Vajou@ledomainedeChampigny.com", availability: "18-25 septembre / 2-9 octobre", notes: "Réservation du vendredi 14 h au dimanche 19 h · 90 places de parking · gardiennage · pas de musique autorisée pendant le cocktail dehors" }),
+      V("Lieu", OUI, "Clos du Colombier", "Fontenay-Trésigny (77)", 3950, { distance: "40 min", phone: "07.62.44.12.12", email: "Closducolombier77@gmail.com", availability: "9, 16, 23 oct 2027 / novembre", notes: "Prix HS 3 950 € · capacité 150 pers · ménage 260 € · traiteur non imposé · droit de bouchon 0 € · réservation vendredi 9 h-18 h, samedi 9 h, dimanche 18 h · 100 places de parking · 80 € pour la chambre de la mariée · salle pour faire dormir les bébés · écran projecteur déjà présent" }),
+      V("Traiteur", FIN, "Mademoiselle Marguerite", "Clais (Normandie)", 8400, { distance: "350", notes: "Prix pour 110 adultes · droit de bouchon 0 € · serveurs/cuisto inclus · vaisselle/nappes non incluses · soft non inclus · dégustation 28/29 novembre à Clais, 50 €/pers" }),
+      V("Traiteur", OUI, "La graine d'envie", "Tournan-en-Brie", 10428, { phone: "06 81 08 45 34", notes: "Prix pour 110 adultes · droit de bouchon 0 € · serveurs et vaisselle/nappes inclus · dégustations : vendredi 30/10 à 18 h, samedi 31/10 à 11 h et à 14 h à Pontault-Combault · super gentil, lui donner toutes les allergies" }),
+      V("Traiteur", DEV, "Guyot traiteur", "Bruyères-le-Châtel", 9400, { notes: "Prix pour 110 adultes · serveurs et vaisselle inclus · dégustation 12 nov (35 €) · à demander : le DJ est-il en repas presta ? combien coûte l'heure supp jusqu'à 4 h ?" }),
+      V("Traiteur", FIN, "Idélice traiteur", "Fontenay-Trésigny", 11070, { notes: "Prix pour 110 adultes · serveurs et vaisselle inclus · dégustation 30 € · heure supp déjà incluse" }),
+      V("Traiteur", NON, "Prog traiteur 77", "Moissy-Cramayel", 11118.8, { notes: "Noté « donner réponse finale, NON » dans le tableur · serveurs et vaisselle inclus · dégustation : 120 € pour 2, déduite du devis si on continue (200 €)" }),
+      V("Traiteur", DEV, "La marinade", "Combs-la-Ville", null, {}),
+      V("Traiteur", DEV, "Romain Merlet", "", 10649, { distance: "??", notes: "Prix pour 110 adultes · droit de bouchon 0 € · 3510 (à préciser)" }),
+      V("Traiteur", FIN, "Axel : Le petit gourmet", "Tournan-en-Brie", 11355, { notes: "Prix pour 110 adultes · serveurs inclus · droit de bouchon 0 €" }),
+      V("Traiteur", NON, "KB traiteur", "Croissy-Beaubourg", 12440, { notes: "Serveurs et vaisselle inclus" }),
+      V("Traiteur", NON, "Traiteur artisan 77", "Ozoir-la-Ferrière", 9500, { distance: "22 min", email: "artisantraiteur77@gmail.com", notes: "Vins à discrétion · pas de ristourne si c'est NOTRE vin · soft non inclus · jusqu'à 1 h" }),
+      V("Traiteur", DEV, "Gourmet traiteur", "Normandie / Île-de-France", null, {}),
+      V("Traiteur", DEV, "L'heure des mets", "Montigny", null, { notes: "Serveurs et vaisselle inclus" }),
+      V("Traiteur", REP, "Dolcezza Gourmet", "Cesson (77)", null, { notes: "Pièce montée en choux" }),
+      V("Photographe", OUI, "Thomas Vallette", "", 1100, { contact: "mail / insta", availability: "2, 9, 16 oct 2027", notes: "Catho · photo avant le mariage · aime le jeu du bouquet" }),
+      V("Photographe", REP, "unrayon2solene", "Paris", null, { email: "unrayon2solene@gmail.com", notes: "Catho" }),
+      V("Photographe", NON, "Salomé Orieux", "Perpignan", 1100, { contact: "insta", notes: "300 photos (j'aime beaucoup) · attente d'un autre couple sur cette date" }),
+      V("Photographe", NEG, "Elise Delattre", "Provins", 1600, { contact: "insta", notes: "1600 à 2000 € · catho" }),
+      V("Photographe", REP, "Alaïs Rousseau", "Paris", 1500, { email: "contact@alais-rousseau.com" }),
+      V("Photographe", REP, "Joséphine Gilbert", "Paris", 1400, { email: "josephineglbt@gmail.com", notes: "Catho" }),
+      V("Photographe", NON, "tesbellesphotos", "Paris", 1350, { email: "contact@tesbellesphotos.fr", notes: "150 à 250 photos retouchées (pas fan du style photos 2012)" }),
+      V("Photographe", NON, "Marguerite de Gastines", "Paris", 2100, { email: "margueritedegastines.pro@gmail.com" }),
+      V("Photographe", NEG, "Albane CT (albanect)", "Paris", 2550, { email: "albanect@gmail.com" }),
+      V("Photographe", CON, "Domitille Daief", "Toulon", 1775, { distance: "inclus dans le tarif", email: "domi.photographie.dd@gmail.com", availability: "ok" }),
+      V("DJ", OUI, "L'onirique", "77", 990, { distance: "20 min", availability: "visio le 13", notes: "400 € le photobooth · faire une playlist, déroulé de la journée / soirée" }),
+      V("Musicien", CON, "Cyril Morin", "Paris", 850, { contact: "insta", notes: "Saxo · durée 2 h" }),
+      V("Musicien", FIN, "Music tous style", "Étampes", 590, { contact: "saxo", notes: "Saxo · durée 2 h" }),
+      V("Musicien", CON, "Joosax", "Bussy-Saint-Georges", null, { contact: "saxo", phone: "06 65 60 10 31", notes: "Revenir vers lui en janvier" }),
+      V("Musicien", REP, "Sevsax", "Sainte-Aulde (77)", null, { contact: "saxo" }),
+      V("Musicien", REP, "Marc Denouel", "La Ferté-sous-Jouarre", 600, { contact: "saxo", notes: "Saxo + piano" }),
+      V("Musicien", OUI, "Alexandre Adler", "Montcourt-Fromonville", 380, { contact: "saxo", notes: "Saxo · durée 2 h" }),
+      V("Fleuriste", REP, "L'onirique (fleurs)", "77", 500, { availability: "OK pour le 09 oct 27", notes: "Rencontre en vrai nécessaire · temps de pose des fleurs facturé 40 € de l'heure" }),
+      V("Coiffure / Maquillage", CON, "Mélise Bycoiff", "Andrezel (77)", 80, { notes: "À partir de 80 €" }),
+      V("Coiffure / Maquillage", CON, "BLD coiffure", "Provins (77)", 50, { notes: "À partir de 50 €" }),
+      V("Coiffure / Maquillage", CON, "L'atelier beauté", "Varennes-sur-Seine", 70, { notes: "À partir de 70 €" })
+    ];
+  },
+  games: () => [
+    ["Chaise musicale", "10", "Chaises", 0], ["LUI ou ELLE", "Toutes les tables", "1 panneau CASS / MATT par table", 0], ["Premier qui trouve l'objet", "5", "", 0],
+    ["Pétanque", "Illimité", "Cagette + boules", 0], ["Molkky", "Illimité", "", null], ["Blind test", "Toutes les tables", "Sono", null], ["Jeu des binômes", "Tout le monde", "Papier", null],
+    ["Course saucisson", "Les hommes", "Saucisson", 15], ["Pallet breton", "Illimité", "", null], ["Jeu photo : imiter des poses", "Illimité", "Imprimer des images", null],
+    ["Jeu des pinces à linge à accrocher sur les autres", "Illimité", "Pinces à linge + corbeille", 20]
+  ].map(([name, people, material, price]) => ({ name, people, material: material || null, price, chosen: false })),
   seating: () => ["Table d'honneur", ...Array.from({ length: 10 }, (_, i) => "Table " + (i + 1))].map((name, i) => ({ name, capacity: 10, guests: "", position: i })),
   timeline: () => [
     ["08:30", "Petit-déjeuner et début des préparatifs"], ["10:00", "Coiffure et maquillage de la mariée"], ["12:30", "Habillage et photos de préparation"],
@@ -164,6 +211,7 @@ function sortRows(key, rows) {
   const by = (f) => rows.slice().sort(f);
   if (key === "tasks") return by((a, b) => (a.done - b.done) || String(a.due || "9999").localeCompare(String(b.due || "9999")) || String(a.title).localeCompare(String(b.title)));
   if (key === "budget") return by((a, b) => CATS_BUDGET.indexOf(a.cat) - CATS_BUDGET.indexOf(b.cat) || String(a.item).localeCompare(String(b.item)));
+  if (key === "vendors") return by((a, b) => { const ia = ROLES.indexOf(a.role), ib = ROLES.indexOf(b.role); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || String(a.created_at || "").localeCompare(String(b.created_at || "")); });
   if (key === "seating") return by((a, b) => (a.position || 0) - (b.position || 0) || String(a.name).localeCompare(String(b.name), "fr", { numeric: true }));
   if (key === "timeline") { const k = t => { const [h, m] = String(t || "99:00").split(":").map(Number); return (h < 6 ? h + 24 : h) * 60 + (m || 0); }; return by((a, b) => k(a.time) - k(b.time)); }
   return by((a, b) => String(a.created_at || "").localeCompare(String(b.created_at || "")));
@@ -204,9 +252,11 @@ function orgSummary(key, rows) {
     const s = f => rows.reduce((a, r) => a + (Number(r[f]) || 0), 0), est = s("estimated"), act = s("actual"), paid = s("paid"), total = act || est;
     chip("prévu", eur(est)); chip("réel", eur(act)); chip("payé", eur(paid)); chip("reste à payer", eur(Math.max(0, total - paid)), total - paid > 0 ? "warn" : "");
   } else if (key === "vendors") {
-    const c = st => rows.filter(r => r.status === st).length;
-    chip("à contacter", String(c("À contacter"))); chip("devis", String(c("Devis demandé"))); chip("réservés", String(c("Réservé") + c("Acompte versé"))); chip("soldés", String(c("Soldé")));
-    chip("prix cumulés", eur(rows.reduce((a, r) => a + (Number(r.price) || 0), 0)));
+    const c = st => rows.filter(r => st.includes(r.status)).length;
+    chip("à contacter", String(c(["À contacter"]))); chip("en attente", String(c(["En attente de devis", "En attente de réponse", "Réponse finale à donner", "Réponse négative à donner"]))); chip("retenus", String(c(RETAINED))); chip("refusés", String(c(["Refusé (NON)"])));
+    chip("prix des retenus", eur(rows.filter(r => RETAINED.includes(r.status)).reduce((a, r) => a + (Number(r.price) || 0), 0)));
+  } else if (key === "games") {
+    chip("idées", String(rows.length)); chip("retenues", String(rows.filter(r => r.chosen).length)); chip("coût des retenues", eur(rows.filter(r => r.chosen).reduce((a, r) => a + (Number(r.price) || 0), 0)));
   } else if (key === "seating") {
     const placed = rows.reduce((a, r) => a + String(r.guests || "").split("\n").filter(x => x.trim()).length, 0), cap = rows.reduce((a, r) => a + (Number(r.capacity) || 0), 0);
     chip("tables", String(rows.length)); chip("invités placés", String(placed)); chip("places", String(cap), cap && placed > cap ? "warn" : "");
@@ -277,71 +327,6 @@ async function seatPlan(rows) {
 }
 
 
-/* ---------------------------------------------------------------------------
-   Import depuis un tableur (CSV / copier-coller depuis Google Sheets ou Excel)
-   --------------------------------------------------------------------------- */
-const ALIASES = {
-  title: ["tache", "titre", "action", "todo", "a faire"], cat: ["categorie", "poste", "rubrique", "type"], due: ["echeance", "date", "deadline", "avant le"], who: ["qui", "responsable"], notes: ["notes", "note", "remarque", "commentaire", "observation"], done: ["fait", "termine", "ok", "statut"],
-  item: ["depense", "libelle", "designation", "description", "article", "nom", "poste"], estimated: ["prevu", "estime", "previsionnel", "budget", "devis"], actual: ["reel", "cout", "montant", "total"], paid: ["paye", "regle", "acompte verse"], vendor: ["prestataire", "fournisseur"],
-  name: ["nom", "prestataire", "societe", "table", "invite"], role: ["role", "service", "metier", "type", "categorie"], status: ["statut", "etat", "avancement"], contact: ["contact", "interlocuteur"], phone: ["telephone", "tel", "portable", "mobile"], email: ["email", "e-mail", "mail", "courriel"], price: ["prix", "tarif", "montant", "cout"], deposit: ["acompte", "arrhes"],
-  capacity: ["places", "capacite", "nombre"], guests: ["invites", "convives", "personnes", "noms"], time: ["heure", "horaire"]
-};
-function parseTable(text) {
-  const first = text.split(/\r?\n/)[0] || "";
-  const delim = [["\t", first.split("\t").length], [";", first.split(";").length], [",", first.split(",").length]].sort((a, b) => b[1] - a[1])[0][0];
-  const out = []; let row = [], cur = "", q = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (q) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
-    else if (c === '"') q = true;
-    else if (c === delim) { row.push(cur); cur = ""; }
-    else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(cur); cur = ""; if (row.some(x => x.trim())) out.push(row); row = []; }
-    else cur += c;
-  }
-  row.push(cur); if (row.some(x => x.trim())) out.push(row);
-  return out;
-}
-const toNum = v => { const n = parseFloat(String(v).replace(/\s| /g, "").replace(/[€$]/g, "").replace(",", ".")); return isNaN(n) ? null : n; };
-const toISO = v => { v = String(v).trim(); let m = v.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/); if (m) return (m[3].length === 2 ? "20" + m[3] : m[3]) + "-" + m[2].padStart(2, "0") + "-" + m[1].padStart(2, "0"); return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null; };
-const toTime = v => { const m = String(v).match(/(\d{1,2})\s*[h:]\s*(\d{2})?/i); return m ? m[1].padStart(2, "0") + ":" + (m[2] || "00") : null; };
-function mapTable(key, grid) {
-  const M = ORG[key], fields = M.fields;
-  let hi = -1, map = null;
-  for (let i = 0; i < Math.min(6, grid.length) && !map; i++) {
-    const cols = {}; let hits = 0;
-    grid[i].forEach((h, c) => { const n = norm(h); if (!n) return; const f = fields.find(f => !cols[f.k] && (norm(f.l) === n || f.k === n || (ALIASES[f.k] || []).some(a => n === a || n.startsWith(a)))); if (f) { cols[f.k] = c + 1; hits++; } });
-    if (hits >= 2 || (hits >= 1 && grid[i].length <= 2)) { hi = i; map = cols; }
-  }
-  if (!map) { hi = -1; map = {}; fields.forEach((f, i) => { if (i < (grid[0] || []).length) map[f.k] = i + 1; }); }
-  const rows = [];
-  grid.slice(hi + 1).forEach(r => {
-    const rec = { ...M.defaults };
-    fields.forEach(f => {
-      if (!map[f.k]) return; const raw = (r[map[f.k] - 1] || "").trim(); if (!raw) return;
-      rec[f.k] = f.t === "number" ? toNum(raw) : f.t === "date" ? toISO(raw) : f.t === "time" ? toTime(raw) : f.t === "check" ? /^(oui|x|✓|✔|vrai|true|1|fait|ok|termin)/i.test(raw) : f.t === "long" ? raw.replace(/\s*[;,|]\s*/g, "\n") : raw;
-    });
-    const need = fields.find(f => f.req); if (need && !rec[need.k]) return;
-    if (key === "seating") rec.position = rows.length;
-    rows.push(rec);
-  });
-  return rows;
-}
-function importBox(key, onDone) {
-  const M = ORG[key];
-  const box = el("details", { class: "card org-import" }, el("summary", { text: "Importer depuis un tableur (Google Sheets, Excel)" }));
-  const ta = el("textarea", { rows: "5", placeholder: "Dans Google Sheets : sélectionnez les cellules (avec la ligne d'en-tête), copiez (Ctrl+C), puis collez ici (Ctrl+V).", "aria-label": "Données du tableur" });
-  const file = el("input", { type: "file", accept: ".csv,.tsv,.txt,text/csv" });
-  const info = el("p", { class: "hint", role: "status" });
-  const go = el("button", { class: "btn small solid", type: "button", text: "Importer", disabled: true });
-  let pending = [];
-  const analyse = () => { const g = parseTable(ta.value); pending = g.length ? mapTable(key, g) : []; go.disabled = !pending.length; info.textContent = pending.length ? pending.length + " ligne(s) reconnue(s) pour « " + M.label + " ». Vérifiez puis cliquez sur Importer." : (ta.value.trim() ? "Aucune ligne reconnue : vérifiez que la ligne d'en-tête contient des titres comme " + M.fields.slice(0, 3).map(f => "« " + f.l + " »").join(", ") + "." : ""); };
-  ta.addEventListener("input", analyse);
-  file.addEventListener("change", async () => { const f = file.files[0]; if (f) { ta.value = await f.text(); analyse(); } });
-  go.addEventListener("click", async () => { go.disabled = true; try { await orgStore.insert(M.table, pending); showToast(pending.length + " ligne(s) importée(s)"); onDone(); } catch (e) { info.textContent = orgErr(e); go.disabled = false; } });
-  box.append(el("p", { class: "hint", text: "Les colonnes sont reconnues par leur titre (ex. " + M.fields.filter(f => f.t !== "check").slice(0, 4).map(f => f.l).join(", ") + "…). Les catégories inconnues sont créées automatiquement." }), el("div", { style: "display:grid;gap:8px;margin-top:8px" }, ta, file, info, go));
-  return box;
-}
-
 async function renderOrg(key) {
   orgState.key = key;
   document.querySelectorAll("[data-org]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.org === key)));
@@ -372,8 +357,6 @@ async function renderOrg(key) {
 
   if (key === "seating" && rows.length) host.append(await seatPlan(rows));
 
-  host.append(importBox(key, () => renderOrg(key)));
-
   // formulaire d'ajout
   const form = el("form", { class: "card org-add", novalidate: true });
   const inputs = {};
@@ -401,6 +384,7 @@ async function renderOrg(key) {
     let lastCat = null;
     shown.forEach((r, i) => {
       if (key === "budget" && r.cat !== lastCat) { lastCat = r.cat; const sub = rows.filter(x => x.cat === r.cat).reduce((a, x) => a + (Number(x.actual) || Number(x.estimated) || 0), 0); list.append(el("h3", { class: "org-grp", text: (r.cat || "Sans poste") + " · " + eur(sub) })); }
+      if (key === "vendors" && r.role !== lastCat) { lastCat = r.role; list.append(el("h3", { class: "org-grp", text: (r.role || "Autre") + " · " + rows.filter(x => x.role === r.role).length })); }
       const g = el("div", { class: "org-grid" });
       M.fields.forEach(f => {
         const inp = fieldInput(f, r[f.k]);
@@ -690,13 +674,35 @@ function buildAdminShell() {
   const today = el("section", { "data-main-sec": "today" }, el("div", { id: "today-body" }));
   const org = el("section", { "data-main-sec": "org", hidden: true },
     el("div", { class: "admin-tabs", role: "group", "aria-label": "Organisation" },
-      ...[["tasks", "Tâches"], ["budget", "Budget"], ["vendors", "Prestataires"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["notes", "Notes"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
+      ...[["tasks", "Tâches"], ["budget", "Budget"], ["vendors", "Prestataires"], ["games", "Jeux"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["notes", "Notes"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
     el("div", { id: "org-body" }));
   const photos = el("section", { "data-main-sec": "photos", hidden: true }, el("h3", { class: "cat", text: "Photos du mariage" }), el("div", { id: "photos-admin" }));
   const pray = el("section", { "data-main-sec": "pray", hidden: true }, el("h3", { class: "cat", text: "Prière du jour" }), el("div", { id: "pray-body" }));
   panel.replaceChildren(top, today, site, org, photos, pray);
 }
-function adminExtraRefresh() { buildAdminShell(); let k = "today"; try { k = sessionStorage.getItem("mariage:main") || "today"; } catch {} showMain(MAINS.includes(k) ? k : "today"); }
+
+/* Reprise automatique (une seule fois) du tableur Prestataires des mariés : prestataires, jeux et budget prévisionnel. */
+async function seedFromSheet() {
+  try {
+    if ((await store.getSetting("seed_sheet_v1")) === "1") return;
+    const have = await orgStore.list("org_vendors");
+    for (const r of have) if (/ à choisir$/.test(r.name || "") && !r.phone && !r.email) await orgStore.remove("org_vendors", r.id);
+    const key = v => norm(v.name) + "|" + norm(v.role);
+    const names = new Set(have.filter(r => !/ à choisir$/.test(r.name || "")).map(key));
+    const addV = TPL.vendors().filter(v => !names.has(key(v)));
+    if (addV.length) await orgStore.insert("org_vendors", addV);
+    const games = await orgStore.list("org_games"), gn = new Set(games.map(g => norm(g.name)));
+    const addG = TPL.games().filter(g => !gn.has(norm(g.name)));
+    if (addG.length) await orgStore.insert("org_games", addG);
+    const bud = await orgStore.list("org_budget"), bn = new Set(bud.map(b => norm(b.item)));
+    const addB = TPL.budget().filter(b => !bn.has(norm(b.item)));
+    if (addB.length) await orgStore.insert("org_budget", addB);
+    await store.setSetting("seed_sheet_v1", "1");
+    showToast("Vos prestataires, jeux et budget prévisionnel ont été repris de votre tableur.");
+    if (typeof orgState !== "undefined" && !$("#org-body").closest("[hidden]")) renderOrg(orgState.key);
+  } catch (e) { console.warn("Reprise du tableur :", e); }
+}
+function adminExtraRefresh() { seedFromSheet(); buildAdminShell(); let k = "today"; try { k = sessionStorage.getItem("mariage:main") || "today"; } catch {} showMain(MAINS.includes(k) ? k : "today"); }
 
 buildAdminShell();
 applyPostWedding();

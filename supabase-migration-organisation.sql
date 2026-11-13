@@ -62,3 +62,23 @@ create policy photos_storage_admin on storage.objects for all to authenticated
 drop policy if exists prive_storage_admin on storage.objects;
 create policy prive_storage_admin on storage.objects for all to authenticated
   using (bucket_id = 'prive' and public.is_admin()) with check (bucket_id = 'prive' and public.is_admin());
+
+-- ============================================================
+-- 11. PRESTATAIRES (colonnes du tableur) + JEUX
+-- ============================================================
+alter table public.org_vendors add column if not exists location text;
+alter table public.org_vendors add column if not exists distance text;
+alter table public.org_vendors add column if not exists availability text;
+create table if not exists public.org_games (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  chosen boolean not null default false,
+  name text not null,
+  people text,
+  material text,
+  price numeric,
+  notes text
+);
+alter table public.org_games enable row level security;
+drop policy if exists org_games_admin on public.org_games;
+create policy org_games_admin on public.org_games for all to authenticated using (public.is_admin()) with check (public.is_admin());
