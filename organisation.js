@@ -61,7 +61,7 @@ async function renderVerse(host, opts = {}) {
   host.append(cross);
   if (g) {
     host.append(
-      el("p", { class: "verse-day", text: (g.jour ? g.jour + " · " : "") + frDate(d) }),
+      el("p", { class: "verse-day", text: frDate(d) }),
       el("blockquote", { class: "verse-text", text: "« " + g.verset + " »" }),
       el("p", { class: "verse-ref", text: g.titre + (g.ref ? " (" + g.ref + ")" : "") }));
     if (opts.full !== false && g.full) host.append(el("details", { class: "verse-more" }, el("summary", { text: "Lire l'Évangile du jour" }), el("div", { class: "verse-full", text: g.full })));
@@ -299,48 +299,71 @@ const PALETTE = ["#8d8f45", "#a1624a", "#5f7f8c", "#9b7aa6", "#c08a3e", "#6e8f6a
 const guestsOf = r => String(r.guests || "").split("\n").map(x => x.trim()).filter(Boolean);
 const initials = n => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
 const colorOf = n => { let h = 0; for (const c of n) h = (h * 31 + c.charCodeAt(0)) >>> 0; return PALETTE[h % PALETTE.length]; };
+const rawSeats = r => { const a = String(r.guests || "").split("\n").map(x => x.trim()); while (a.length && !a[a.length - 1]) a.pop(); return a; };
 async function seatPlan(rows) {
   const M = ORG.seating; let sel = null;
   const wrap = el("section", { class: "seat-plan-wrap" });
-  const hint = el("p", { class: "hint", text: "Glissez un invité sur une autre table, ou touchez-le puis touchez la table. Déposez-le dans « À placer » pour le retirer." });
+  const hint = el("p", { class: "hint", text: "Glissez un invité sur une place (libre ou occupée : ils échangent) ou sur une autre table. Sur téléphone : touchez l'invité, puis la place. Déposez-le dans « À placer » pour le retirer." });
   const plan = el("div", { class: "seat-plan" });
   const pool = el("div", { class: "seat-pool", "data-pool": "1" }, el("b", { text: "À placer" }));
-  const save = async (r, list) => { await orgStore.update(M.table, r.id, { guests: list.join("\n") }); r.guests = list.join("\n"); };
-  async function move(from, name, toId) {
-    const src = from ? rows.find(r => r.id === from) : null, dst = toId ? rows.find(r => r.id === toId) : null;
-    if ((src && src.id) === (dst && dst.id)) return;
+  const save = async (r, list) => { const a = list.slice(); while (a.length && !a[a.length - 1]) a.pop(); const v = a.join("\n"); await orgStore.update(M.table, r.id, { guests: v }); r.guests = v; };
+  const byId = id => id ? rows.find(r => r.id === id) : null;
+  // déplacement : de (table, place) vers (table, place) ; place = null → à la suite de la table
+  async function place(from, fromIdx, name, toId, toIdx) {
+    const src = byId(from), dst = byId(toId);
+    if (!src && !dst) return;
     try {
-      if (src) { const l = guestsOf(src), i = l.indexOf(name); if (i >= 0) l.splice(i, 1); await save(src, l); }
-      if (dst) { const l = guestsOf(dst); l.push(name); await save(dst, l); }
+      if (src && dst && src.id === dst.id) {
+        if (toIdx == null || toIdx === fromIdx) return;
+        const a = rawSeats(src); while (a.length <= Math.max(fromIdx, toIdx)) a.push("");
+        [a[fromIdx], a[toIdx]] = [a[toIdx], a[fromIdx]]; await save(src, a);
+      } else {
+        const a = src ? rawSeats(src) : null, b = dst ? rawSeats(dst) : null; let swapped = "";
+        if (b) {
+          let at = toIdx;
+          if (at == null) { at = b.findIndex((x, k) => !x && k < (Number(dst.capacity) || 0)); if (at < 0) at = b.length; }
+          while (b.length <= at) b.push("");
+          swapped = b[at]; b[at] = name;
+        }
+        if (a) { a[fromIdx != null ? fromIdx : a.indexOf(name)] = swapped; }
+        if (a) await save(src, a);
+        if (b) await save(dst, b);
+      }
       renderOrg("seating");
     } catch (e) { showToast(orgErr(e)); }
   }
-  const avatar = (name, fromId, over) => {
+  const avatar = (name, fromId, over, idx) => {
     const a = el("button", { type: "button", class: "av" + (over ? " over" : ""), draggable: "true", title: name, "aria-label": name + (fromId ? " (cliquer pour déplacer)" : " (à placer)") },
       el("i", { text: initials(name), style: "background:" + colorOf(name) }), el("span", { text: name.split(/\s+/)[0] }));
-    a.addEventListener("dragstart", e => { e.dataTransfer.setData("text/plain", JSON.stringify({ from: fromId, name })); e.dataTransfer.effectAllowed = "move"; });
-    a.addEventListener("click", e => { e.stopPropagation(); sel = sel && sel.name === name && sel.from === fromId ? null : { from: fromId, name }; document.querySelectorAll(".av.sel").forEach(x => x.classList.remove("sel")); if (sel) a.classList.add("sel"); hint.textContent = sel ? name + " : touchez maintenant la table (ou « À placer »)." : "Glissez un invité sur une autre table, ou touchez-le puis touchez la table."; });
+    a.addEventListener("dragstart", e => { e.dataTransfer.setData("text/plain", JSON.stringify({ from: fromId, idx, name })); e.dataTransfer.effectAllowed = "move"; });
+    a.addEventListener("click", e => {
+      e.stopPropagation();
+      if (sel && !(sel.name === name && sel.from === fromId)) { const s0 = sel; sel = null; if (fromId) place(s0.from, s0.idx, s0.name, fromId, idx); return; }   // 2e clic sur un invité : échange de places
+      sel = sel && sel.name === name && sel.from === fromId ? null : { from: fromId, idx, name };
+      document.querySelectorAll(".av.sel").forEach(x => x.classList.remove("sel")); if (sel) a.classList.add("sel");
+      hint.textContent = sel ? name + " : touchez maintenant la place libre, un autre invité (pour échanger) ou une table." : "Glissez un invité sur une place (libre ou occupée : ils échangent) ou sur une autre table. Sur téléphone : touchez l'invité, puis la place. Déposez-le dans « À placer » pour le retirer.";
+    });
     return a;
   };
-  const zone = (node, toId) => {
-    node.addEventListener("dragover", e => { e.preventDefault(); node.classList.add("drop"); });
+  const zone = (node, toId, toIdx) => {
+    node.addEventListener("dragover", e => { e.preventDefault(); e.stopPropagation(); node.classList.add("drop"); });
     node.addEventListener("dragleave", () => node.classList.remove("drop"));
-    node.addEventListener("drop", e => { e.preventDefault(); node.classList.remove("drop"); try { const d = JSON.parse(e.dataTransfer.getData("text/plain")); move(d.from, d.name, toId); } catch {} });
-    node.addEventListener("click", () => { if (sel) move(sel.from, sel.name, toId); });
+    node.addEventListener("drop", e => { e.preventDefault(); e.stopPropagation(); node.classList.remove("drop"); try { const d = JSON.parse(e.dataTransfer.getData("text/plain")); place(d.from, d.idx, d.name, toId, toIdx); } catch {} });
+    node.addEventListener("click", e => { e.stopPropagation(); if (sel) { const s0 = sel; sel = null; place(s0.from, s0.idx, s0.name, toId, toIdx); } });
   };
   const placed = new Set();
   rows.forEach(r => {
-    const g = guestsOf(r), cap = Number(r.capacity) || 0, n = Math.max(cap, g.length), R = 96, size = 280;
-    g.forEach(x => placed.add(norm(x)));
-    const t = el("div", { class: "seat-table" + (g.length > cap && cap ? " full" : ""), style: "width:" + size + "px;height:" + size + "px" },
-      el("div", { class: "t-disc" }, el("b", { text: r.name }), el("span", { text: g.length + " / " + (cap || "?") })));
+    const g = rawSeats(r), cap = Number(r.capacity) || 0, n = Math.max(cap, g.length), R = 96, size = 280, count = g.filter(Boolean).length;
+    g.filter(Boolean).forEach(x => placed.add(norm(x)));
+    const t = el("div", { class: "seat-table" + (count > cap && cap ? " full" : ""), style: "width:" + size + "px;height:" + size + "px" },
+      el("div", { class: "t-disc" }, el("b", { text: r.name }), el("span", { text: count + " / " + (cap || "?") })));
     for (let i = 0; i < n; i++) {
       const ang = -Math.PI / 2 + i * 2 * Math.PI / n, x = size / 2 + R * Math.cos(ang), y = size / 2 + R * Math.sin(ang);
       const seat = el("div", { class: "seat", style: "left:" + x + "px;top:" + y + "px" });
-      if (g[i]) seat.append(avatar(g[i], r.id, cap && i >= cap)); else seat.append(el("i", { class: "empty-seat", "aria-hidden": "true" }));
-      t.append(seat);
+      if (g[i]) seat.append(avatar(g[i], r.id, cap && i >= cap, i)); else seat.append(el("i", { class: "empty-seat", "aria-hidden": "true" }));
+      zone(seat, r.id, i); t.append(seat);
     }
-    zone(t, r.id); plan.append(t);
+    zone(t, r.id, null); plan.append(t);
   });
   // invités ayant répondu « oui » mais pas encore placés
   let rep = []; try { rep = await store.listResponses(); } catch {}
@@ -618,8 +641,8 @@ const ICONS = {
   "Agneau": WOOL(LAMB_BODY) + LEGS + HEAD,
   "Agneau pascal": WOOL(LAMB_BODY.map(([x, y, r]) => [x, y + 4, r])) + '<path d="M22 53V61M32 54V61M40 53V61M47 50V61" class="ln"/><ellipse cx="55" cy="35" rx="5.5" ry="7" class="ln"/><circle cx="57" cy="33" r="1.1" class="dot"/><path d="M46 8V32" class="ln"/><path d="M46 9l14 3-14 5z" class="ln"/><path d="M53 11v4M51 13h4" class="ln thin"/>',
   "Agneau couché": WOOL([[14, 44, 7], [22, 38, 8], [32, 36, 9], [43, 40, 8], [43, 48, 6], [32, 49, 8], [21, 50, 6]]) + '<path d="M16 56h34M44 54c3 1 5 2 8 2" class="ln"/><ellipse cx="54" cy="40" rx="5.5" ry="6.5" class="ln"/><path d="M51 35c-5-2-7 2-6 5" class="ln"/><circle cx="56" cy="38" r="1.1" class="dot"/>',
-  "Colombe": '<path d="M6 38c9-10 20-8 27-3 1-11 9-21 24-24-1 11-6 20-15 25 7 2 13 0 19-5-3 13-14 21-27 19-6 7-17 8-26-1" class="ln"/><circle cx="46" cy="22" r="1.3" class="dot"/><path d="M58 26l5 1-5 3" class="ln thin"/>',
-  "Croix": '<path d="M27 6h10v18h18v10H37v26H27V34H9V24h18z" class="ln"/><path d="M32 12v40M16 29h32" class="ln thin"/>',
+  "Colombe": '<path d="M47 29C41 28 31 30 23 36L7 42l16 2c12 2 22-4 26-13" class="ln"/><path d="M39 33C34 22 40 12 55 7 53 18 49 26 44 31" class="ln"/><path d="M43 24c-3 1-6 4-7 8M48 17c-3 1-6 3-8 6" class="ln thin"/><circle cx="51" cy="27" r="4.3" class="ln"/><path d="M55 26.4l6 2-6 1.4" class="ln"/><circle cx="52.2" cy="26" r="1" class="dot"/><path d="M13 41l-6 4M18 43l-4 5M24 44l-2 5" class="ln thin"/>',
+  "Soleil": '<circle cx="32" cy="32" r="9" class="ln"/><circle cx="32" cy="32" r="5.5" class="ln thin"/><path d="M32 6v10M32 48v10M6 32h10M48 32h10M13.6 13.6l7 7M43.4 43.4l7 7M50.4 13.6l-7 7M20.6 43.4l-7 7" class="ln"/><path d="M19 10.5l3.5 6M45 10.5l-3.5 6M19 53.5l3.5-6M45 53.5l-3.5-6M10.5 19l6 3.5M53.5 19l-6 3.5M10.5 45l6-3.5M53.5 45l-6-3.5" class="ln thin"/>',  "Croix": '<path d="M27 6h10v18h18v10H37v26H27V34H9V24h18z" class="ln"/><path d="M32 12v40M16 29h32" class="ln thin"/>',
   "Calice": '<path d="M16 14h32c0 14-5 22-16 22S16 28 16 14z" class="ln"/><path d="M32 36v12M22 56h20c0-5-4-8-10-8s-10 3-10 8z" class="ln"/><circle cx="32" cy="7" r="4.5" class="ln"/><path d="M32 4.5v5M29.5 7h5" class="ln thin"/>',
   "Poisson": '<path d="M6 32C20 12 38 14 46 32 38 50 20 52 6 32z" class="ln"/><path d="M46 32l14-12v24z" class="ln"/><circle cx="18" cy="29" r="1.6" class="dot"/><path d="M26 22c4 6 4 14 0 20M33 24c3 5 3 11 0 16" class="ln thin"/>',
   "Épi de blé": '<path d="M32 60V22" class="ln"/><g class="ln"><ellipse cx="25" cy="42" rx="4" ry="8" transform="rotate(-25 25 42)"/><ellipse cx="39" cy="42" rx="4" ry="8" transform="rotate(25 39 42)"/><ellipse cx="25" cy="29" rx="4" ry="8" transform="rotate(-25 25 29)"/><ellipse cx="39" cy="29" rx="4" ry="8" transform="rotate(25 39 29)"/><ellipse cx="32" cy="14" rx="4" ry="8"/></g>',
@@ -691,7 +714,7 @@ function buildAdminShell() {
     el("div", { id: "org-body" }));
   const photos = el("section", { "data-main-sec": "photos", hidden: true }, titled("h3", "cat", "Rameau d'olivier", "Photos du mariage", 28), el("div", { id: "photos-admin" }));
   const pray = el("section", { "data-main-sec": "pray", hidden: true }, titled("h3", "cat", "Calice", "Prière du jour", 28), el("div", { id: "pray-body" }));
-  const ICO = { today: "Colombe", site: "Croix", org: "Agneau", photos: "Rameau d'olivier", pray: "Calice" };
+  const ICO = { today: "Soleil", site: "Croix", org: "Agneau", photos: "Rameau d'olivier", pray: "Calice" };
   nav.querySelectorAll("[data-main]").forEach(b => b.prepend(icon(ICO[b.dataset.main], 24)));
   const OICO = { tasks: "Bougie", budget: "Épi de blé", vendors: "Poisson", games: "Colombe", seating: "Agneau couché", timeline: "Croix", notes: "Rameau d'olivier" };
   org.querySelectorAll("[data-org]").forEach(b => b.prepend(icon(OICO[b.dataset.org], 22)));
