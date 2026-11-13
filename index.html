@@ -27,7 +27,7 @@
   color-scheme:light;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth;font-size:clamp(14px,calc(1.7vh + 4px),24px)}
+html{scrollbar-gutter:stable;scroll-behavior:smooth;font-size:clamp(14px,calc(1.7vh + 4px),24px)}
 [hidden]{display:none!important}
 body{margin:0;background:var(--paper);color:var(--olive);font-family:var(--serif);font-size:1rem;line-height:1.6;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
@@ -59,7 +59,7 @@ body{padding-top:calc(var(--tabs-h) + env(safe-area-inset-top,0px))}
 .tabs a:hover,.tabs a[aria-current="true"]{background:var(--paper-2)}
 /* Espace mariés : petit onglet tout à droite de la barre */
 .tabs .tab-conn{position:absolute;right:calc(var(--flower-w) + 12px);top:calc(env(safe-area-inset-top,0px) + 6px)}
-.tabs .tab-conn a{font-size:.74rem;opacity:.8;padding:0 10px}
+.tabs .tab-conn a{font-size:.8rem;padding:0 10px}
 @media(max-width:1199px){
   .tabs ul{display:grid;grid-template-columns:repeat(3,1fr) 64px;grid-auto-rows:44px;gap:0 2px;align-content:start}
   .tabs li{display:block}
@@ -69,11 +69,11 @@ body{padding-top:calc(var(--tabs-h) + env(safe-area-inset-top,0px))}
 }
 
 main.stage{position:relative;z-index:1;width:100%;max-width:1100px;margin:0 auto;min-height:calc(100dvh - var(--tabs-h) - env(safe-area-inset-top,0px))}
-.stage{display:flex;flex-direction:column;justify-content:center}
-.panel{display:none;padding-block:min(28px,3vh) 32px}
+.stage{display:flex;flex-direction:column;justify-content:flex-start}
+.panel{display:none;padding-block:min(32px,4vh) 32px}
 .panel.active{display:block}
 .panel:not(.hero){width:100%;max-width:860px;margin-inline:auto}
-#connexion .tbl{max-width:100%}
+#panel-connexion .tbl{max-width:100%}
 
 /* Accueil */
 html:has(body.home),body.home{overflow:hidden}
@@ -120,20 +120,38 @@ h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
 
 /* Programme : frise chronologique en zigzag, compacte */
 .timeline{display:grid;gap:0}
-.step{display:grid;grid-template-columns:minmax(0,42%) minmax(0,1fr);gap:16px;align-items:center;text-align:left}
-.step.rev{grid-template-columns:minmax(0,1fr) minmax(0,42%)}
+.step{display:grid;grid-template-columns:minmax(0,47%) minmax(0,1fr);gap:14px;align-items:center;text-align:left}
+.step.rev{grid-template-columns:minmax(0,1fr) minmax(0,47%)}
 .step.rev .watercolor{order:2}
 .step.rev .txt{text-align:right}
-.step .watercolor{width:auto;max-width:100%;max-height:19vh;justify-self:center}
+.step .watercolor{width:auto;max-width:100%;max-height:23vh;justify-self:center}
+.step .road{display:none}
 .step .hour{font-size:1.15rem;letter-spacing:.04em;margin:0}
 .step .what{font-family:var(--script);font-size:clamp(1.5rem,min(6vw,4.2vh),2.2rem);color:var(--olive-soft);line-height:1.1;margin:0}
 .step .place{margin:0;font-size:.92rem;line-height:1.45}
 .step .place em{display:block;font-family:var(--script);font-style:normal;font-size:1.2rem;color:var(--olive-soft)}
-.zig{display:block;width:min(60%,calc(7vh * 3.6));height:auto;margin:0 auto;overflow:visible}
+.zig{display:block;width:min(56%,calc(5.5vh * 3.6));height:auto;margin:0 auto;overflow:visible}
 .zig.flip{transform:scaleX(-1)}
 .zig path{fill:none;stroke:var(--olive-soft);stroke-width:1.3;stroke-linecap:round}
 .zig .leaf{fill:var(--olive-soft);stroke:none}
 .transit{text-align:center;font-style:italic;font-size:.88rem;margin:0}
+@media(min-aspect-ratio:5/4) and (min-width:900px){
+  .panel#panel-programme{max-width:1500px;padding-inline:3vw}
+  .timeline{--off:13vh;grid-template-columns:repeat(3,1fr);gap:5vw;align-items:start}
+  .step,.step.rev{grid-template-columns:1fr;gap:10px;text-align:center;justify-items:center;position:relative}
+  .step.rev .watercolor{order:0}
+  .step.rev .txt{text-align:center}
+  .step .watercolor{width:100%;max-width:100%;max-height:40vh;object-fit:contain}
+  .zig,.transit{display:none}
+  .step .road{display:block;margin:0 0 .2rem;font-style:italic;font-size:.95rem}
+  .step .hour{font-size:1.3rem}
+  .step .place{font-size:1rem}
+  .s2{margin-top:var(--off)}
+  .s1::after,.s2::after{content:"";position:absolute;left:80%;width:calc(40% + 5vw);height:var(--off);pointer-events:none;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M0 0C70 0 30 100 100 100' fill='none' stroke='%2376773f' stroke-width='1.3' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center/100% 100% no-repeat}
+  .s1::after{top:20vh}
+  .s2::after{top:calc(20vh - var(--off));transform:scaleY(-1)}
+}
 
 /* Infos pratiques : tout sur un seul écran, réparti en grille */
 .route{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -225,14 +243,23 @@ footer .adm{display:inline-block;margin-top:2rem;font-size:.8rem;opacity:.65}
 .tbl table{border-collapse:collapse;width:100%;min-width:520px;font-size:.92rem}
 .tbl th,.tbl td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
 .tbl th{background:var(--paper-2);font-size:.8rem;letter-spacing:.06em;text-transform:uppercase}
-.admin-head{display:flex;justify-content:space-between;align-items:center;gap:10px 16px;flex-wrap:wrap;margin:0 0 16px}
-.admin-actions{display:flex;gap:8px;flex-wrap:wrap}
-.admin-tabs{display:inline-flex;border:1.5px solid var(--olive);border-radius:999px;overflow:hidden}
-.admin-tabs .btn{border:0;border-radius:0;min-height:38px;padding:6px 16px;font-size:.85rem}
-.admin-tabs .btn[aria-pressed="true"]{background:var(--olive);color:var(--paper)}
-#connexion h2{margin-bottom:.2rem}
-@media(max-width:640px){.admin-tabs{display:grid;grid-template-columns:repeat(4,1fr);width:100%}.admin-tabs .btn{padding:6px 2px;font-size:.78rem}}
-#connexion .tbl table{font-size:.85rem}
+.admin-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin:0 0 20px}
+.edit-card{flex:1 1 320px;display:flex;align-items:center;justify-content:space-between;gap:12px 16px;flex-wrap:wrap;background:var(--olive);color:var(--paper);border-radius:14px;padding:14px 18px}
+.edit-card div{display:grid;gap:2px;min-width:0}
+.edit-card span{font-size:.82rem;opacity:.9}
+.edit-card .btn{background:var(--paper);color:var(--olive);border-color:var(--paper);min-height:42px;padding:6px 18px;font-size:.9rem}
+.edit-card .btn:hover{background:var(--paper-2)}
+.link{background:none;border:0;padding:8px 4px;font:inherit;font-size:.85rem;color:var(--olive);text-decoration:underline;cursor:pointer;min-height:44px}
+.admin-tabs{display:flex;gap:2px;border-bottom:1.5px solid var(--line);margin:0 0 20px}
+.admin-tabs button{flex:0 1 auto;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-1.5px;padding:10px 16px;font:inherit;font-size:.95rem;color:var(--olive);cursor:pointer;min-height:44px;opacity:.75}
+.admin-tabs button:hover{opacity:1}
+.admin-tabs button[aria-pressed="true"]{border-bottom-color:var(--olive);font-weight:700;opacity:1}
+.cat{font-family:var(--script);font-weight:400;font-size:1.7rem;color:var(--olive-soft);margin:0 0 .6rem}
+.btn.danger{border-color:var(--alert);color:var(--alert)}
+.btn.danger:hover{background:var(--alert);color:var(--paper)}
+#panel-connexion h2{margin-bottom:.2rem}
+@media(max-width:640px){.admin-tabs button{flex:1;padding:10px 2px;font-size:.84rem}}
+#panel-connexion .tbl table{font-size:.85rem}
 body.on-conn #edit-fab{display:none}
 .tag{display:inline-block;padding:1px 10px;border-radius:999px;background:var(--paper-2);border:1px solid var(--line);font-size:.8rem;margin:2px 4px 2px 0}
 .demo-note{background:#f6ead0;border-radius:10px;padding:12px 16px;font-size:.88rem;margin:0 0 18px}
@@ -260,7 +287,7 @@ body.on-conn #edit-fab{display:none}
 
   <main class="stage">
     <!-- ACCUEIL -->
-    <section class="panel hero active" id="accueil">
+    <section class="panel hero active" id="panel-accueil">
       <div class="hero-text">
       <p class="kicker">Avec joie et bonheur</p>
       <h1 class="names">Cassiana<span class="amp">&amp;</span>Matthieu</h1>
@@ -273,11 +300,11 @@ body.on-conn #edit-fab{display:none}
     </section>
 
     <!-- PROGRAMME -->
-    <section class="panel" id="programme">
+    <section class="panel" id="panel-programme">
       <h2>Le programme</h2>
       <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
       <div class="timeline">
-        <article class="step">
+        <article class="step s1">
           <img class="watercolor" src="img/eglise.png" alt="Aquarelle de l'église Notre-Dame des Ardents" width="264" height="396">
           <div class="txt">
             <p class="hour">13h30</p><p class="what">Cérémonie religieuse</p>
@@ -286,15 +313,16 @@ body.on-conn #edit-fab{display:none}
         </article>
         <svg class="zig" viewBox="0 0 360 100" aria-hidden="true"><path d="M60 4 C 60 60, 300 24, 300 90"/><path class="leaf" d="M300 90 c-6-8-6-15 0-21 c6 6 6 13 0 21z"/></svg>
         <p class="transit" id="transit-line"></p>
-        <article class="step rev">
+        <article class="step rev s2">
           <img class="watercolor" src="img/domaine.png" alt="Aquarelle du Clos du Colombier" width="441" height="297">
           <div class="txt">
+            <p class="road" id="transit-line-2"></p>
             <p class="hour">17h30 – 19h30</p><p class="what">Cocktail</p>
             <p class="place">Le Clos du Colombier<em>Fontenay-Trésigny</em></p>
           </div>
         </article>
         <svg class="zig flip" viewBox="0 0 360 100" aria-hidden="true"><path d="M60 4 C 60 60, 300 24, 300 90"/><path class="leaf" d="M300 90 c-6-8-6-15 0-21 c6 6 6 13 0 21z"/></svg>
-        <article class="step">
+        <article class="step s3">
           <img class="watercolor" src="img/salle.png" alt="Aquarelle de la salle de réception" width="468" height="390">
           <div class="txt">
             <p class="hour">19h30 – 4h00</p><p class="what">Dîner et soirée</p>
@@ -305,8 +333,9 @@ body.on-conn #edit-fab{display:none}
     </section>
 
     <!-- S'Y RENDRE -->
-    <section class="panel" id="infos">
+    <section class="panel" id="panel-infos">
       <h2>Comment s'y rendre ?</h2>
+      <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
       <div class="route">
         <div class="card">
           <h3>Église</h3>
@@ -321,7 +350,7 @@ body.on-conn #edit-fab{display:none}
         <p class="route-time wide">Environ <b id="drive-time"></b> de route entre les deux</p>
         <div class="card wide">
           <h3>Où se garer à l'église ?</h3>
-          <p>Peu de places près de l'église. Garez-vous dans l'un de ces parkings du centre-ville (nom à taper dans Waze) puis rejoignez l'église à pied.</p>
+          <p>Peu de places près de l'église. Garez-vous dans l'un de ces parkings du centre-ville, puis rejoignez l'église à pied.</p>
           <div class="pk" id="parking-list"></div>
           <p>Au domaine, environ <b>100 places de parking</b> sur place.</p>
         </div>
@@ -329,7 +358,7 @@ body.on-conn #edit-fab{display:none}
     </section>
 
     <!-- DRESS CODE -->
-    <section class="panel" id="tenue">
+    <section class="panel" id="panel-tenue">
       <h2>Dress code</h2>
       <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
       <p class="sub">Aucune couleur n'est imposée : venez dans la tenue qui vous plaît, en évitant simplement les couleurs ci-dessous.</p>
@@ -353,7 +382,7 @@ body.on-conn #edit-fab{display:none}
     </section>
 
     <!-- CHANTS -->
-    <section class="panel" id="chants">
+    <section class="panel" id="panel-chants">
       <h2>Les chants de la messe</h2>
       <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
       <p class="sub">Écoutez-les à l'avance pour chanter avec nous le jour J. Pas besoin de savoir chanter, la joie suffit.</p>
@@ -361,14 +390,14 @@ body.on-conn #edit-fab{display:none}
     </section>
 
     <!-- QUESTIONS / RÉPONSES -->
-    <section class="panel" id="faq">
+    <section class="panel" id="panel-faq">
       <h2>Questions et réponses</h2>
       <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
       <div id="faq-list"></div>
     </section>
 
     <!-- ESPACE DES MARIÉS (accès par l'onglet Connexion) -->
-    <section class="panel" id="connexion">
+    <section class="panel" id="panel-connexion">
       <h2>Espace des mariés</h2>
       <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
       <div id="auth-box">
@@ -391,19 +420,21 @@ body.on-conn #edit-fab{display:none}
         </form>
       </div>
 <div id="admin-panel" hidden>
-      <div class="admin-head">
-        <div class="admin-tabs" role="group" aria-label="Rubriques">
-          <button class="btn small" type="button" data-tab="al" aria-pressed="true">Réponses</button>
-          <button class="btn small" type="button" data-tab="so" aria-pressed="false">Chants</button>
-          <button class="btn small" type="button" data-tab="fq" aria-pressed="false">Questions</button>
-          <button class="btn small" type="button" data-tab="gi" aria-pressed="false">Cagnotte</button>
+      <div class="admin-top">
+        <div class="edit-card">
+          <div><b>Modifier le site</b><span>Changez n'importe quel texte directement sur la page.</span></div>
+          <button class="btn solid" id="goto-edit" type="button">&#9998; Modifier les textes</button>
         </div>
-        <div class="admin-actions">
-          <button class="btn small solid" id="goto-edit" type="button">&#9998; Modifier les textes du site</button>
-          <button class="btn small" id="logout" type="button">Se déconnecter</button>
-        </div>
+        <button class="link" id="logout" type="button">Se déconnecter</button>
+      </div>
+      <div class="admin-tabs" role="group" aria-label="Catégories">
+        <button type="button" data-tab="al" aria-pressed="true">Réponses</button>
+        <button type="button" data-tab="so" aria-pressed="false">Chants</button>
+        <button type="button" data-tab="fq" aria-pressed="false">Questions</button>
+        <button type="button" data-tab="gi" aria-pressed="false">Cagnotte</button>
       </div>
       <div id="tab-al">
+          <h3 class="cat">Réponses des invités</h3>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
             <button class="btn small solid" id="copy-al" type="button">Copier pour le tableur</button>
             <span class="hint" id="al-count"></span>
@@ -417,6 +448,7 @@ body.on-conn #edit-fab{display:none}
         </div>
 
         <div id="tab-gi" hidden>
+          <h3 class="cat">Cagnotte de la nuit de noces</h3>
           <form class="card" id="pot-form" novalidate style="margin-bottom:22px">
             <h3>Cagnotte en ligne</h3>
             <p class="hint">Collez le lien de votre cagnotte pour la nuit de noces (Leetchi, Lydia, PayPal...). Un bouton apparaît alors dans la rubrique Cadeaux et dans les questions. Laissez vide pour le retirer.</p>
@@ -427,6 +459,7 @@ body.on-conn #edit-fab{display:none}
         </div>
 
         <div id="tab-so" hidden>
+          <h3 class="cat">Chants de la messe</h3>
           <form class="card" id="song-form" novalidate style="margin-bottom:22px">
             <h3>Ajouter un chant</h3>
             <div class="two-f">
@@ -448,6 +481,7 @@ body.on-conn #edit-fab{display:none}
       </div>
 
         <div id="tab-fq" hidden>
+      <h3 class="cat">Questions ajoutées</h3>
           <form class="card" id="faq-form" novalidate style="margin-bottom:22px">
             <h3>Ajouter une question</h3>
             <label for="fq-q">Question<input id="fq-q" required maxlength="200"></label>
@@ -669,6 +703,7 @@ const store = {
 function renderStatic(){
   $("#drive-time").textContent = CONTENT.driveTime;
   $("#transit-line").textContent = `Environ ${CONTENT.driveTime} de route`;
+  $("#transit-line-2").textContent = `Environ ${CONTENT.driveTime} de route`;
   $("#waze-church").href = wazeUrl(CONTENT.church.name + ", " + CONTENT.church.address);
   $("#waze-domaine").href = wazeUrl(CONTENT.domaine.name + ", " + CONTENT.domaine.address);
 
@@ -774,7 +809,7 @@ async function renderConnexion(){
 }
 const PANELS = ["accueil","programme","infos","tenue","chants","faq","connexion"];
 function showPanel(id){
-  PANELS.forEach(p => $("#"+p).classList.toggle("active", p === id));
+  PANELS.forEach(p => $("#panel-" + p).classList.toggle("active", p === id));
   document.querySelectorAll(".tabs a").forEach(a => a.setAttribute("aria-current", String(a.getAttribute("href") === "#" + id)));
   document.body.classList.toggle("home", id === "accueil");
   document.body.classList.toggle("on-conn", id === "connexion");
@@ -803,7 +838,7 @@ async function renderResponses(){
     el("td",{}, el("span",{class:"tag",text:a.presence === "non" ? "NON" : "OUI"})),
     el("td",{}, ...(a.allergies||"").split(", ").filter(Boolean).map(t => el("span",{class:"tag",text:t}))),
     el("td",{text:fmtDate(a.created_at)}),
-    el("td",{}, el("button",{class:"btn small",type:"button",text:"Supprimer","aria-label":`Supprimer la réponse de ${a.prenom} ${a.nom}`,onclick: async () => { await store.deleteResponse(a.id); renderResponses(); }})))));
+    el("td",{}, el("button",{class:"btn small danger",type:"button",text:"Supprimer","aria-label":`Supprimer la réponse de ${a.prenom} ${a.nom}`,onclick: async () => { await store.deleteResponse(a.id); renderResponses(); }})))));
   $("#copy-al").onclick = async () => {
     const tsv = list.map(a => [(a.nom||"").toUpperCase(), a.prenom, a.presence === "non" ? "NON" : "OUI", a.allergies].join("\t")).join("\n");
     try { await navigator.clipboard.writeText(tsv); showToast("Copié. Collez dans le tableur."); }
@@ -819,7 +854,7 @@ async function renderSongAdmin(){
   list.forEach(x => rows.append(el("tr",{},
     el("td",{text:x.moment}), el("td",{}, el("b",{text:x.title}), x.author ? el("div",{class:"hint",text:x.author}) : ""),
     el("td",{style:"word-break:break-all",text:x.audio_url || "–"}),
-    el("td",{}, el("button",{class:"btn small",type:"button",text:"Supprimer","aria-label":"Supprimer " + x.title,onclick: async () => { await store.deleteSong(x.id); renderSongAdmin(); renderSongs(); }})))));
+    el("td",{}, el("button",{class:"btn small danger",type:"button",text:"Supprimer","aria-label":"Supprimer " + x.title,onclick: async () => { await store.deleteSong(x.id); renderSongAdmin(); renderSongs(); }})))));
 }
 async function renderFaqAdmin(){
   const rows = $("#fq-rows"); rows.replaceChildren();
@@ -827,7 +862,7 @@ async function renderFaqAdmin(){
   try { list = await store.listFaqExtra(); } catch { $("#fq-empty").hidden = false; return; }
   state.faqExtra = list; $("#fq-empty").hidden = list.length > 0;
   list.forEach(x => rows.append(el("tr",{}, el("td",{text:x.q}), el("td",{text:x.a}),
-    el("td",{}, el("button",{class:"btn small",type:"button",text:"Supprimer","aria-label":"Supprimer la question " + x.q,onclick: async () => { await store.deleteFaqExtra(x.id); renderFaqAdmin(); renderFaq(); }})))));
+    el("td",{}, el("button",{class:"btn small danger",type:"button",text:"Supprimer","aria-label":"Supprimer la question " + x.q,onclick: async () => { await store.deleteFaqExtra(x.id); renderFaqAdmin(); renderFaq(); }})))));
 }
 async function loadPotField(){ try { $("#pot-url").value = await store.getSetting("cagnotte_url"); } catch {} }
 
