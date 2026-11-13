@@ -47,9 +47,9 @@ a{color:var(--olive)}
 .c-bl{left:0;transform:scaleX(-1)}
 
 /* Onglets : bandeau fixe, tous visibles, ne bouge jamais */
-@media(min-width:1200px){.tabs ul{padding-inline:calc(var(--flower-w) + 12px)}}
+@media(min-width:1360px){.tabs ul{padding-inline:calc(var(--flower-w) + 12px)}}
 :root{--tabs-h:56px;--flower-w:clamp(70px,min(18vw,22vh),190px)}
-@media(max-width:1199px){:root{--tabs-h:100px}}
+@media(max-width:1359px){:root{--tabs-h:100px}}
 body{padding-top:calc(var(--tabs-h) + env(safe-area-inset-top,0px))}
 .tabs{position:fixed;top:0;left:0;right:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--line);
   padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-left,0px)) 0 max(16px,env(safe-area-inset-right,0px))}
@@ -60,7 +60,7 @@ body{padding-top:calc(var(--tabs-h) + env(safe-area-inset-top,0px))}
 /* Espace mariés : petit onglet tout à droite de la barre */
 .tabs .tab-conn{position:absolute;right:calc(var(--flower-w) + 12px);top:calc(env(safe-area-inset-top,0px) + 6px)}
 .tabs .tab-conn a{font-size:.8rem;padding:0 10px}
-@media(max-width:1199px){
+@media(max-width:1359px){
   .tabs ul{display:grid;grid-template-columns:repeat(3,1fr) 64px;grid-auto-rows:44px;gap:0 2px;align-content:start}
   .tabs li{display:block}
   .tabs a{width:100%;padding:0 4px;font-size:.86rem;letter-spacing:.02em}
@@ -182,10 +182,29 @@ h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
 
 /* Mode édition des textes (mariés) */
 #edit-fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:60;box-shadow:0 4px 14px rgba(79,80,32,.3);background:var(--olive);color:var(--paper)}
-#edit-bar{position:fixed;left:0;right:0;bottom:0;z-index:60;background:var(--olive);color:var(--paper);display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;font-size:.85rem;
-  padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
-#edit-bar .btn{border-color:var(--paper);color:var(--paper);min-height:38px}
+#edit-bar{position:fixed;left:0;right:0;bottom:0;z-index:60;background:var(--olive);color:var(--paper);font-size:.82rem;max-height:46vh;overflow-y:auto;
+  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));box-shadow:0 -6px 20px rgba(0,0,0,.18)}
+#edit-bar .btn{border-color:var(--paper);color:var(--paper);min-height:36px}
 #edit-bar .btn.solid{background:var(--paper);color:var(--olive)}
+.ed-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.ed-spacer{flex:1}
+.ed-target{font-style:italic;opacity:.95;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.ed-tools{border:0;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;min-width:0}
+.ed-tools:disabled{opacity:.45}
+.ed-f{display:grid;gap:4px;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;min-width:0}
+.ed-f select,.ed-f input[type=range]{font:inherit;font-size:.85rem;text-transform:none}
+.ed-f select{min-height:36px;padding:4px 8px;border-radius:8px;border:1px solid var(--paper);background:var(--paper);color:var(--olive);width:auto;min-width:130px}
+.ed-f input[type=range]{width:130px;min-height:0;padding:0;accent-color:var(--paper);background:none;border:0}
+.ed-f output{text-transform:none;opacity:.85;margin-left:4px}
+.ed-g{display:flex;gap:4px;align-items:center}
+.ed-g button{min-width:36px;height:36px;padding:0 8px;border-radius:8px;border:1px solid var(--paper);background:transparent;color:var(--paper);font:inherit;font-size:.85rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.ed-g button[aria-pressed="true"]{background:var(--paper);color:var(--olive)}
+.ed-g .sw{min-width:24px;width:24px;height:24px;padding:0;border-radius:50%;border:2px solid var(--paper)}
+.ed-colors input[type=color]{width:36px;height:36px;min-height:0;padding:0;border:1px solid var(--paper);border-radius:8px;background:var(--paper)}
+body.editing{padding-bottom:calc(150px)}
+body.editing.home{overflow:auto}
+html:has(body.editing.home){overflow:auto}
+body.editing [data-ed].ed-active{outline:2px solid var(--olive);background:#fffdf3}
 body.editing [data-ed]{outline:1.5px dashed var(--olive-soft);outline-offset:3px;border-radius:3px;cursor:text}
 body.editing [data-ed]:focus{outline:2px solid var(--olive);background:#fffdf3}
 
@@ -468,7 +487,7 @@ body.on-conn #edit-fab{display:none}
             </div>
             <label for="s-author">Auteur ou interprète (facultatif)<input id="s-author" maxlength="100"></label>
             <label for="s-audio">Lien audio (facultatif)<input id="s-audio" type="url" placeholder="Lien YouTube, ou lien direct vers un fichier .mp3"></label>
-            <p class="hint">Un lien .mp3 affiche un lecteur sur le site. Un lien YouTube affiche un bouton « Écouter sur YouTube ». Sans lien, le bouton lance une recherche YouTube du titre.</p>
+            <p class="hint">Un lien .mp3 affiche un lecteur sur le site. Un lien YouTube affiche un bouton « Écouter sur YouTube ». Sans lien, le chant s'affiche sans bouton d'écoute.</p>
             <button class="btn solid" type="submit">Ajouter le chant</button>
             <p class="msg" id="s-msg" role="status" hidden></p>
           </form>
@@ -539,10 +558,53 @@ body.on-conn #edit-fab{display:none}
 </div>
 
 <button class="btn" id="edit-fab" type="button" hidden>&#9998; Modifier les textes</button>
-<div id="edit-bar" role="region" aria-label="Mode édition" hidden>
-  <span>Mode édition : cliquez sur un texte pour le modifier. Enregistrement automatique.</span>
-  <button class="btn small" id="edit-reset" type="button">Rétablir ce texte</button>
-  <button class="btn small solid" id="edit-done" type="button">Terminer</button>
+<div id="edit-bar" role="region" aria-label="Éditeur de texte" hidden>
+  <div class="ed-row">
+    <span id="ed-target" class="ed-target">Cliquez sur un texte de la page pour le modifier</span>
+    <span class="ed-spacer"></span>
+    <button class="btn small" id="edit-reset" type="button">Rétablir</button>
+    <button class="btn small solid" id="edit-done" type="button">Terminer</button>
+  </div>
+  <fieldset class="ed-tools" id="ed-tools" disabled>
+    <label class="ed-f">Police
+      <select id="ed-font"></select></label>
+    <label class="ed-f">Taille <output id="ed-size-o">100%</output>
+      <input type="range" id="ed-size" min="50" max="250" step="5" value="100"></label>
+    <label class="ed-f">Épaisseur
+      <select id="ed-weight"><option value="">D'origine</option><option value="300">Fin</option><option value="400">Normal</option><option value="500">Moyen</option><option value="700">Gras</option><option value="900">Très gras</option></select></label>
+    <div class="ed-f">Style
+      <div class="ed-g" role="group" aria-label="Style du texte">
+        <button type="button" data-st="b" aria-pressed="false" title="Gras" style="font-weight:700">B</button>
+        <button type="button" data-st="i" aria-pressed="false" title="Italique" style="font-style:italic">I</button>
+        <button type="button" data-st="u" aria-pressed="false" title="Souligné" style="text-decoration:underline">U</button>
+        <button type="button" data-st="up" aria-pressed="false" title="Majuscules">AA</button>
+      </div></div>
+    <div class="ed-f">Couleur
+      <div class="ed-g ed-colors" role="group" aria-label="Couleur">
+        <input type="color" id="ed-color" value="#4f5020" aria-label="Choisir une couleur">
+        <button type="button" class="sw" data-c="#4f5020" style="background:#4f5020" aria-label="Vert olive"></button>
+        <button type="button" class="sw" data-c="#76773f" style="background:#76773f" aria-label="Vert clair"></button>
+        <button type="button" class="sw" data-c="#8a3b2b" style="background:#8a3b2b" aria-label="Rouge brique"></button>
+        <button type="button" class="sw" data-c="#b08d3c" style="background:#b08d3c" aria-label="Doré"></button>
+        <button type="button" class="sw" data-c="#1b1b1b" style="background:#1b1b1b" aria-label="Noir"></button>
+        <button type="button" class="sw" data-c="#ffffff" style="background:#fff" aria-label="Blanc"></button>
+      </div></div>
+    <div class="ed-f">Alignement
+      <div class="ed-g" role="group" aria-label="Alignement">
+        <button type="button" data-al="left" aria-pressed="false" title="À gauche"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 3h12M2 7h8M2 11h12M2 15h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg></button>
+        <button type="button" data-al="center" aria-pressed="false" title="Centré"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 3h12M4 7h8M2 11h12M5 15h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg></button>
+        <button type="button" data-al="right" aria-pressed="false" title="À droite"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 3h12M6 7h8M2 11h12M8 15h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg></button>
+      </div></div>
+    <div class="ed-f">Position
+      <div class="ed-g" role="group" aria-label="Position">
+        <button type="button" data-mv="-1,0" title="Vers la gauche">&larr;</button>
+        <button type="button" data-mv="0,-1" title="Vers le haut">&uarr;</button>
+        <button type="button" data-mv="0,1" title="Vers le bas">&darr;</button>
+        <button type="button" data-mv="1,0" title="Vers la droite">&rarr;</button>
+      </div></div>
+    <label class="ed-f">Espace entre lettres
+      <input type="range" id="ed-ls" min="-1" max="10" step="0.5" value="0"></label>
+  </fieldset>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -742,14 +804,13 @@ async function renderSongs(){
     const url = x.audio_url || "";
     const isFile = /\.(mp3|m4a|ogg|wav)(\?.*)?$/i.test(url);
     const yt = ((url.match(/(?:youtube\.com\/watch\?(?:[^#]*&)?v=|youtu\.be\/)([\w-]{11})/) || [])[1]) || "";
-    const href = isFile ? url : (url || "https://www.youtube.com/results?search_query=" + encodeURIComponent(x.title));
     host.append(el("article",{class:"card song"},
       el("span",{class:"moment",text:x.moment}),
       el("p",{class:"title",text:x.title}),
       x.author ? el("span",{class:"hint",text:x.author}) : "",
       isFile ? el("audio",{controls:true,preload:"none",src:url,"aria-label":"Écouter " + x.title}) : "",
       yt ? el("iframe",{class:"yt",src:"https://www.youtube-nocookie.com/embed/" + yt,title:"Écouter " + x.title,loading:"lazy",allow:"encrypted-media; picture-in-picture",allowfullscreen:true,referrerpolicy:"strict-origin-when-cross-origin"}) : "",
-      el("div",{class:"row"}, el("a",{class:"btn small solid",href,target:"_blank",rel:"noopener",text: isFile ? "Ouvrir le fichier audio" : (url ? "Écouter sur YouTube" : "Chercher sur YouTube")}))));
+      url ? el("div",{class:"row"}, el("a",{class:"btn small solid",href:url,target:"_blank",rel:"noopener",text: isFile ? "Ouvrir le fichier audio" : "Écouter sur YouTube"})) : ""));
   });
 }
 
@@ -943,6 +1004,44 @@ let texts = {}, editing = false, editorAllowed = false, lastEd = null;
 const hashKey = t => { let h = 5381; for (const c of t) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0; return "t" + h.toString(36); };
 const wsOf = t => [(t.match(/^\s*/) || [""])[0], (t.match(/\s*$/) || [""])[0]];
 
+/* --- Styles : police, taille, couleur, position... (stockés dans « textes » sous la clé s_<clé>) --- */
+const FONTS = [
+  { n: "Parisienne", q: "Parisienne", fb: "cursive", base: true },
+  { n: "Libre Baskerville", q: "Libre+Baskerville:ital,wght@0,400;0,700;1,400", fb: "Georgia, serif", base: true },
+  { n: "Great Vibes", q: "Great+Vibes", fb: "cursive" },
+  { n: "Dancing Script", q: "Dancing+Script:wght@400;500;700", fb: "cursive" },
+  { n: "Cormorant Garamond", q: "Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,700;1,400", fb: "Georgia, serif" },
+  { n: "Playfair Display", q: "Playfair+Display:ital,wght@0,400;0,500;0,700;0,900;1,400", fb: "Georgia, serif" },
+  { n: "Montserrat", q: "Montserrat:wght@300;400;500;700;900", fb: "Arial, sans-serif" }
+];
+const loadedFonts = new Set(["Parisienne", "Libre Baskerville"]);
+function ensureFont(name){
+  const f = FONTS.find(x => x.n === name); if (!f || loadedFonts.has(name)) return;
+  loadedFonts.add(name);
+  const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "https://fonts.googleapis.com/css2?family=" + f.q + "&display=swap"; document.head.append(l);
+}
+function getStyle(key){ try { const v = texts["s_" + key]; return v ? JSON.parse(v) : {}; } catch { return {}; } }
+const clampN = (v, a, b) => Math.min(b, Math.max(a, Number(v) || 0));
+function applyStyle(n, st){
+  const S = n.style;
+  const f = st.ff && FONTS.find(x => x.n === st.ff);
+  if (f) ensureFont(f.n);
+  S.fontFamily = f ? `"${f.n}", ${f.fb}` : "";
+  S.fontWeight = st.fw ? String(clampN(st.fw, 100, 900)) : (st.b ? "700" : "");
+  S.fontStyle = st.i ? "italic" : "";
+  S.textDecoration = st.u ? "underline" : "";
+  S.textTransform = st.up ? "uppercase" : "";
+  S.color = /^#[0-9a-f]{6}$/i.test(st.c || "") ? st.c : "";
+  S.letterSpacing = st.ls ? clampN(st.ls, -1, 10) + "px" : "";
+  S.zoom = st.z && st.z !== 100 ? String(clampN(st.z, 50, 250) / 100) : "";
+  const al = ["left", "center", "right"].includes(st.ta) ? st.ta : "";
+  const mv = st.x || st.y;
+  S.textAlign = al;
+  const inline = getComputedStyle(n).display === "inline";
+  if ((al || mv) && inline) S.display = al ? "block" : "inline-block"; else if (!al && !mv && n.dataset.w) S.display = "";
+  S.transform = mv ? `translate(${clampN(st.x, -400, 400)}px, ${clampN(st.y, -400, 400)}px)` : "";
+}
+
 function prepareTexts(root = $("#public")){
   root.querySelectorAll(TEXT_SEL).forEach(n => {
     if (n.closest(TEXT_SKIP) || !n.children.length) return;
@@ -955,6 +1054,7 @@ function prepareTexts(root = $("#public")){
     const raw = n.textContent, txt = raw.trim(); if (!txt) return;
     if (!n.dataset.orig) { n.dataset.orig = txt; n.dataset.key = hashKey(txt); n.dataset.ed = "1"; [n.dataset.pre, n.dataset.post] = wsOf(raw); }
     if (n !== document.activeElement) { const v = texts[n.dataset.key]; n.textContent = n.dataset.pre + (v != null ? v : n.dataset.orig) + n.dataset.post; }
+    applyStyle(n, getStyle(n.dataset.key));
     if (editing) n.setAttribute("contenteditable", CE);
   });
 }
@@ -964,6 +1064,7 @@ function setEditing(on){
   document.querySelectorAll("[data-ed]").forEach(n => { if (on) n.setAttribute("contenteditable", CE); else n.removeAttribute("contenteditable"); });
   document.querySelectorAll("#faq-list details").forEach(d => { d.open = on; });
   $("#edit-bar").hidden = !on; $("#edit-fab").hidden = on || !editorAllowed;
+  if (!on && lastEd) { lastEd.classList.remove("ed-active"); lastEd = null; $("#ed-tools").disabled = true; $("#ed-target").textContent = "Cliquez sur un texte de la page pour le modifier"; }
 }
 
 async function saveText(n){
@@ -978,19 +1079,86 @@ async function saveText(n){
   } catch { show(cur); showToast("L'enregistrement a échoué. Vérifiez que vous êtes connecté(e) avec l'adresse des mariés."); }
 }
 
+/* --- Barre d'outils de mise en forme --- */
+let saveTimer = null;
+const hexOf = rgb => { const m = (rgb || "").match(/\d+/g); return m ? "#" + m.slice(0, 3).map(x => (+x).toString(16).padStart(2, "0")).join("") : "#4f5020"; };
+function setTarget(n){
+  if (lastEd) lastEd.classList.remove("ed-active");
+  lastEd = n; n.classList.add("ed-active");
+  $("#ed-tools").disabled = false;
+  $("#ed-target").textContent = "Texte sélectionné : « " + (n.dataset.orig || "").slice(0, 48) + " »";
+  const st = getStyle(n.dataset.key), cs = getComputedStyle(n);
+  const sel = $("#ed-font"); sel.value = st.ff || "";
+  $("#ed-size").value = st.z || 100; $("#ed-size-o").textContent = (st.z || 100) + "%";
+  $("#ed-weight").value = st.fw ? String(st.fw) : "";
+  document.querySelectorAll("[data-st]").forEach(b => b.setAttribute("aria-pressed", String(!!st[b.dataset.st])));
+  document.querySelectorAll("[data-al]").forEach(b => b.setAttribute("aria-pressed", String(st.ta === b.dataset.al)));
+  $("#ed-color").value = st.c || hexOf(cs.color);
+  $("#ed-ls").value = st.ls || 0;
+}
+function patchStyle(patch){
+  const n = lastEd; if (!n) return;
+  const key = n.dataset.key, st = { ...getStyle(key), ...patch };
+  Object.keys(st).forEach(k => { if (st[k] === null || st[k] === "" || st[k] === false || (k === "z" && st[k] === 100) || ((k === "x" || k === "y" || k === "ls") && !st[k])) delete st[k]; });
+  applyStyle(n, st);
+  const json = JSON.stringify(st);
+  if (Object.keys(st).length) texts["s_" + key] = json; else delete texts["s_" + key];
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try { if (Object.keys(st).length) await store.setText("s_" + key, json); else await store.deleteText("s_" + key); showToast("Enregistré"); }
+    catch { showToast("L'enregistrement a échoué. Vérifiez que vous êtes connecté(e) avec l'adresse des mariés."); }
+  }, 600);
+  document.querySelectorAll(`[data-key="${key}"]`).forEach(m => { if (m !== n) applyStyle(m, st); });
+}
+function bindStyler(){
+  const sel = $("#ed-font");
+  sel.append(el("option",{value:"",text:"Police d'origine"}), ...FONTS.map(f => el("option",{value:f.n,text:f.n})));
+  sel.addEventListener("change", () => { ensureFont(sel.value); patchStyle({ ff: sel.value }); });
+  $("#ed-size").addEventListener("input", e => { $("#ed-size-o").textContent = e.target.value + "%"; patchStyle({ z: +e.target.value }); });
+  $("#ed-weight").addEventListener("change", e => patchStyle({ fw: e.target.value ? +e.target.value : null }));
+  $("#ed-ls").addEventListener("input", e => patchStyle({ ls: +e.target.value }));
+  $("#ed-color").addEventListener("input", e => patchStyle({ c: e.target.value }));
+  document.querySelectorAll(".sw").forEach(b => b.addEventListener("click", () => { $("#ed-color").value = b.dataset.c; patchStyle({ c: b.dataset.c }); }));
+  document.querySelectorAll("[data-st]").forEach(b => b.addEventListener("click", () => {
+    const k = b.dataset.st, on = b.getAttribute("aria-pressed") !== "true";
+    b.setAttribute("aria-pressed", String(on));
+    const patch = { [k]: on };
+    if (k === "b") { patch.fw = null; $("#ed-weight").value = ""; }
+    patchStyle(patch);
+  }));
+  document.querySelectorAll("[data-al]").forEach(b => b.addEventListener("click", () => {
+    const same = b.getAttribute("aria-pressed") === "true";
+    document.querySelectorAll("[data-al]").forEach(x => x.setAttribute("aria-pressed", "false"));
+    if (!same) b.setAttribute("aria-pressed", "true");
+    patchStyle({ ta: same ? null : b.dataset.al });
+  }));
+  document.querySelectorAll("[data-mv]").forEach(b => b.addEventListener("click", () => {
+    if (!lastEd) return;
+    const [dx, dy] = b.dataset.mv.split(",").map(Number), st = getStyle(lastEd.dataset.key);
+    patchStyle({ x: clampN((st.x || 0) + dx * 6, -400, 400), y: clampN((st.y || 0) + dy * 6, -400, 400) });
+  }));
+}
+
 function bindEditor(){
   document.addEventListener("focusout", ev => { const n = ev.target.closest && ev.target.closest("[data-ed]"); if (editing && n) saveText(n); });
-  document.addEventListener("focusin", ev => { const n = ev.target.closest && ev.target.closest("[data-ed]"); if (n) lastEd = n; });
+  document.addEventListener("focusin", ev => { const n = ev.target.closest && ev.target.closest("[data-ed]"); if (editing && n) setTarget(n); });
   document.addEventListener("keydown", ev => { if (editing && ev.key === "Enter" && ev.target.closest && ev.target.closest("[data-ed]")) { ev.preventDefault(); ev.target.blur(); } });
   document.addEventListener("click", ev => { if (editing && ev.target.closest && ev.target.closest("#faq-list summary")) ev.preventDefault(); }, true);
   $("#edit-fab").addEventListener("click", () => setEditing(true));
   $("#edit-done").addEventListener("click", () => setEditing(false));
   $("#edit-reset").addEventListener("click", async () => {
     if (!lastEd) return showToast("Cliquez d'abord sur le texte à rétablir.");
-    try { await store.deleteText(lastEd.dataset.key); delete texts[lastEd.dataset.key]; prepareTexts(); showToast("Texte d'origine rétabli."); }
+    try {
+      const k = lastEd.dataset.key;
+      await store.deleteText(k); delete texts[k];
+      if (texts["s_" + k] != null) { await store.deleteText("s_" + k); delete texts["s_" + k]; }
+      lastEd.dataset.orig && (lastEd.textContent = lastEd.dataset.pre + lastEd.dataset.orig + lastEd.dataset.post);
+      applyStyle(lastEd, {}); prepareTexts(); setTarget(lastEd); showToast("Texte et mise en forme d'origine rétablis.");
+    }
     catch { showToast("Le rétablissement a échoué."); }
   });
   $("#goto-edit").addEventListener("click", () => { location.hash = "#accueil"; setTimeout(() => setEditing(true), 80); });
+  bindStyler();
 }
 
 async function checkAdmin(){
