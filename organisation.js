@@ -735,7 +735,9 @@ function buildAdminShell() {
   site.append(editCard, ...rest);
   const nav = el("div", { class: "admin-main", role: "group", "aria-label": "Espaces" },
     ...[["today", "Aujourd'hui"], ["site", "Le site"], ["org", "Organisation"], ["photos", "Photos"], ["pray", "Prière"]].map(([k, l]) => el("button", { type: "button", "data-main": k, "aria-pressed": "false", text: l, onclick: () => showMain(k) })));
-  const top = el("div", { class: "admin-bar2" }, nav, logout);
+  const sortBtn = el("button", { type: "button", class: "link", id: "tab-sort", "aria-pressed": "false", title: "Changer l'ordre des onglets", text: "⇄ Réorganiser les onglets", onclick: () => { const on = !document.body.classList.contains("sorting"); document.body.classList.toggle("sorting", on); sortBtn.setAttribute("aria-pressed", String(on)); sortBtn.textContent = on ? "✓ Terminer" : "⇄ Réorganiser les onglets"; sortHint.hidden = !on; } });
+  const sortHint = el("p", { class: "hint sort-hint", hidden: true, text: "Glissez un onglet à sa nouvelle place, ou utilisez ‹ › sur chaque onglet. L'ordre est enregistré." });
+  const top = el("div", { class: "admin-bar2" }, nav, el("div", { class: "admin-bar-right" }, sortBtn, logout));
   const today = el("section", { "data-main-sec": "today" }, el("div", { id: "today-body" }));
   const org = el("section", { "data-main-sec": "org", hidden: true },
     el("div", { class: "admin-tabs", role: "group", "aria-label": "Organisation" },
@@ -749,7 +751,45 @@ function buildAdminShell() {
   org.querySelectorAll("[data-org]").forEach(b => b.prepend(icon(OICO[b.dataset.org], 22)));
   const SICO = { al: "Épi de blé", so: "Musique", fq: "Bougie", gi: "Poisson" };
   site.querySelectorAll("[data-tab]").forEach(b => { if (SICO[b.dataset.tab]) b.prepend(icon(SICO[b.dataset.tab], 22)); });
-  panel.replaceChildren(el("div", { class: "admin-orn" }, iconRow(["Croix"], 34)), top, today, site, org, photos, pray);
+  panel.replaceChildren(el("div", { class: "admin-orn" }, iconRow(["Croix"], 34)), top, sortHint, today, site, org, photos, pray);
+  setupTabSorting(panel);
+}
+
+/* --- Onglets déplaçables (glisser-déposer ou flèches), ordre enregistré --- */
+const TAB_GROUPS = [["main", ".admin-main", "data-main"], ["org", '[data-main-sec="org"] .admin-tabs', "data-org"], ["site", '[data-main-sec="site"] .admin-tabs', "data-tab"]];
+function readTabOrder(panel) { const o = {}; TAB_GROUPS.forEach(([g, sel, attr]) => { const box = panel.querySelector(sel); if (box) o[g] = [...box.children].map(b => b.getAttribute(attr)); }); return o; }
+let tabSaveTimer = null;
+function saveTabOrder(panel) {
+  const json = JSON.stringify(readTabOrder(panel));
+  try { localStorage.setItem("mariage:tab-order", json); } catch {}
+  clearTimeout(tabSaveTimer);
+  tabSaveTimer = setTimeout(async () => { try { await store.setSetting("admin_tab_order", json); showToast("Ordre des onglets enregistré"); } catch {} }, 500);
+}
+async function setupTabSorting(panel) {
+  // 1) applique l'ordre enregistré
+  let saved = null;
+  try { saved = JSON.parse((await store.getSetting("admin_tab_order")) || localStorage.getItem("mariage:tab-order") || "null"); } catch {}
+  TAB_GROUPS.forEach(([g, sel, attr]) => {
+    const box = panel.querySelector(sel); if (!box) return;
+    if (saved && Array.isArray(saved[g])) { const rank = k => { const i = saved[g].indexOf(k); return i < 0 ? 999 : i; }; box.append(...[...box.children].map((b, i) => [b, i]).sort((a, c) => rank(a[0].getAttribute(attr)) - rank(c[0].getAttribute(attr)) || a[1] - c[1]).map(a => a[0])); }
+  });
+  // 2) rend les onglets déplaçables
+  TAB_GROUPS.forEach(([g, sel, attr]) => {
+    const box = panel.querySelector(sel); if (!box || box.dataset.sortable) return; box.dataset.sortable = "1";
+    let drag = null; const clear = () => box.querySelectorAll(".drop-before,.drop-after").forEach(x => x.classList.remove("drop-before", "drop-after"));
+    [...box.children].forEach(b => {
+      b.draggable = true;
+      [["‹", -1, "Déplacer à gauche"], ["›", 1, "Déplacer à droite"]].forEach(([t, d, lab]) => b.append(el("span", { class: "mv", role: "button", tabindex: "0", "aria-label": lab, text: t, onclick: e => {
+        e.preventDefault(); e.stopPropagation();
+        if (d < 0 && b.previousElementSibling) box.insertBefore(b, b.previousElementSibling); else if (d > 0 && b.nextElementSibling) box.insertBefore(b.nextElementSibling, b);
+        saveTabOrder(panel);
+      } })));
+      b.addEventListener("dragstart", e => { drag = b; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", b.getAttribute(attr) || ""); b.classList.add("dragging"); });
+      b.addEventListener("dragend", () => { b.classList.remove("dragging"); clear(); drag = null; });
+      b.addEventListener("dragover", e => { if (!drag || drag === b) return; e.preventDefault(); const r = b.getBoundingClientRect(), before = e.clientX < r.left + r.width / 2; clear(); b.classList.add(before ? "drop-before" : "drop-after"); });
+      b.addEventListener("drop", e => { e.preventDefault(); if (!drag || drag === b) return; const before = b.classList.contains("drop-before"); clear(); box.insertBefore(drag, before ? b : b.nextSibling); saveTabOrder(panel); });
+    });
+  });
 }
 
 /* Reprise automatique (une seule fois) du tableur Prestataires des mariés : prestataires, jeux et budget prévisionnel. */

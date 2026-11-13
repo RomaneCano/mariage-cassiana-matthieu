@@ -380,6 +380,17 @@ details[open]>.org-sum-row::before{transform:translateY(-50%) rotate(90deg)}
 #panel-connexion.wide .org-table.guests td:nth-child(2){width:auto;min-width:0}#panel-connexion.wide .org-table.guests th:nth-child(1),#panel-connexion.wide .org-table.guests th{white-space:nowrap}
 body.post .pre{display:none}
 #panel-connexion.wide .org-table.guests select[aria-label="Présence"],#panel-connexion.wide .org-table.guests select[aria-label="Invitation"]{min-width:124px}
+.admin-bar-right{display:flex;align-items:center;gap:6px 16px;flex-wrap:wrap}
+#tab-sort{font-size:.8rem;opacity:.85}
+.admin-main button[draggable],.admin-tabs button[draggable]{cursor:grab}
+.admin-main button.dragging,.admin-tabs button.dragging{opacity:.35}
+.admin-main button.drop-before,.admin-tabs button.drop-before{box-shadow:inset 3px 0 0 var(--olive)}
+.admin-main button.drop-after,.admin-tabs button.drop-after{box-shadow:inset -3px 0 0 var(--olive)}
+.mv{display:none;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:1px solid currentColor;font-size:.9rem;line-height:1;opacity:.7;cursor:pointer}
+.mv:hover{opacity:1;background:rgba(118,119,63,.16)}
+body.sorting .mv{display:inline-flex}
+body.sorting .admin-main button,body.sorting .admin-tabs button{outline:1.5px dashed var(--olive-soft);outline-offset:2px}
+.sort-hint{text-align:center;margin:-6px 0 10px}
 .org-fold{display:flex;gap:6px;justify-content:flex-end;margin:0 0 6px}
 @media(max-width:640px){.org-sum-row{grid-template-columns:minmax(0,1fr) auto}.org-sum-row .sm,.org-sum-row .num:nth-of-type(2){display:none}}
 .org-grp{margin:10px 0 0;font-size:.95rem;color:var(--olive)}
