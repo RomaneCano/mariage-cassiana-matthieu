@@ -62,9 +62,9 @@ body{padding-top:calc(var(--tabs-h) + env(safe-area-inset-top,0px))}
 .tabs .tab-conn{position:absolute;right:calc(var(--flower-w) + 12px);top:calc(env(safe-area-inset-top,0px) + 6px)}
 .tabs .tab-conn a{font-size:.8rem;padding:0 10px}
 @media(max-width:1020px){
-  .tabs ul{display:grid;grid-template-columns:repeat(3,1fr) 64px;grid-auto-rows:44px;gap:0 2px;align-content:start;padding:6px calc(var(--flower-w) * .55)}
+  .tabs ul{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) 62px;grid-auto-rows:44px;gap:0 2px;align-content:start;padding:6px calc(var(--flower-w) * .45) 6px calc(var(--flower-w) * .45)}
   .tabs li{display:block}
-  .tabs a{width:100%;padding:0 4px;font-size:.86rem;letter-spacing:.02em}
+  .tabs a{width:100%;padding:0 1px;font-size:clamp(11px,3.1vw,14.5px);letter-spacing:0}
   .tabs li:nth-child(4){grid-row:2;grid-column:1}
   .tabs li:nth-child(5){grid-row:2;grid-column:2}
   .tabs li:nth-child(6){grid-row:2;grid-column:3}
@@ -148,7 +148,7 @@ h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
 .step .what{font-family:var(--script);font-size:clamp(1.5rem,min(6vw,4.2vh),2.2rem);color:var(--olive-soft);line-height:1.1;margin:0}
 .step .place{margin:0;font-size:.92rem;line-height:1.45}
 .step .place em{display:block;font-family:var(--script);font-style:normal;font-size:1.2rem;color:var(--olive-soft)}
-.zig{display:block;width:auto;height:min(12vh,110px);margin:0 auto;transform:scaleY(-1)}
+.zig{display:block;width:auto;height:min(15vh,140px);margin:0 auto;transform:scaleY(-1)}
 .zig.flip{transform:scale(-1,-1)}
 .transit{text-align:center;font-style:italic;font-size:.88rem;margin:0}
 .timeline{position:relative}
@@ -158,7 +158,7 @@ h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
   .panel#panel-programme{max-width:min(97vw,2000px);padding:1.5vh 2vw 12px}
   #panel-programme h2{font-size:clamp(1.8rem,min(5vw,5.2vh),2.6rem)}
   #panel-programme .rule{margin-bottom:1vh}
-  .timeline{grid-template-columns:repeat(3,1fr);gap:clamp(90px,9vw,170px);align-items:start}
+  .timeline{grid-template-columns:repeat(3,1fr);gap:clamp(150px,13.5vw,270px);align-items:start}
   .step,.step.rev{grid-template-columns:1fr;gap:8px;text-align:center;justify-items:center}
   .step.rev .watercolor{order:0}
   .step.rev .txt{text-align:center}
@@ -308,7 +308,7 @@ footer .adm{display:inline-block;margin-top:2rem;font-size:.8rem;opacity:.65}
 .admin-tabs button[aria-pressed="true"]{border-bottom-color:var(--olive);font-weight:700;opacity:1}
 .couple{margin:0 auto 1.2rem;display:grid;justify-items:center;gap:.4rem}
 .couple .ph{width:min(230px,44vw);max-height:30vh;aspect-ratio:4/5;overflow:hidden;border-radius:999px 999px 18px 18px;border:2px solid var(--olive-soft);box-shadow:0 8px 22px rgba(79,80,32,.18)}
-.couple .ph img{width:100%;height:100%;object-fit:cover;transform:scale(1.7);transform-origin:57% 70%}
+.couple .ph img{width:100%;height:100%;object-fit:cover;object-position:50% 40%}
 .couple figcaption{font-family:var(--script);font-size:1.6rem;color:var(--olive-soft);line-height:1.1}
 .cat{font-family:var(--script);font-weight:400;font-size:1.7rem;color:var(--olive-soft);margin:0 0 .6rem}
 .btn.danger{border-color:var(--alert);color:var(--alert)}
@@ -377,11 +377,9 @@ body.on-conn #edit-fab{display:none}
           </div>
         </article>
         <img class="zig" src="img/fleche-v.png" alt="" aria-hidden="true">
-        <p class="transit" id="transit-line"></p>
         <article class="step rev s2">
           <img class="watercolor" src="img/domaine.png" alt="Aquarelle du Clos du Colombier" width="441" height="297">
           <div class="txt">
-            <p class="road" id="transit-line-2"></p>
             <p class="hour">17h30 – 19h30</p><p class="what">Cocktail</p>
             <p class="place">Le Clos du Colombier<em>Fontenay-Trésigny</em></p>
           </div>
@@ -837,8 +835,6 @@ const store = {
 /* ============ SITE PUBLIC ============ */
 function renderStatic(){
   $("#drive-time").textContent = CONTENT.driveTime;
-  $("#transit-line").textContent = `Environ ${CONTENT.driveTime} de route`;
-  $("#transit-line-2").textContent = `Environ ${CONTENT.driveTime} de route`;
   $("#maps-church").href = mapsUrl(CONTENT.church.name + ", " + CONTENT.church.address);
   $("#maps-domaine").href = mapsUrl(CONTENT.domaine.name + ", " + CONTENT.domaine.address);
 
@@ -883,9 +879,8 @@ function drawLoops(){
   for (let i = 0; i < 2; i++) {
     const A = im[i], B = im[i + 1], x1 = A.r + 12 - o.left, x2 = B.l - 12 - o.left, gap = x2 - x1;
     if (gap < 50) continue;
-    const w = Math.min(gap, 260), h = w * 67 / 166, cx = (x1 + x2) / 2, cy = (A.cy + B.cy) / 2 - o.top;
+    const w = Math.min(gap * 1.05, 360), h = w * 67 / 166, cx = (x1 + x2) / 2, cy = (A.cy + B.cy) / 2 - o.top;
     box.append(el("img", { class: "arrow", src: "img/fleche-h.png", alt: "", style: `left:${cx - w / 2}px;top:${cy - h / 2}px;width:${w}px` }));
-    if (i === 0) box.append(el("span", { class: "arrow-note", style: `left:${cx}px;top:${cy + h / 2 + 6}px;width:${w}px`, text: `Environ ${CONTENT.driveTime} de route` }));
   }
 }
 
