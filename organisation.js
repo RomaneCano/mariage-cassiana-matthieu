@@ -255,7 +255,12 @@ function fieldInput(f, value, row) {
   }
   else if (f.t === "check") { inp = el("input", { type: "checkbox" }); inp.checked = !!value; }
   else if (f.t === "long" && f.k === "guests") inp = guestEditor(value, row ? row.capacity : 10);
-  else if (f.t === "long") { inp = el("textarea", { rows: "3" }); inp.value = value || ""; }
+  else if (f.t === "long") {
+    inp = el("textarea", { rows: "1" }); inp.value = value || "";
+    const grow = () => { inp.style.height = "auto"; if (inp.scrollHeight) inp.style.height = (inp.scrollHeight + 2) + "px"; };
+    inp.addEventListener("input", grow);
+    new ResizeObserver(() => { if (inp._w !== inp.offsetWidth) { inp._w = inp.offsetWidth; grow(); } }).observe(inp);
+  }
   else { inp = el("input", { type: f.t === "number" ? "number" : f.t === "date" ? "date" : f.t === "time" ? "time" : "text", step: f.t === "number" ? "any" : null }); inp.value = value == null ? "" : value; }
   inp.setAttribute("aria-label", f.l);
   if (f.ph && inp.tagName === "INPUT") inp.placeholder = f.ph;
