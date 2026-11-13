@@ -64,7 +64,7 @@ async function renderVerse(host, opts = {}) {
       el("p", { class: "verse-day", text: frDate(d) }),
       el("blockquote", { class: "verse-text", text: "« " + g.verset + " »" }),
       el("p", { class: "verse-ref", text: g.titre + (g.ref ? " (" + g.ref + ")" : "") }));
-    if (opts.full !== false && g.full) host.append(el("details", { class: "verse-more" }, el("summary", { text: "Lire l'Évangile du jour" }), el("div", { class: "verse-full", text: g.full })));
+    if (opts.full !== false && g.full) host.append(el("details", { class: "verse-more" }, el("summary", { text: "Lire l'Évangile du jour" }), el("div", { class: "verse-full", text: String(g.full).replace(/\n{3,}/g, "\n\n").trim() })));
   } else {
     const f = FALLBACK_VERSES[Math.floor(Date.parse(d) / dayMs) % FALLBACK_VERSES.length];
     host.append(
