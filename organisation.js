@@ -221,7 +221,7 @@ const orgState = { key: "tasks", filter: { status: "todo", cat: "", gp: "", gq: 
 
 function sortRows(key, rows) {
   const by = (f) => rows.slice().sort(f);
-  if (key === "guests") return by((a, b) => (a.position || 0) - (b.position || 0) || String(a.nom || "").localeCompare(String(b.nom || ""), "fr") || String(a.prenom || "").localeCompare(String(b.prenom || ""), "fr"));
+  if (key === "guests") { const k = r => String(r.nom || r.prenom || "").trim(), cmp = (x, y) => String(x).localeCompare(String(y), "fr", { sensitivity: "base", numeric: true }); return by((a, b) => cmp(k(a), k(b)) || cmp(a.prenom || "", b.prenom || "")); }
   if (key === "tasks") return by((a, b) => (a.done - b.done) || String(a.due || "9999").localeCompare(String(b.due || "9999")) || String(a.title).localeCompare(String(b.title)));
   if (key === "budget") return by((a, b) => CATS_BUDGET.indexOf(a.cat) - CATS_BUDGET.indexOf(b.cat) || String(a.item).localeCompare(String(b.item)));
   if (key === "vendors") return by((a, b) => { const ia = ROLES.indexOf(a.role), ib = ROLES.indexOf(b.role); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || String(a.created_at || "").localeCompare(String(b.created_at || "")); });
