@@ -31,6 +31,16 @@
       }
       local.write("covoit", local.read("covoit").filter(r => r.id !== id));
     },
+    async take(id, prenom, contact) {
+      if (remote) { const { error } = await remote.rpc("covoit_prendre", { p_id: id, p_prenom: prenom, p_contact: contact }); if (error) throw error; return; }
+      const l = local.read("covoit"), r = l.find(x => x.id === id); if (!r || r.places < 1) throw new Error("complet");
+      r.places -= 1; local.write("covoit", l);
+      const res = local.read("covoit-res"); res.push({ offer_id: id, prenom, contact, created_at: new Date().toISOString() }); local.write("covoit-res", res);
+    },
+    async passengers(id, c) {
+      if (remote) { const { data, error } = await remote.rpc("covoit_passagers", { p_id: id, p_code: c }); if (error) throw error; return data || []; }
+      return local.read("covoit-res").filter(x => x.offer_id === id);
+    },
     async places(id, c, n) {
       if (remote) { const { error } = await remote.rpc("covoit_places", { p_id: id, p_code: c, p_places: n }); if (error) throw error; return; }
       const l = local.read("covoit"); const r = l.find(x => x.id === id); if (r) r.places = n; local.write("covoit", l);
@@ -56,34 +66,66 @@
     if (isPhone(ct)) actions.append(el("a", { class: "btn small solid", href: "tel:" + digits(ct), text: "Appeler" }));
     if (isPhone(ct)) {
       actions.append(el("a", { class: "btn small", href: "sms:" + digits(ct), text: "SMS" }));
-      actions.append(el("button", { class: "btn small", type: "button", text: "Copier le numéro", onclick: async e => { try { await navigator.clipboard.writeText(ct); e.target.textContent = "Copié ✓"; } catch { e.target.textContent = ct; } } }));
     }
     if (isMail(ct)) actions.append(el("a", { class: "btn small solid", href: "mailto:" + ct.trim(), text: "Écrire" }));
     const own = el("div", { class: "cv-own" });
     if (m && r.type === "offre") own.append(
       el("button", { class: "btn small", type: "button", text: full ? "Il reste des places" : "Complet", onclick: async () => { try { await api.places(r.id, m, full ? 1 : 0); load(); } catch { toast("Action impossible pour le moment."); } } }));
     if (m || isAdm) own.append(el("button", { class: "btn small danger", type: "button", text: m ? "Retirer mon annonce" : "Supprimer", onclick: async () => { try { await api.remove(r.id, m, !m && isAdm); const mm = mine(); delete mm[r.id]; saveMine(mm); load(); } catch { toast("Suppression impossible pour le moment."); } } }));
+    const extra = el("div", { class: "cv-extra" });
+    if (r.type === "offre" && !full && !m) {
+      const f = el("form", { class: "cv-take", hidden: true, novalidate: true },
+        el("label", {}, el("span", { text: "Votre prénom" }), el("input", { name: "prenom", maxlength: "40", autocomplete: "given-name", required: true })),
+        el("label", {}, el("span", { text: "Votre téléphone ou e-mail" }), el("input", { name: "contact", maxlength: "80", autocomplete: "off", required: true })),
+        el("label", { class: "cv-ok" }, el("input", { type: "checkbox", name: "ok" }), el("span", { text: "J'accepte que ces informations soient transmises à " + r.prenom + "." })),
+        el("p", { class: "msg", hidden: true }),
+        el("button", { class: "btn small solid", type: "submit", text: "Confirmer ma place" }));
+      f.addEventListener("submit", async e => {
+        e.preventDefault(); const msg = f.querySelector(".msg"), d = new FormData(f), pr = clean(d.get("prenom")), co = clean(d.get("contact"));
+        if (!pr || !co) return showMsg(msg, "Merci d'indiquer votre prénom et un moyen de vous contacter.", "err");
+        if (!isPhone(co) && !isMail(co)) return showMsg(msg, "Le contact doit être un numéro de téléphone ou une adresse e-mail valide.", "err");
+        if (!d.get("ok")) return showMsg(msg, "Cochez la case pour confirmer.", "err");
+        try { await api.take(r.id, pr, co); toast("Place réservée. " + r.prenom + " a bien reçu vos coordonnées. Vous pouvez aussi la contacter."); load(); }
+        catch { showMsg(msg, "Cette place n'est plus disponible ou la réservation a échoué. Réessayez.", "err"); load(); }
+      });
+      extra.append(el("button", { class: "btn small solid", type: "button", text: "Prendre une place", onclick: () => { f.hidden = !f.hidden; if (!f.hidden) f.querySelector("input").focus(); } }), f);
+    }
+    if (m && r.type === "offre") {
+      const det = el("details", { class: "cv-pass" }, el("summary", { text: "Mes passagers" }));
+      let loaded = false;
+      det.addEventListener("toggle", async () => {
+        if (!det.open || loaded) return; loaded = true;
+        try {
+          const ps = await api.passengers(r.id, m);
+          det.append(ps.length ? el("ul", {}, ...ps.map(x => el("li", {}, el("b", { text: x.prenom }), " · " + x.contact + " ", isPhone(x.contact) ? el("a", { href: "tel:" + digits(x.contact), text: "Appeler" }) : isMail(x.contact) ? el("a", { href: "mailto:" + x.contact.trim(), text: "Écrire" }) : ""))) : el("p", { class: "hint", text: "Personne n'a encore pris de place." }));
+        } catch { det.append(el("p", { class: "hint", text: "Liste indisponible pour le moment." })); }
+      });
+      extra.append(det);
+    }
     return el("article", { class: "cv-item" + (full ? " full" : "") + (r.type === "demande" ? " ask" : "") },
       el("div", { class: "cv-top" }, el("b", { text: r.prenom }), el("span", { class: "cv-badge", text: kind })),
       el("p", { class: "cv-line", text: (r.type === "demande" ? "Part de " : "Départ de ") + r.lieu + (r.heure ? " · vers " + r.heure : "") }),
       r.note ? el("p", { class: "cv-note", text: r.note }) : "",
       el("p", { class: "cv-contact", text: "Contact : " + ct }),
-      actions, own);
+      actions, extra, own);
   }
   const toast = t => { if (typeof showToast === "function") showToast(t); else alert(t); };
 
+  const isFull = r => r.type === "offre" && Number(r.places) <= 0;
   function renderList() {
     const host = $("#cv-list"); if (!host) return; host.replaceChildren();
     const shown = list.filter(r => filter === "all" || r.sens === filter || r.sens === "both");
+    const open = shown.filter(r => !isFull(r)), full = shown.filter(isFull);
     const cols = el("div", { class: "cv-cols" + (filter === "all" ? "" : " one") }); host.append(cols);
     ["aller", "retour"].forEach(s => {
       if (filter !== "all" && filter !== s) return;
-      const rows = shown.filter(r => r.sens === s || r.sens === "both");
+      const rows = open.filter(r => r.sens === s || r.sens === "both");
       const col = el("div", { class: "cv-col" }, el("h3", { class: "cat", text: SENS[s] }));
       if (!rows.length) col.append(el("p", { class: "hint cv-empty", text: "Aucune annonce pour l'instant. Soyez le premier à vous proposer !" }));
       else col.append(el("div", { class: "cv-grid" }, ...rows.map(card)));
       cols.append(col);
     });
+    if (full.length) host.append(el("details", { class: "cv-archive" }, el("summary", { text: "Trajets complets (" + full.length + ")" }), el("div", { class: "cv-grid" }, ...full.map(card))));
   }
   async function load() {
     try { list = await api.list(); } catch { list = []; const h = $("#cv-list"); if (h) h.replaceChildren(el("p", { class: "hint", text: "Les annonces ne peuvent pas être chargées pour le moment. Réessayez dans un instant." })); return; }
