@@ -71,12 +71,14 @@
   function renderList() {
     const host = $("#cv-list"); if (!host) return; host.replaceChildren();
     const shown = list.filter(r => filter === "all" || r.sens === filter || r.sens === "both");
+    const cols = el("div", { class: "cv-cols" + (filter === "all" ? "" : " one") }); host.append(cols);
     ["aller", "retour"].forEach(s => {
       if (filter !== "all" && filter !== s) return;
       const rows = shown.filter(r => r.sens === s || r.sens === "both");
-      host.append(el("h3", { class: "cat", text: SENS[s] }));
-      if (!rows.length) host.append(el("p", { class: "hint cv-empty", text: "Aucune annonce pour l'instant. Soyez le premier à vous proposer !" }));
-      else host.append(el("div", { class: "cv-grid" }, ...rows.map(card)));
+      const col = el("div", { class: "cv-col" }, el("h3", { class: "cat", text: SENS[s] }));
+      if (!rows.length) col.append(el("p", { class: "hint cv-empty", text: "Aucune annonce pour l'instant. Soyez le premier à vous proposer !" }));
+      else col.append(el("div", { class: "cv-grid" }, ...rows.map(card)));
+      cols.append(col);
     });
   }
   async function load() {
