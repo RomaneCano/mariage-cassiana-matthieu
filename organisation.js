@@ -368,13 +368,6 @@ async function renderOrg(key) {
     st.addEventListener("change", () => { orgState.filter.status = st.value; renderOrg(key); }); ct.addEventListener("change", () => { orgState.filter.cat = ct.value; renderOrg(key); });
     bar.append(st, ct);
   }
-  const tplBtn = el("button", { class: "btn small", type: "button", text: rows.length ? "Compléter avec le modèle type" : "Charger le modèle type", onclick: async () => {
-    const have = new Set(rows.map(r => String(r.title || r.item || r.name || r.time + r.title)));
-    const add = TPL[key]().filter(r => !have.has(String(r.title || r.item || r.name || r.time + r.title)));
-    if (!add.length) return showToast("Le modèle est déjà entièrement chargé.");
-    try { await orgStore.insert(M.table, add); showToast(add.length + " ligne(s) ajoutée(s)"); renderOrg(key); } catch (e) { showToast(orgErr(e)); }
-  } });
-  bar.append(tplBtn);
   host.append(bar);
 
   if (key === "seating" && rows.length) host.append(await seatPlan(rows));
@@ -395,13 +388,13 @@ async function renderOrg(key) {
     if (key === "seating") row.position = rows.length;
     try { await orgStore.insert(M.table, row); renderOrg(key); } catch (e) { showMsg(msg, orgErr(e), "err"); }
   });
-  const addBox = el("details", { class: "org-addbox" }, el("summary", { text: "➕ Ajouter (" + M.label.toLowerCase() + ")" }), form);
+  const addBox = el("details", { class: "org-addbox" }, el("summary", {}, icon("Plus", 22), " Ajouter (" + M.label.toLowerCase() + ")"), form);
   host.append(addBox);
 
   // tableau modifiable
   let shown = rows;
   if (key === "tasks") shown = rows.filter(r => (orgState.filter.status === "all" || (orgState.filter.status === "done" ? r.done : !r.done)) && (!orgState.filter.cat || r.cat === orgState.filter.cat));
-  if (!shown.length) { host.append(el("div", { class: "empty-ico" }, icon("Agneau couché", 44)), el("p", { class: "empty", text: rows.length ? "Aucune ligne avec ce filtre." : "Rien pour l'instant. Utilisez « Charger le modèle type » ou ajoutez une première ligne." })); return; }
+  if (!shown.length) { host.append(el("div", { class: "empty-ico" }, icon("Agneau couché", 44)), el("p", { class: "empty", text: rows.length ? "Aucune ligne avec ce filtre." : "Rien pour l'instant. Ajoutez une première ligne avec « Ajouter »." })); return; }
   if (key === "vendors" || key === "seating" || key === "budget") {
     const list = el("div", { class: "org-cards" });
     const bar2 = el("div", { class: "org-fold" },
@@ -622,6 +615,7 @@ const ICONS = {
   "Poisson": '<path d="M6 32C20 12 38 14 46 32 38 50 20 52 6 32z" class="ln"/><path d="M46 32l14-12v24z" class="ln"/><circle cx="18" cy="29" r="1.6" class="dot"/><path d="M26 22c4 6 4 14 0 20M33 24c3 5 3 11 0 16" class="ln thin"/>',
   "Épi de blé": '<path d="M32 60V22" class="ln"/><g class="ln"><ellipse cx="25" cy="42" rx="4" ry="8" transform="rotate(-25 25 42)"/><ellipse cx="39" cy="42" rx="4" ry="8" transform="rotate(25 39 42)"/><ellipse cx="25" cy="29" rx="4" ry="8" transform="rotate(-25 25 29)"/><ellipse cx="39" cy="29" rx="4" ry="8" transform="rotate(25 39 29)"/><ellipse cx="32" cy="14" rx="4" ry="8"/></g>',
   "Rameau d'olivier": '<path d="M8 54C20 44 38 32 56 10" class="ln"/><g class="ln"><ellipse cx="20" cy="40" rx="3.5" ry="8" transform="rotate(50 20 40)"/><ellipse cx="30" cy="49" rx="3.5" ry="8" transform="rotate(-10 30 49)"/><ellipse cx="32" cy="31" rx="3.5" ry="8" transform="rotate(50 32 31)"/><ellipse cx="43" cy="39" rx="3.5" ry="8" transform="rotate(-5 43 39)"/><ellipse cx="45" cy="21" rx="3.5" ry="8" transform="rotate(50 45 21)"/><ellipse cx="55" cy="29" rx="3.5" ry="8" transform="rotate(5 55 29)"/></g>',
+  "Plus": '<circle cx="32" cy="32" r="24" class="ln"/><path d="M32 20v24M20 32h24" class="ln"/>',
   "Bougie": '<path d="M23 26h18v32H23z" class="ln"/><path d="M32 26v-5" class="ln thin"/><path d="M32 4c6 6 8 10 8 13a8 8 0 0 1-16 0c0-3 2-7 8-13z" class="ln"/>'
 };
 const icon = (name, size) => { const s = el("span", { class: "ico", role: "img", "aria-label": name, title: name }); s.innerHTML = '<svg viewBox="0 0 64 64" width="' + (size || 56) + '" height="' + (size || 56) + '" aria-hidden="true">' + ICONS[name] + "</svg>"; return s; };
@@ -694,7 +688,7 @@ function buildAdminShell() {
   org.querySelectorAll("[data-org]").forEach(b => b.prepend(icon(OICO[b.dataset.org], 22)));
   const SICO = { al: "Épi de blé", so: "Colombe", fq: "Bougie", gi: "Poisson" };
   site.querySelectorAll("[data-tab]").forEach(b => { if (SICO[b.dataset.tab]) b.prepend(icon(SICO[b.dataset.tab], 22)); });
-  panel.replaceChildren(el("div", { class: "admin-orn" }, iconRow(["Agneau", "Colombe", "Croix", "Calice", "Poisson"], 30)), top, today, site, org, photos, pray);
+  panel.replaceChildren(el("div", { class: "admin-orn" }, iconRow(["Croix"], 34)), top, today, site, org, photos, pray);
 }
 
 /* Reprise automatique (une seule fois) du tableur Prestataires des mariés : prestataires, jeux et budget prévisionnel. */

@@ -349,7 +349,7 @@ details[open]>.org-sum-row::before{transform:translateY(-50%) rotate(90deg)}
 .org-card .org-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:5px 8px}
 .org-card .org-grid label{font-size:.72rem}.org-card .org-grid input,.org-card .org-grid select,.org-card .org-grid textarea{min-height:30px;padding:3px 7px;font-size:.82rem;border-radius:7px}
 .org-card .org-grid textarea{min-height:44px}
-.org-addbox{margin:0 0 10px}.org-addbox>summary{min-height:0;padding:7px 12px;font-size:.88rem;background:var(--paper-2);border-radius:10px;display:block}.org-addbox>summary::after{content:none}.org-addbox[open]>summary{border-radius:10px 10px 0 0}.org-addbox .org-add{margin:0;border-radius:0 0 12px 12px}
+.org-addbox{margin:0 0 10px}.org-addbox>summary{min-height:0;padding:6px 12px;font-size:.88rem;background:var(--paper-2);border-radius:10px;display:flex;justify-content:flex-start;align-items:center;gap:8px;color:var(--olive)}.org-addbox>summary .ico .ln{stroke-width:3.4}.org-addbox>summary::after{content:none}.org-addbox[open]>summary{border-radius:10px 10px 0 0}.org-addbox .org-add{margin:0;border-radius:0 0 12px 12px}
 .org-grid{align-items:start}
 .org-add{padding:10px 12px}.org-add h3{display:none}
 .org-add .org-grid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:5px 8px}
@@ -878,7 +878,7 @@ body.on-conn #edit-fab{display:none}
 <button class="btn" id="edit-fab" type="button" hidden>&#9998; Modifier les textes</button>
 <div id="edit-bar" role="region" aria-label="Éditeur de texte" hidden>
   <div class="ed-row">
-    <span id="ed-target" class="ed-target">Cliquez sur un texte de la page pour le modifier (Entrée = nouvelle ligne)</span>
+    <span id="ed-target" class="ed-target">Cliquez sur un texte pour le modifier. Sélectionnez un mot pour ne changer que lui (Entrée = nouvelle ligne)</span>
     <span id="ed-status" class="ed-status" role="status"></span>
     <span class="ed-spacer"></span>
     <button class="btn small" id="edit-reset" type="button">Rétablir</button>
@@ -1580,18 +1580,50 @@ function applyStyle(n, st){
   S.transform = mv ? `translate(${clampN(st.x, -400, 400)}px, ${clampN(st.y, -400, 400)}px)` : "";
 }
 
+/* --- Mise en forme d'un seul mot / passage : <span class="mk"> (stocké sous la clé m_<clé> : [{t: texte, st: style}]) --- */
+const isMk = c => c.nodeType === 1 && c.classList.contains("mk");
+const isLeaf = n => [...n.children].every(c => c.classList.contains("mk"));
+function getMarks(key){ try { const a = JSON.parse(texts["m_" + key] || "[]"); return Array.isArray(a) ? a : []; } catch { return []; } }
+function markCSS(sp, st){
+  const f = st.ff && FONTS.find(x => x.n === st.ff); if (f) ensureFont(f.n);
+  const S = sp.style;
+  S.fontFamily = f ? `"${f.n}", ${f.fb}` : "";
+  S.fontWeight = st.fw ? String(clampN(st.fw, 100, 900)) : (st.b ? "700" : "");
+  S.fontStyle = st.i ? "italic" : ""; S.textDecoration = st.u ? "underline" : ""; S.textTransform = st.up ? "uppercase" : "";
+  S.color = /^#[0-9a-f]{6}$/i.test(st.c || "") ? st.c : "";
+  S.letterSpacing = st.ls ? clampN(st.ls, -1, 10) + "px" : "";
+  S.fontSize = st.z && st.z !== 100 ? clampN(st.z, 50, 250) + "%" : "";
+}
+function mkSpan(t, st){ const sp = document.createElement("span"); sp.className = "mk"; sp.dataset.st = JSON.stringify(st); sp.textContent = t; markCSS(sp, st); return sp; }
+function renderMarks(n, value){
+  const marks = getMarks(n.dataset.key); if (!marks.length) return;
+  const kids = [n.dataset.pre || ""]; let cur = 0;
+  for (const m of marks) {
+    if (!m || typeof m.t !== "string" || !m.t) continue;
+    const i = value.indexOf(m.t, cur); if (i < 0) continue;
+    if (i > cur) kids.push(value.slice(cur, i));
+    kids.push(mkSpan(m.t, m.st || {})); cur = i + m.t.length;
+  }
+  kids.push(value.slice(cur) + (n.dataset.post || ""));
+  n.replaceChildren(...kids);
+}
+const normMark = t => t.replace(/\u00a0/g, " ").replace(/[ \t]+/g, " ").trim();
+function collectMarks(n){
+  return [...n.querySelectorAll("span.mk")].map(sp => { let st = {}; try { st = JSON.parse(sp.dataset.st || "{}"); } catch {} return { t: normMark(sp.textContent), st }; }).filter(m => m.t && Object.keys(m.st).length);
+}
+
 function prepareTexts(root = $("#public")){
   root.querySelectorAll(TEXT_SEL).forEach(n => {
-    if (n.closest(TEXT_SKIP) || !n.children.length) return;
+    if (n.closest(TEXT_SKIP) || !n.children.length || isLeaf(n)) return;
     [...n.childNodes].forEach(c => {
       if (c.nodeType === 3 && c.textContent.trim()) { const w = document.createElement("span"); w.dataset.w = "1"; w.textContent = c.textContent; c.replaceWith(w); }
     });
   });
   root.querySelectorAll(TEXT_SEL + ",span[data-w]").forEach(n => {
-    if (n.closest(TEXT_SKIP) || n.children.length) return;
+    if (n.closest(TEXT_SKIP) || !isLeaf(n)) return;
     const raw = n.textContent, txt = raw.trim().replace(/\s+/g, " "); if (!txt) return;
     if (!n.dataset.orig) { n.dataset.orig = txt; n.dataset.key = hashKey(txt); n.dataset.ed = "1"; [n.dataset.pre, n.dataset.post] = wsOf(raw).map(x => x.replace(/\s+/g, " ")); }
-    if (n !== document.activeElement) { const v0 = texts[n.dataset.key], v = (v0 != null && !/https?:\/\//i.test(v0)) ? v0 : null; n.textContent = n.dataset.pre + (v != null ? v : n.dataset.orig) + n.dataset.post; }
+    if (n !== document.activeElement) { const v0 = texts[n.dataset.key], v = (v0 != null && !/https?:\/\//i.test(v0)) ? v0 : null; const val = v != null ? v : n.dataset.orig; n.textContent = n.dataset.pre + val + n.dataset.post; renderMarks(n, val); }
     applyStyle(n, getStyle(n.dataset.key));
     if (editing) n.setAttribute("contenteditable", CE);
   });
@@ -1602,19 +1634,23 @@ function setEditing(on){
   document.querySelectorAll("[data-ed]").forEach(n => { if (on) n.setAttribute("contenteditable", CE); else n.removeAttribute("contenteditable"); });
   document.querySelectorAll("#faq-list details").forEach(d => { d.open = on; });
   $("#edit-bar").hidden = !on; $("#edit-fab").hidden = on || !editorAllowed;
-  if (!on && lastEd) { lastEd.classList.remove("ed-active"); lastEd = null; $("#ed-tools").disabled = true; $("#ed-target").textContent = "Cliquez sur un texte de la page pour le modifier (Entrée = nouvelle ligne)"; }
+  if (!on && lastEd) { lastEd.classList.remove("ed-active"); lastEd = null; $("#ed-tools").disabled = true; $("#ed-target").textContent = "Cliquez sur un texte pour le modifier. Sélectionnez un mot pour ne changer que lui (Entrée = nouvelle ligne)"; }
 }
 
+/* Texte réellement saisi (sans les majuscules ou autres effets d'affichage du CSS) */
+function domText(n){ let t = ""; n.childNodes.forEach(c => { if (c.nodeType === 3) t += c.data; else if (c.nodeName === "BR") t += "\n"; else if (/^(DIV|P)$/.test(c.nodeName)) { if (t && !t.endsWith("\n")) t += "\n"; t += domText(c); } else t += domText(c); }); return t; }
 async function saveText(n){
   const key = n.dataset.key, cur = texts[key] != null ? texts[key] : n.dataset.orig;
   // espaces multiples réduits, mais les retours à la ligne saisis sont conservés
-  const v = n.innerText.replace(/\u00a0/g, " ").replace(/[ \t]+/g, " ").replace(/ ?\n ?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
-  const show = val => { n.textContent = n.dataset.pre + val + n.dataset.post; };
-  if (v === cur) { show(cur); return; }
+  const v = domText(n).replace(/\u00a0/g, " ").replace(/[ \t]+/g, " ").replace(/ ?\n ?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  const marks = collectMarks(n), mj = marks.length ? JSON.stringify(marks) : "", markChanged = mj !== (texts["m_" + key] || "");
+  const show = val => { n.textContent = n.dataset.pre + val + n.dataset.post; renderMarks(n, val); };
+  if (v === cur && !markChanged) { if (n.textContent !== n.dataset.pre + cur + n.dataset.post) show(cur); return; }
   if (/https?:\/\//i.test(v)) { show(cur); showToast("Les liens ne peuvent pas être collés dans un texte. Le texte d'origine est conservé."); setStatus(false, "Lien refusé dans le texte"); return; }
   if (!v) { show(cur); showToast("Un texte ne peut pas être vide. Utilisez « Rétablir ce texte » pour revenir à l'original."); return; }
   try {
-    if (v === n.dataset.orig) { await store.deleteText(key); delete texts[key]; } else { await store.setText(key, v); texts[key] = v; }
+    if (v !== cur) { if (v === n.dataset.orig) { await store.deleteText(key); delete texts[key]; } else { await store.setText(key, v); texts[key] = v; } }
+    if (markChanged) { if (mj) { await store.setText("m_" + key, mj); texts["m_" + key] = mj; } else { await store.deleteText("m_" + key); delete texts["m_" + key]; } }
     show(v); prepareTexts(); showToast("Enregistré"); setStatus(true, "Texte enregistré à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }));
   } catch (e) { show(cur); const why = explainErr(e); showToast("Non enregistré : " + why); setStatus(false, "Non enregistré : " + why); }
 }
@@ -1652,8 +1688,74 @@ function setTarget(n){
   $("#ed-color").value = st.c || hexOf(cs.color);
   $("#ed-ls").value = st.ls || 0;
 }
+/* --- Sélection d'un mot ou d'un passage : la mise en forme ne s'applique qu'à lui --- */
+let wordSel = null, rebuilding = false, markTimer = null;
+const WORD_KEYS = ["ff", "b", "fw", "i", "u", "up", "c", "z", "ls"];
+const cleanSt = st => { const o = { ...st }; Object.keys(o).forEach(k => { if (o[k] === null || o[k] === "" || o[k] === false || (k === "z" && o[k] === 100) || (k === "ls" && !o[k])) delete o[k]; }); return o; };
+function segStyleAt(n, a){
+  let pos = 0;
+  for (const c of n.childNodes) { const len = c.textContent.length; if (a < pos + len || c === n.lastChild) { if (isMk(c)) { try { return JSON.parse(c.dataset.st || "{}"); } catch {} } return {}; } pos += len; }
+  return {};
+}
+function setSelOffsets(n, a, b){
+  const tw = document.createTreeWalker(n, NodeFilter.SHOW_TEXT); let pos = 0, node, sN = null, sO = 0, eN = null, eO = 0;
+  while ((node = tw.nextNode())) { const len = node.textContent.length; if (!sN && a <= pos + len) { sN = node; sO = a - pos; } if (!eN && b <= pos + len) { eN = node; eO = b - pos; break; } pos += len; }
+  if (!sN || !eN) return;
+  const r = document.createRange(); r.setStart(sN, sO); r.setEnd(eN, eO);
+  rebuilding = true; const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); setTimeout(() => { rebuilding = false; }, 80);
+}
+function applyToSelection(n, patch){
+  const ws = wordSel; if (!ws || ws.n !== n) return false;
+  const total = n.textContent.length, a = Math.max(ws.a, (n.dataset.pre || "").length), b = Math.min(ws.b, total - (n.dataset.post || "").length);
+  if (b <= a) return false;
+  const segs = [...n.childNodes].map(c => { let st = {}; if (isMk(c)) { try { st = JSON.parse(c.dataset.st || "{}"); } catch {} } return { t: c.textContent, st }; });
+  const out = []; let pos = 0;
+  for (const sg of segs) {
+    const s0 = pos, s1 = pos + sg.t.length; pos = s1;
+    if (s1 <= a || s0 >= b) { out.push(sg); continue; }
+    const i = Math.max(a, s0) - s0, j = Math.min(b, s1) - s0;
+    if (i > 0) out.push({ t: sg.t.slice(0, i), st: sg.st });
+    out.push({ t: sg.t.slice(i, j), st: cleanSt({ ...sg.st, ...patch }) });
+    if (j < sg.t.length) out.push({ t: sg.t.slice(j), st: sg.st });
+  }
+  const merged = [];
+  for (const sg of out) { const last = merged[merged.length - 1]; if (last && JSON.stringify(last.st) === JSON.stringify(sg.st)) last.t += sg.t; else merged.push({ ...sg }); }
+  n.replaceChildren(...merged.map(sg => Object.keys(sg.st).length ? mkSpan(sg.t, sg.st) : sg.t));
+  setSelOffsets(n, ws.a, ws.b);
+  const key = n.dataset.key, marks = collectMarks(n), mj = marks.length ? JSON.stringify(marks) : "";
+  if (mj) texts["m_" + key] = mj; else delete texts["m_" + key];
+  clearTimeout(markTimer);
+  markTimer = setTimeout(async () => {
+    try { if (mj) await store.setText("m_" + key, mj); else await store.deleteText("m_" + key); showToast("Enregistré"); setStatus(true, "Mise en forme du passage enregistrée"); }
+    catch (e) { const why = explainErr(e); showToast("Non enregistré : " + why); setStatus(false, "Non enregistré : " + why); }
+  }, 600);
+  syncTools({ ...getStyle(key), ...segStyleAt(n, ws.a) });
+  return true;
+}
+function syncTools(st){
+  $("#ed-font").value = st.ff || "";
+  $("#ed-size").value = st.z || 100; $("#ed-size-o").textContent = (st.z || 100) + "%";
+  $("#ed-weight").value = st.fw ? String(st.fw) : "";
+  document.querySelectorAll("[data-st]").forEach(b => b.setAttribute("aria-pressed", String(!!st[b.dataset.st])));
+  if (st.c) $("#ed-color").value = st.c;
+  $("#ed-ls").value = st.ls || 0;
+}
+document.addEventListener("selectionchange", () => {
+  if (!editing || rebuilding) return;
+  const sel = getSelection(); if (!sel.rangeCount) return;
+  const r = sel.getRangeAt(0), node = r.commonAncestorContainer, host = (node.nodeType === 3 ? node.parentElement : node).closest && (node.nodeType === 3 ? node.parentElement : node).closest("[data-ed]");
+  if (!host) return;
+  if (r.collapsed) { if (document.activeElement === host) { wordSel = null; if (host === lastEd) $("#ed-target").textContent = "Texte sélectionné : « " + (host.dataset.orig || "").slice(0, 48) + " » (sélectionnez un mot pour ne modifier que lui)"; } return; }
+  const pr = document.createRange(); pr.selectNodeContents(host); pr.setEnd(r.startContainer, r.startOffset);
+  const a = pr.toString().length, txt = r.toString();
+  wordSel = { n: host, a, b: a + txt.length };
+  $("#ed-target").textContent = "Passage sélectionné : « " + txt.trim().slice(0, 40) + " » (seul ce passage sera modifié)";
+  syncTools({ ...getStyle(host.dataset.key), ...segStyleAt(host, a) });
+});
+
 function patchStyle(patch){
   const n = lastEd; if (!n) return;
+  if (wordSel && wordSel.n === n && wordSel.b > wordSel.a && Object.keys(patch).every(k => WORD_KEYS.includes(k)) && applyToSelection(n, patch)) return;
   const key = n.dataset.key, st = { ...getStyle(key), ...patch };
   Object.keys(st).forEach(k => { if (st[k] === null || st[k] === "" || st[k] === false || (k === "z" && st[k] === 100) || ((k === "x" || k === "y" || k === "ls") && !st[k])) delete st[k]; });
   applyStyle(n, st);
@@ -1740,7 +1842,8 @@ function bindEditor(){
       const k = lastEd.dataset.key;
       await store.deleteText(k); delete texts[k];
       if (texts["s_" + k] != null) { await store.deleteText("s_" + k); delete texts["s_" + k]; }
-      lastEd.dataset.orig && (lastEd.textContent = lastEd.dataset.pre + lastEd.dataset.orig + lastEd.dataset.post);
+      if (texts["m_" + k] != null) { await store.deleteText("m_" + k); delete texts["m_" + k]; }
+      wordSel = null; lastEd.dataset.orig && (lastEd.textContent = lastEd.dataset.pre + lastEd.dataset.orig + lastEd.dataset.post);
       applyStyle(lastEd, {}); prepareTexts(); setTarget(lastEd); showToast("Texte et mise en forme d'origine rétablis.");
     }
     catch (e) { setStatus(false, "Non rétabli : " + explainErr(e)); showToast("Le rétablissement a échoué."); }
