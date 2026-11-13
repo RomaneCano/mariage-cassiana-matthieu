@@ -201,6 +201,68 @@ function orgSummary(key, rows) {
   return box;
 }
 
+
+/* ---------------------------------------------------------------------------
+   Plan de tables : schéma avec avatars (glisser-déposer, ou toucher puis toucher la table)
+   --------------------------------------------------------------------------- */
+const PALETTE = ["#8d8f45", "#a1624a", "#5f7f8c", "#9b7aa6", "#c08a3e", "#6e8f6a", "#b5586b", "#7b7355"];
+const guestsOf = r => String(r.guests || "").split("\n").map(x => x.trim()).filter(Boolean);
+const initials = n => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
+const colorOf = n => { let h = 0; for (const c of n) h = (h * 31 + c.charCodeAt(0)) >>> 0; return PALETTE[h % PALETTE.length]; };
+async function seatPlan(rows) {
+  const M = ORG.seating; let sel = null;
+  const wrap = el("section", { class: "seat-plan-wrap" });
+  const hint = el("p", { class: "hint", text: "Glissez un invité sur une autre table, ou touchez-le puis touchez la table. Déposez-le dans « À placer » pour le retirer." });
+  const plan = el("div", { class: "seat-plan" });
+  const pool = el("div", { class: "seat-pool", "data-pool": "1" }, el("b", { text: "À placer" }));
+  const save = async (r, list) => { await orgStore.update(M.table, r.id, { guests: list.join("\n") }); r.guests = list.join("\n"); };
+  async function move(from, name, toId) {
+    const src = from ? rows.find(r => r.id === from) : null, dst = toId ? rows.find(r => r.id === toId) : null;
+    if ((src && src.id) === (dst && dst.id)) return;
+    try {
+      if (src) { const l = guestsOf(src), i = l.indexOf(name); if (i >= 0) l.splice(i, 1); await save(src, l); }
+      if (dst) { const l = guestsOf(dst); l.push(name); await save(dst, l); }
+      renderOrg("seating");
+    } catch (e) { showToast(orgErr(e)); }
+  }
+  const avatar = (name, fromId, over) => {
+    const a = el("button", { type: "button", class: "av" + (over ? " over" : ""), draggable: "true", title: name, "aria-label": name + (fromId ? " (cliquer pour déplacer)" : " (à placer)") },
+      el("i", { text: initials(name), style: "background:" + colorOf(name) }), el("span", { text: name.split(/\s+/)[0] }));
+    a.addEventListener("dragstart", e => { e.dataTransfer.setData("text/plain", JSON.stringify({ from: fromId, name })); e.dataTransfer.effectAllowed = "move"; });
+    a.addEventListener("click", e => { e.stopPropagation(); sel = sel && sel.name === name && sel.from === fromId ? null : { from: fromId, name }; document.querySelectorAll(".av.sel").forEach(x => x.classList.remove("sel")); if (sel) a.classList.add("sel"); hint.textContent = sel ? name + " : touchez maintenant la table (ou « À placer »)." : "Glissez un invité sur une autre table, ou touchez-le puis touchez la table."; });
+    return a;
+  };
+  const zone = (node, toId) => {
+    node.addEventListener("dragover", e => { e.preventDefault(); node.classList.add("drop"); });
+    node.addEventListener("dragleave", () => node.classList.remove("drop"));
+    node.addEventListener("drop", e => { e.preventDefault(); node.classList.remove("drop"); try { const d = JSON.parse(e.dataTransfer.getData("text/plain")); move(d.from, d.name, toId); } catch {} });
+    node.addEventListener("click", () => { if (sel) move(sel.from, sel.name, toId); });
+  };
+  const placed = new Set();
+  rows.forEach(r => {
+    const g = guestsOf(r), cap = Number(r.capacity) || 0, n = Math.max(cap, g.length), R = 96, size = 280;
+    g.forEach(x => placed.add(norm(x)));
+    const t = el("div", { class: "seat-table" + (g.length > cap && cap ? " full" : ""), style: "width:" + size + "px;height:" + size + "px" },
+      el("div", { class: "t-disc" }, el("b", { text: r.name }), el("span", { text: g.length + " / " + (cap || "?") })));
+    for (let i = 0; i < n; i++) {
+      const ang = -Math.PI / 2 + i * 2 * Math.PI / n, x = size / 2 + R * Math.cos(ang), y = size / 2 + R * Math.sin(ang);
+      const seat = el("div", { class: "seat", style: "left:" + x + "px;top:" + y + "px" });
+      if (g[i]) seat.append(avatar(g[i], r.id, cap && i >= cap)); else seat.append(el("i", { class: "empty-seat", "aria-hidden": "true" }));
+      t.append(seat);
+    }
+    zone(t, r.id); plan.append(t);
+  });
+  // invités ayant répondu « oui » mais pas encore placés
+  let rep = []; try { rep = await store.listResponses(); } catch {}
+  const names = [...new Set(rep.filter(x => x.presence !== "non").map(x => ((x.prenom || "") + " " + (x.nom || "")).trim()).filter(Boolean))];
+  const left = names.filter(n => !placed.has(norm(n)));
+  const chips = el("div", { class: "pool-chips" }, ...left.map(n => avatar(n, null)));
+  pool.append(chips, left.length ? "" : el("small", { text: names.length ? "Tout le monde est placé 🎉" : "Les invités qui confirment leur présence apparaîtront ici." }));
+  zone(pool, null);
+  wrap.append(el("h3", { class: "cat", text: "Schéma des tables" }), hint, pool, plan);
+  return wrap;
+}
+
 async function renderOrg(key) {
   orgState.key = key;
   document.querySelectorAll("[data-org]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.org === key)));
@@ -227,6 +289,8 @@ async function renderOrg(key) {
   } });
   bar.append(tplBtn);
   host.append(bar);
+
+  if (key === "seating" && rows.length) host.append(await seatPlan(rows));
 
   // formulaire d'ajout
   const form = el("form", { class: "card org-add", novalidate: true });
@@ -408,6 +472,29 @@ async function applyPostWedding() {
    4. Prière : Évangile du jour et images (espace privé)
    --------------------------------------------------------------------------- */
 const COMMONS = f => "https://commons.wikimedia.org/wiki/Special:FilePath/" + encodeURIComponent(f) + "?width=900";
+
+/* ---------------------------------------------------------------------------
+   Icônes dessinées (traits, sans fichier externe) : agneaux, colombe, croix, calice…
+   --------------------------------------------------------------------------- */
+const WOOL = (cs) => '<g class="wool">' + cs.map(([x, y, r]) => '<circle cx="' + x + '" cy="' + y + '" r="' + r + '"/>').join("") + '</g><g class="woolfill">' + cs.map(([x, y, r]) => '<circle cx="' + x + '" cy="' + y + '" r="' + (r - 1.1) + '"/>').join("") + "</g>";
+const LAMB_BODY = [[15, 37, 7], [23, 30, 8], [33, 28, 9], [43, 32, 8], [44, 41, 7], [32, 41, 9], [21, 43, 7]];
+const LEGS = '<path d="M22 49V59M32 50V59M40 49V59M47 46V59" class="ln"/>';
+const HEAD = '<ellipse cx="55" cy="31" rx="5.5" ry="7" class="ln"/><path d="M52 26c-5-2-7 2-6 5" class="ln"/><circle cx="57" cy="29" r="1.1" class="dot"/>';
+const ICONS = {
+  "Agneau": WOOL(LAMB_BODY) + LEGS + HEAD,
+  "Agneau pascal": WOOL(LAMB_BODY.map(([x, y, r]) => [x, y + 4, r])) + '<path d="M22 53V61M32 54V61M40 53V61M47 50V61" class="ln"/><ellipse cx="55" cy="35" rx="5.5" ry="7" class="ln"/><circle cx="57" cy="33" r="1.1" class="dot"/><path d="M46 8V32" class="ln"/><path d="M46 9l14 3-14 5z" class="ln"/><path d="M53 11v4M51 13h4" class="ln thin"/>',
+  "Agneau couché": WOOL([[14, 44, 7], [22, 38, 8], [32, 36, 9], [43, 40, 8], [43, 48, 6], [32, 49, 8], [21, 50, 6]]) + '<path d="M16 56h34M44 54c3 1 5 2 8 2" class="ln"/><ellipse cx="54" cy="40" rx="5.5" ry="6.5" class="ln"/><path d="M51 35c-5-2-7 2-6 5" class="ln"/><circle cx="56" cy="38" r="1.1" class="dot"/>',
+  "Colombe": '<path d="M6 38c9-10 20-8 27-3 1-11 9-21 24-24-1 11-6 20-15 25 7 2 13 0 19-5-3 13-14 21-27 19-6 7-17 8-26-1" class="ln"/><circle cx="46" cy="22" r="1.3" class="dot"/><path d="M58 26l5 1-5 3" class="ln thin"/>',
+  "Croix": '<path d="M27 6h10v18h18v10H37v26H27V34H9V24h18z" class="ln"/><path d="M32 12v40M16 29h32" class="ln thin"/>',
+  "Calice": '<path d="M16 14h32c0 14-5 22-16 22S16 28 16 14z" class="ln"/><path d="M32 36v12M22 56h20c0-5-4-8-10-8s-10 3-10 8z" class="ln"/><circle cx="32" cy="7" r="4.5" class="ln"/><path d="M32 4.5v5M29.5 7h5" class="ln thin"/>',
+  "Poisson": '<path d="M6 32C20 12 38 14 46 32 38 50 20 52 6 32z" class="ln"/><path d="M46 32l14-12v24z" class="ln"/><circle cx="18" cy="29" r="1.6" class="dot"/><path d="M26 22c4 6 4 14 0 20M33 24c3 5 3 11 0 16" class="ln thin"/>',
+  "Épi de blé": '<path d="M32 60V22" class="ln"/><g class="ln"><ellipse cx="25" cy="42" rx="4" ry="8" transform="rotate(-25 25 42)"/><ellipse cx="39" cy="42" rx="4" ry="8" transform="rotate(25 39 42)"/><ellipse cx="25" cy="29" rx="4" ry="8" transform="rotate(-25 25 29)"/><ellipse cx="39" cy="29" rx="4" ry="8" transform="rotate(25 39 29)"/><ellipse cx="32" cy="14" rx="4" ry="8"/></g>',
+  "Rameau d'olivier": '<path d="M8 54C20 44 38 32 56 10" class="ln"/><g class="ln"><ellipse cx="20" cy="40" rx="3.5" ry="8" transform="rotate(50 20 40)"/><ellipse cx="30" cy="49" rx="3.5" ry="8" transform="rotate(-10 30 49)"/><ellipse cx="32" cy="31" rx="3.5" ry="8" transform="rotate(50 32 31)"/><ellipse cx="43" cy="39" rx="3.5" ry="8" transform="rotate(-5 43 39)"/><ellipse cx="45" cy="21" rx="3.5" ry="8" transform="rotate(50 45 21)"/><ellipse cx="55" cy="29" rx="3.5" ry="8" transform="rotate(5 55 29)"/></g>',
+  "Bougie": '<path d="M23 26h18v32H23z" class="ln"/><path d="M32 26v-5" class="ln thin"/><path d="M32 4c6 6 8 10 8 13a8 8 0 0 1-16 0c0-3 2-7 8-13z" class="ln"/>'
+};
+const icon = (name, size) => { const s = el("span", { class: "ico", role: "img", "aria-label": name, title: name }); s.innerHTML = '<svg viewBox="0 0 64 64" width="' + (size || 56) + '" height="' + (size || 56) + '" aria-hidden="true">' + ICONS[name] + "</svg>"; return s; };
+const iconRow = (names, size) => el("div", { class: "ico-row", "aria-hidden": "true" }, ...names.map(n => icon(n, size)));
+
 const SACRED = [
   { f: "Christ Pantocrator Deesis mosaic Hagia Sophia.jpg", c: "Christ Pantocrator, mosaïque de la Déisis, Sainte-Sophie (XIIIe siècle). Domaine public, via Wikimedia Commons." },
   { f: "\"The good Shepherd\" mosaic - Mausoleum of Galla Placidia.jpg", c: "Le Bon Pasteur, mosaïque du mausolée de Galla Placidia, Ravenne (Ve siècle). Photo : Petar Milošević, CC BY-SA 4.0, via Wikimedia Commons." }
@@ -416,6 +503,8 @@ async function renderPrayer() {
   const host = $("#pray-body"); host.replaceChildren();
   const verse = el("div", { class: "verse-card" }); host.append(verse);
   renderVerse(verse);
+  host.append(el("h3", { class: "cat", text: "Symboles" }), el("p", { class: "hint", text: "Des dessins pour accompagner vos prières. Agneau de Dieu, colombe, croix, calice, poisson, épi de blé, rameau d'olivier, bougie." }),
+    el("div", { class: "ico-grid" }, ...Object.keys(ICONS).map(n => el("figure", { class: "ico-tile" }, icon(n, 72), el("figcaption", { text: n })))));
   host.append(el("h3", { class: "cat", text: "Images" }), el("p", { class: "hint", text: "Cet espace est privé : rien de ce qui se trouve ici n'apparaît sur le site public." }));
   const grid = el("div", { class: "pray-grid" });
   SACRED.forEach(s => { const img = el("img", { src: COMMONS(s.f), alt: s.c.split(".")[0], loading: "lazy", referrerpolicy: "no-referrer" }); const fig = el("figure", { class: "pray-item" }, img, el("figcaption", { text: s.c })); img.addEventListener("error", () => fig.remove()); grid.append(fig); });
@@ -450,7 +539,7 @@ async function renderToday() {
   const host = $("#today-body"); host.replaceChildren();
   const days = daysBetween(todayISO(), WEDDING_ISO);
   host.append(el("div", { class: "today-head" },
-    el("div", { class: "count" }, el("b", { text: days > 0 ? "J-" + days : days === 0 ? "C'est aujourd'hui !" : "Jour " + Math.abs(days) + " de vie à deux" }), el("span", { text: days > 0 ? "avant le mariage, le samedi 9 octobre 2027" : days === 0 ? "Que cette journée soit belle" : "depuis le mariage" })),
+    el("div", { class: "count" }, iconRow(["Agneau", "Colombe", "Croix"], 34), el("b", { text: days > 0 ? "J-" + days : days === 0 ? "C'est aujourd'hui !" : "Jour " + Math.abs(days) + " de vie à deux" }), el("span", { text: days > 0 ? "avant le mariage, le samedi 9 octobre 2027" : days === 0 ? "Que cette journée soit belle" : "depuis le mariage" })),
     el("div", { class: "verse-card" })));
   renderVerse($(".verse-card", host));
   const cols = el("div", { class: "today-cols" }); host.append(cols);
