@@ -65,6 +65,9 @@ body{padding-top:calc(var(--tabs-h) + env(safe-area-inset-top,0px))}
   .tabs ul{display:grid;grid-template-columns:repeat(3,1fr) 64px;grid-auto-rows:44px;gap:0 2px;align-content:start;padding:6px calc(var(--flower-w) * .55)}
   .tabs li{display:block}
   .tabs a{width:100%;padding:0 4px;font-size:.86rem;letter-spacing:.02em}
+  .tabs li:nth-child(4){grid-row:2;grid-column:1}
+  .tabs li:nth-child(5){grid-row:2;grid-column:2}
+  .tabs li:nth-child(6){grid-row:2;grid-column:3}
   .tabs .tab-conn{position:static;grid-row:2;grid-column:4}
   .tabs .tab-conn a{height:100%;white-space:normal;text-align:center;line-height:1.1;font-size:.66rem;padding:0 2px}
 }
@@ -144,12 +147,12 @@ h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
 .step .what{font-family:var(--script);font-size:clamp(1.5rem,min(6vw,4.2vh),2.2rem);color:var(--olive-soft);line-height:1.1;margin:0}
 .step .place{margin:0;font-size:.92rem;line-height:1.45}
 .step .place em{display:block;font-family:var(--script);font-style:normal;font-size:1.2rem;color:var(--olive-soft)}
-.zig{display:block;width:min(56%,calc(5.5vh * 3.6));height:auto;margin:0 auto;overflow:visible}
-.zig.flip{transform:scaleX(-1)}
+.zig{display:block;width:auto;height:min(12vh,110px);margin:0 auto;transform:scaleY(-1)}
+.zig.flip{transform:scale(-1,-1)}
 .transit{text-align:center;font-style:italic;font-size:.88rem;margin:0}
 .timeline{position:relative}
 .loops{display:none;position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none}
-.loops path,.zig path{fill:none;stroke:var(--olive-soft);stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+.loops img.arrow{position:absolute;height:auto;max-width:none}
 @media(min-aspect-ratio:5/4) and (min-width:900px){
   .panel#panel-programme{max-width:min(97vw,2000px);padding:1.5vh 2vw 12px}
   #panel-programme h2{font-size:clamp(1.8rem,min(5vw,5.2vh),2.6rem)}
@@ -158,14 +161,13 @@ h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
   .step,.step.rev{grid-template-columns:1fr;gap:8px;text-align:center;justify-items:center}
   .step.rev .watercolor{order:0}
   .step.rev .txt{text-align:center}
-  .step .watercolor{width:80%;max-width:80%;max-height:min(46vh,calc(91vh - 306px));object-fit:contain}
+  .step .watercolor{width:66%;max-width:66%;height:min(46vh,calc(91vh - 306px));max-height:none;object-fit:contain}
   .zig,.transit{display:none}
   .loops{display:block}
   .step .road{display:block;margin:0 0 .2rem;font-style:italic;font-size:.95rem}
   .step .hour{font-size:1.4rem}
   .step .what{font-size:clamp(1.8rem,3vw,2.6rem)}
   .step .place{font-size:1.05rem}
-  .s2{margin-top:var(--off)}
 }
 
 /* Infos pratiques : tout sur un seul écran, réparti en grille */
@@ -363,7 +365,7 @@ body.on-conn #edit-fab{display:none}
       <h2>Le programme</h2>
       <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
       <div class="timeline">
-        <svg class="loops" id="loops" aria-hidden="true"></svg>
+        <div class="loops" id="loops" aria-hidden="true"></div>
         <article class="step s1">
           <img class="watercolor" src="img/eglise.png" alt="Aquarelle de l'église Notre-Dame des Ardents" width="264" height="396">
           <div class="txt">
@@ -371,7 +373,7 @@ body.on-conn #edit-fab{display:none}
             <p class="place">Église Notre-Dame des Ardents<em>Lagny-sur-Marne</em></p>
           </div>
         </article>
-        <svg class="zig" viewBox="0 0 360 100" aria-hidden="true"></svg>
+        <img class="zig" src="img/fleche-v.png" alt="" aria-hidden="true">
         <p class="transit" id="transit-line"></p>
         <article class="step rev s2">
           <img class="watercolor" src="img/domaine.png" alt="Aquarelle du Clos du Colombier" width="441" height="297">
@@ -381,7 +383,7 @@ body.on-conn #edit-fab{display:none}
             <p class="place">Le Clos du Colombier<em>Fontenay-Trésigny</em></p>
           </div>
         </article>
-        <svg class="zig flip" viewBox="0 0 360 100" aria-hidden="true"></svg>
+        <img class="zig flip" src="img/fleche-v.png" alt="" aria-hidden="true">
         <article class="step s3">
           <img class="watercolor" src="img/salle.png" alt="Aquarelle de la salle de réception" width="468" height="390">
           <div class="txt">
@@ -400,12 +402,12 @@ body.on-conn #edit-fab{display:none}
         <div class="card">
           <h3>Église</h3>
           <p>Notre-Dame des Ardents<br>1 rue du Docteur-Nodier<br>77400 Lagny-sur-Marne</p>
-          <a class="btn solid small" href="#" id="waze-church" target="_blank" rel="noopener">Ouvrir dans Waze</a>
+          <a class="btn solid small" href="#" id="maps-church" target="_blank" rel="noopener">Ouvrir dans Google Maps</a>
         </div>
         <div class="card">
           <h3>Domaine</h3>
           <p>Le Clos du Colombier<br>Ferme de Malassise, D402<br>77610 Fontenay-Trésigny</p>
-          <a class="btn solid small" href="#" id="waze-domaine" target="_blank" rel="noopener">Ouvrir dans Waze</a>
+          <a class="btn solid small" href="#" id="maps-domaine" target="_blank" rel="noopener">Ouvrir dans Google Maps</a>
         </div>
         <p class="route-time wide">Environ <b id="drive-time"></b> de route entre les deux</p>
         <div class="card wide">
@@ -678,7 +680,7 @@ const CONTENT = {
   driveTime: "40 minutes",
   // Lien de la cagnotte en ligne (Leetchi, Lydia, PayPal...). Laisser vide tant qu'il n'existe pas.
   cagnotteUrl: "",
-  // Noms à saisir dans Waze, à proximité de l'église.
+  // Parkings à proximité de l'église (ouverts dans Google Maps).
   parkings: [
     { name: "Parking Vanel", where: "Boulevard Gallieni, Lagny-sur-Marne" },
     { name: "Parking Charpentier", where: "Lagny-sur-Marne" },
@@ -716,7 +718,7 @@ const el = (tag, attrs={}, ...kids) => {
   kids.flat().forEach(c => n.append(c));
   return n;
 };
-const wazeUrl = q => "https://waze.com/ul?q=" + encodeURIComponent(q) + "&navigate=yes";
+const mapsUrl = q => "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(q);
 const norm = s => (s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim();
 const showMsg = (n, text, kind) => { n.hidden = false; n.className = "msg " + kind; n.textContent = text; };
 const fmtDate = iso => { try { return new Date(iso).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric"}); } catch { return ""; } };
@@ -823,11 +825,11 @@ function renderStatic(){
   $("#drive-time").textContent = CONTENT.driveTime;
   $("#transit-line").textContent = `Environ ${CONTENT.driveTime} de route`;
   $("#transit-line-2").textContent = `Environ ${CONTENT.driveTime} de route`;
-  $("#waze-church").href = wazeUrl(CONTENT.church.name + ", " + CONTENT.church.address);
-  $("#waze-domaine").href = wazeUrl(CONTENT.domaine.name + ", " + CONTENT.domaine.address);
+  $("#maps-church").href = mapsUrl(CONTENT.church.name + ", " + CONTENT.church.address);
+  $("#maps-domaine").href = mapsUrl(CONTENT.domaine.name + ", " + CONTENT.domaine.address);
 
   const pl = $("#parking-list");
-  CONTENT.parkings.forEach(p => pl.append(el("a",{class:"btn small", href:wazeUrl(p.name + ", " + p.where), target:"_blank", rel:"noopener", title:p.where, text:p.name})));
+  CONTENT.parkings.forEach(p => pl.append(el("a",{class:"btn small", href:mapsUrl(p.name + ", " + p.where), target:"_blank", rel:"noopener", title:p.where, text:p.name})));
 
   CONTENT.avoid.forEach(([n,c]) => $("#palette-no").append(el("li",{}, el("span",{class:"swatch no", style:`background:${c}`, role:"img","aria-label":"À éviter : "+n}), n)));
 
@@ -852,44 +854,24 @@ function renderFaq(){
   if (typeof prepareTexts === "function") { prepareTexts(faq); if (editing) faq.querySelectorAll("details").forEach(d => d.open = true); }
 }
 
-/* --- Boucles légères entre les lieux --- */
-const NS = "http://www.w3.org/2000/svg";
-function loopGeom(x1, y1, x2, y2, k, amp){
-  const N = 140, r = 1 / (2 * Math.PI), d = r * k, raw = [];
-  for (let i = 0; i <= N; i++) { const th = -Math.PI + 2 * Math.PI * i / N; raw.push([r * th - d * Math.sin(th), i / N, Math.cos(th)]); }
-  const xs = raw.map(q => q[0]), xmin = Math.min(...xs), sx = (x2 - x1) / (Math.max(...xs) - xmin), dy = y2 - y1;
-  const pts = raw.map(([X, u, c]) => [x1 + (X - xmin) * sx, y1 + dy * u - sx * d * (1 + c) * amp]);
-  const f = v => v.toFixed(1);
-  const [ax, ay] = pts[N], [bx, by] = pts[N - 6], a = Math.atan2(ay - by, ax - bx), L = 8;
-  return {
-    d: "M" + pts.map(q => f(q[0]) + " " + f(q[1])).join(" L"),
-    tip: `M${f(ax - L * Math.cos(a - .5))} ${f(ay - L * Math.sin(a - .5))} L${f(ax)} ${f(ay)} L${f(ax - L * Math.cos(a + .5))} ${f(ay - L * Math.sin(a + .5))}`
-  };
-}
-const mkPath = d => { const p = document.createElementNS(NS, "path"); p.setAttribute("d", d); return p; };
+/* --- Flèches en boucle entre les lieux (illustrations de l'invitation) --- */
 function visRect(img){
   const r = img.getBoundingClientRect(), nw = img.naturalWidth || r.width, nh = img.naturalHeight || r.height;
   const sc = Math.min(r.width / nw, r.height / nh), w = nw * sc, h = nh * sc, l = r.left + (r.width - w) / 2, t = r.top + (r.height - h) / 2;
   return { l: l + w * .05, r: l + w * .95, cy: t + h / 2 };
 }
 function drawLoops(){
-  const svg = $("#loops"), tl = $(".timeline");
-  if (!svg || !tl || !$("#panel-programme").classList.contains("active")) return;
-  svg.replaceChildren();
-  if (getComputedStyle(svg).display !== "none") {
-    const o = tl.getBoundingClientRect(), im = [...tl.querySelectorAll(".watercolor")].map(visRect);
-    for (let i = 0; i < 2; i++) {
-      const A = im[i], B = im[i + 1], x1 = A.r + 14 - o.left, x2 = B.l - 14 - o.left;
-      if (x2 - x1 < 60) continue;
-      const g = loopGeom(x1, A.cy - o.top, x2, B.cy - o.top, 1.5, 1);
-      svg.append(mkPath(g.d), mkPath(g.tip));
-    }
+  const box = $("#loops"), tl = $(".timeline");
+  if (!box || !tl || !$("#panel-programme").classList.contains("active")) return;
+  box.replaceChildren();
+  if (getComputedStyle(box).display === "none") return;
+  const o = tl.getBoundingClientRect(), im = [...tl.querySelectorAll(".watercolor")].map(visRect);
+  for (let i = 0; i < 2; i++) {
+    const A = im[i], B = im[i + 1], x1 = A.r + 12 - o.left, x2 = B.l - 12 - o.left, gap = x2 - x1;
+    if (gap < 50) continue;
+    const w = Math.min(gap, 260), h = w * 67 / 166, cx = (x1 + x2) / 2, cy = (A.cy + B.cy) / 2 - o.top;
+    box.append(el("img", { class: "arrow", src: "img/fleche-h.png", alt: "", style: `left:${cx - w / 2}px;top:${cy - h / 2}px;width:${w}px` }));
   }
-  document.querySelectorAll(".zig").forEach(z => {
-    z.replaceChildren();
-    const g = loopGeom(48, 40, 300, 92, 1.4, .3);
-    z.append(mkPath(g.d), mkPath(g.tip));
-  });
 }
 
 /* --- Écoute des chants : un bouton discret, le son seul, sans lecteur visible --- */
