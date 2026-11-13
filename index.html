@@ -22,42 +22,44 @@ html{scroll-behavior:smooth}
 body{margin:0;background:var(--paper);color:var(--olive);font-family:var(--serif);font-size:17px;line-height:1.7;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
-img{max-width:100%;display:block}
+img{max-width:100%;height:auto;display:block}
 a{color:var(--olive)}
 :focus-visible{outline:3px solid var(--olive-soft);outline-offset:3px;border-radius:4px}
-.wrap{max-width:720px;margin:0 auto}
+.wrap{max-width:960px;margin:0 auto}
 
-/* Fleurs d'angle (reprises de l'invitation) */
-.corner{position:absolute;pointer-events:none;user-select:none}
-.corner.tl{top:0;left:calc(-1 * max(16px,env(safe-area-inset-left,0px)));width:min(46vw,230px)}
-.corner.br{bottom:0;right:calc(-1 * max(16px,env(safe-area-inset-right,0px)));width:min(34vw,170px)}
+/* Fleurs d'angle : même illustration, miroir aux quatre coins, sans déformation */
+.corner{position:absolute;pointer-events:none;user-select:none;height:auto;width:clamp(96px,22vw,230px)}
+.corner.tl{top:0;left:0}
+.corner.tr{top:0;right:0;transform:scaleX(-1)}
+.corner.bl{bottom:0;left:0;transform:scaleY(-1)}
+.corner.br{bottom:0;right:0;transform:scale(-1,-1)}
 
-/* Hero */
-.hero{position:relative;text-align:center;padding-block:56px 0;overflow:hidden;margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
-.hero .wrap{position:relative}
-.kicker{font-size:.95rem;letter-spacing:.14em;text-transform:uppercase;margin:0 0 .6rem;text-wrap:balance}
-.names{font-family:var(--script);font-weight:400;color:var(--olive-soft);margin:.2rem 0;line-height:1.1;font-size:clamp(3rem,13vw,4.6rem)}
-.names .amp{display:block;font-size:.6em;color:var(--olive)}
-.lead{text-transform:uppercase;letter-spacing:.1em;font-size:.92rem;max-width:26em;margin:1.6rem auto;text-wrap:balance}
-.when{font-size:1.05rem;letter-spacing:.08em;text-transform:uppercase;margin:1.4rem 0 0}
-.where{font-family:var(--script);font-size:1.8rem;color:var(--olive-soft);margin:1.2rem 0 0;line-height:1.2}
-.where small{display:block;font-family:var(--serif);font-size:.95rem;letter-spacing:.08em;color:var(--olive);margin-top:.2rem}
-.hero-art{margin-top:1.8rem;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 22%);mask-image:linear-gradient(to bottom,transparent 0,#000 22%)}
-.hero-art img{width:100%;max-width:760px;margin:0 auto}
-.countdown{margin:1.4rem auto 0;font-size:.95rem}
-.countdown b{font-weight:700;font-size:1.1em}
-
-/* Onglets */
+/* Onglets (en haut de page) */
 .tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--paper);border-bottom:1px solid var(--line);
   margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--paper);z-index:30}
-.tabs ul{list-style:none;margin:0 auto;padding:6px 0;display:flex;gap:4px;overflow-x:auto;max-width:720px;scrollbar-width:none}
+.tabs ul{list-style:none;margin:0 auto;padding:6px 0;display:flex;gap:4px;overflow-x:auto;max-width:960px;scrollbar-width:none;justify-content:safe center}
 .tabs ul::-webkit-scrollbar{display:none}
-.tabs a{display:block;white-space:nowrap;text-decoration:none;padding:10px 14px;border-radius:999px;font-size:.88rem;letter-spacing:.04em;min-height:44px;line-height:24px}
+.tabs a{display:block;white-space:nowrap;text-decoration:none;padding:10px 14px;border-radius:999px;font-size:.9rem;letter-spacing:.04em;min-height:44px;line-height:24px}
 .tabs a:hover,.tabs a[aria-current="true"]{background:var(--paper-2)}
+
+/* Hero */
+.hero{position:relative;text-align:center;padding-block:clamp(48px,9vw,84px) 8px;overflow:hidden;margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
+.hero .wrap{position:relative;max-width:820px}
+.kicker{font-size:clamp(.95rem,2.6vw,1.2rem);letter-spacing:.16em;text-transform:uppercase;margin:0 0 .6rem;text-wrap:balance}
+.names{font-family:var(--script);font-weight:400;color:var(--olive-soft);margin:.1rem 0;line-height:1.05;font-size:clamp(3.6rem,15vw,8rem)}
+.names .amp{display:block;font-size:.55em;color:var(--olive);line-height:1}
+.lead{text-transform:uppercase;letter-spacing:.1em;font-size:clamp(.95rem,2.8vw,1.25rem);max-width:30em;margin:1.4rem auto;text-wrap:balance}
+.when{font-size:clamp(1.05rem,3.2vw,1.5rem);letter-spacing:.08em;text-transform:uppercase;margin:1.4rem 0 0}
+.where{font-family:var(--script);font-size:clamp(1.9rem,6.5vw,3rem);color:var(--olive-soft);margin:1.1rem 0 0;line-height:1.15}
+.where small{display:block;font-family:var(--serif);font-size:clamp(.9rem,2.4vw,1.1rem);letter-spacing:.08em;color:var(--olive);margin-top:.2rem}
+.watercolor{height:auto;display:block;margin-inline:auto;-webkit-mask-image:radial-gradient(ellipse 66% 66% at 50% 50%,#000 42%,transparent 100%);mask-image:radial-gradient(ellipse 66% 66% at 50% 50%,#000 42%,transparent 100%)}
+.hero-art{margin-top:1.4rem}
+.hero-art .watercolor{width:min(100%,520px)}
 
 /* Sections */
 section{padding-block:56px 8px;scroll-margin-top:64px}
+main.wrap{max-width:860px}
 h2{font-family:var(--script);font-weight:400;color:var(--olive-soft);font-size:clamp(2.4rem,9vw,3.2rem);text-align:center;margin:0 0 .4rem;line-height:1.1}
 .sub{text-align:center;margin:0 auto 2rem;max-width:30em;text-wrap:balance}
 .rule{display:flex;align-items:center;gap:14px;margin:0 auto 2rem;max-width:320px}
@@ -74,16 +76,27 @@ h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
 .btn.small{min-height:40px;padding:6px 16px;font-size:.85rem}
 .btn[disabled]{opacity:.5;cursor:not-allowed}
 
-/* Programme */
-.step{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;text-align:center;justify-items:center}
-.step img{width:min(100%,360px);border-radius:6px;-webkit-mask-image:radial-gradient(ellipse at center,#000 62%,transparent 100%);mask-image:radial-gradient(ellipse at center,#000 62%,transparent 100%)}
+/* Programme : frise chronologique en zigzag */
+.timeline{display:grid;gap:0}
+.step{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;text-align:center;justify-items:center;align-items:center}
+.step .watercolor{width:min(100%,300px)}
+.step.salle .watercolor{width:min(100%,320px)}
 .step .hour{font-size:1.5rem;letter-spacing:.04em;margin:0}
-.step .what{font-family:var(--script);font-size:2.1rem;color:var(--olive-soft);line-height:1.1;margin:0}
+.step .what{font-family:var(--script);font-size:2.3rem;color:var(--olive-soft);line-height:1.1;margin:0}
 .step .place{margin:0}
-.step .place em{display:block;font-family:var(--script);font-style:normal;font-size:1.25rem;color:var(--olive-soft)}
-.path{width:72px;height:56px;margin:6px auto;display:block}
-.steps{display:grid;gap:10px}
-.transit{text-align:center;font-style:italic;font-size:.95rem;margin:0}
+.step .place em{display:block;font-family:var(--script);font-style:normal;font-size:1.3rem;color:var(--olive-soft)}
+.zig{display:block;width:min(100%,360px);height:auto;margin:6px auto;overflow:visible}
+.zig.flip{transform:scaleX(-1)}
+.zig path{fill:none;stroke:var(--olive-soft);stroke-width:1.3;stroke-linecap:round}
+.zig .leaf{fill:var(--olive-soft);stroke:none}
+.transit{text-align:center;font-style:italic;font-size:.95rem;margin:0 0 6px}
+@media(min-width:760px){
+  .step{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;text-align:left;justify-items:stretch}
+  .step .watercolor{justify-self:center}
+  .step.rev .watercolor{order:2}
+  .step.rev .txt{text-align:right}
+  .zig{width:min(70%,520px)}
+}
 
 /* Infos pratiques */
 .info-grid{display:grid;gap:18px}
@@ -101,8 +114,8 @@ h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
 .palette li{display:grid;justify-items:center;gap:6px;font-size:.85rem;width:92px;text-align:center}
 .swatch{width:60px;height:60px;border-radius:50%;border:1px solid var(--line);position:relative}
 .swatch.no::after{content:"";position:absolute;inset:-2px;border-radius:50%;background:linear-gradient(to top right,transparent calc(50% - 1.5px),var(--alert) calc(50% - 1.5px),var(--alert) calc(50% + 1.5px),transparent calc(50% + 1.5px))}
-.two{display:grid;gap:18px}
-@media(min-width:640px){.two{grid-template-columns:1fr 1fr}}
+.dress-grid{display:grid;gap:18px}
+@media(min-width:760px){.dress-grid{grid-template-columns:repeat(3,1fr)}}
 .avoid h3{color:var(--alert)}
 
 /* Chants */
@@ -148,7 +161,7 @@ details[open] summary::after{content:"–"}
 details p{margin:0 4px 16px}
 
 /* Pied de page */
-footer{position:relative;text-align:center;padding-block:64px 100px;margin-top:56px;overflow:hidden;margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
+footer{position:relative;text-align:center;padding-block:80px 120px;margin-top:56px;overflow:hidden;margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
 footer .script{font-family:var(--script);font-size:2.2rem;color:var(--olive-soft);margin:0}
 footer .adm{display:inline-block;margin-top:2rem;font-size:.8rem;opacity:.65}
 
@@ -168,73 +181,81 @@ body.is-admin .public{display:none}
 </style>
 
 <div class="public" id="public">
-  <header class="hero" id="accueil">
-    <img class="corner tl" src="img/fleurs-tl.png" alt="" width="405" height="420">
-    <div class="wrap">
-      <p class="kicker">Avec joie et bonheur</p>
-      <h1 class="names" style="font-weight:400">Cassiana<span class="amp">&amp;</span>Matthieu</h1>
-      <p class="lead">ont le plaisir de vous inviter à la célébration de leur mariage</p>
-      <p class="when">Le samedi 09 octobre 2027<br>à 13h30</p>
-      <p class="where">Église Notre-Dame des Ardents<small>LAGNY-SUR-MARNE • FRANCE</small></p>
-      <p class="countdown" id="countdown" aria-live="polite"></p>
-      <p style="margin:1.4rem 0 0;font-size:.95rem;font-style:italic">Merci de confirmer votre présence avant le 1<sup>er</sup> juillet 2027</p>
-      <div class="hero-art"><img src="img/domaine-hero.jpg" alt="Aquarelle du Clos du Colombier, le domaine de la réception" width="1128" height="582"></div>
-    </div>
-  </header>
-
   <nav class="tabs" aria-label="Sections du site">
     <ul>
+      <li><a href="#accueil">Accueil</a></li>
       <li><a href="#programme">Programme</a></li>
-      <li><a href="#infos">Venir</a></li>
-      <li><a href="#tenue">Tenue</a></li>
+      <li><a href="#infos">S'y rendre</a></li>
+      <li><a href="#tenue">Dress code</a></li>
       <li><a href="#chants">Chants</a></li>
       <li><a href="#cadeaux">Cadeaux</a></li>
       <li><a href="#allergies">Allergies</a></li>
-      <li><a href="#faq">FAQ</a></li>
+      <li><a href="#faq">Questions</a></li>
     </ul>
   </nav>
+
+  <header class="hero" id="accueil">
+    <img class="corner tl" src="img/fleurs-tl.png" alt="" width="405" height="420">
+    <img class="corner tr" src="img/fleurs-tl.png" alt="" width="405" height="420">
+    <div class="wrap">
+      <p class="kicker">Avec joie et bonheur</p>
+      <h1 class="names">Cassiana<span class="amp">&amp;</span>Matthieu</h1>
+      <p class="lead">ont le plaisir de vous inviter à la célébration de leur mariage</p>
+      <p class="when">Le samedi 09 octobre 2027<br>à 13h30</p>
+      <p class="where">Église Notre-Dame des Ardents<small>LAGNY-SUR-MARNE • FRANCE</small></p>
+      <div class="hero-art"><img class="watercolor" src="img/domaine-hero.png" alt="Aquarelle du Clos du Colombier, le domaine de la réception" width="794" height="608"></div>
+    </div>
+  </header>
 
   <main class="wrap">
     <!-- PROGRAMME -->
     <section id="programme">
       <h2>Le programme</h2>
       <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
-      <div class="steps">
+      <div class="timeline">
         <article class="step">
-          <img src="img/eglise.jpg" alt="Aquarelle de l'église Notre-Dame des Ardents" width="258" height="294" loading="lazy">
-          <p class="hour">13h30</p><p class="what">Cérémonie religieuse</p>
-          <p class="place">Église Notre-Dame des Ardents<em>Lagny-sur-Marne</em></p>
+          <img class="watercolor" src="img/eglise.png" alt="Aquarelle de l'église Notre-Dame des Ardents" width="264" height="396" loading="lazy">
+          <div class="txt">
+            <p class="hour">13h30</p><p class="what">Cérémonie religieuse</p>
+            <p class="place">Église Notre-Dame des Ardents<em>Lagny-sur-Marne</em></p>
+          </div>
         </article>
+        <svg class="zig" viewBox="0 0 360 120" aria-hidden="true"><path d="M60 4 C 60 70, 300 30, 300 110"/><path class="leaf" d="M300 110 c-7-9-7-17 0-24 c7 7 7 15 0 24z"/></svg>
         <p class="transit" id="transit-line"></p>
-        <article class="step">
-          <img src="img/domaine.jpg" alt="Aquarelle du Clos du Colombier" width="420" height="210" loading="lazy">
-          <p class="hour">17h30 – 19h30</p><p class="what">Cocktail</p>
-          <p class="place">Le Clos du Colombier<em>Fontenay-Trésigny</em></p>
+        <article class="step rev">
+          <img class="watercolor" src="img/domaine.png" alt="Aquarelle du Clos du Colombier" width="441" height="297" loading="lazy">
+          <div class="txt">
+            <p class="hour">17h30 – 19h30</p><p class="what">Cocktail</p>
+            <p class="place">Le Clos du Colombier<em>Fontenay-Trésigny</em></p>
+          </div>
         </article>
-        <article class="step">
-          <img src="img/salle.jpg" alt="Aquarelle de la salle de réception" width="420" height="336" loading="lazy">
-          <p class="hour">19h30 – 4h00</p><p class="what">Dîner et soirée</p>
-          <p class="place">Le Clos du Colombier</p>
+        <svg class="zig flip" viewBox="0 0 360 120" aria-hidden="true"><path d="M60 4 C 60 70, 300 30, 300 110"/><path class="leaf" d="M300 110 c-7-9-7-17 0-24 c7 7 7 15 0 24z"/></svg>
+        <article class="step salle">
+          <img class="watercolor" src="img/salle.png" alt="Aquarelle de la salle de réception" width="468" height="390" loading="lazy">
+          <div class="txt">
+            <p class="hour">19h30 – 4h00</p><p class="what">Dîner et soirée</p>
+            <p class="place">Le Clos du Colombier</p>
+          </div>
         </article>
       </div>
     </section>
 
-    <!-- VENIR -->
+    <!-- S'Y RENDRE -->
     <section id="infos">
-      <h2>Venir et se garer</h2>
+      <h2>Comment s'y rendre ?</h2>
       <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
       <div class="info-grid">
         <div class="card">
           <h3>À l'église</h3>
           <p style="margin:0">Église Notre-Dame des Ardents<br>1 rue du Docteur-Nodier, 77400 Lagny-sur-Marne</p>
-          <p class="hint" style="margin-top:.6rem">Le stationnement est limité près de l'église. Prévoyez d'arriver tôt et garez-vous dans l'un des parkings du centre-ville, puis rejoignez l'église à pied. Tapez le nom exact dans Waze.</p>
+          <p class="hint" style="margin-top:.6rem">Le stationnement est limité près de l'église. Arrivez tôt et garez-vous dans l'un des parkings du centre-ville, puis rejoignez l'église à pied. Tapez le nom exact dans Waze.</p>
           <ul class="parking-list" id="parking-list"></ul>
           <p style="margin:1rem 0 0"><a class="btn solid" href="#" id="waze-church" target="_blank" rel="noopener">Itinéraire vers l'église (Waze)</a></p>
         </div>
 
         <div class="card">
           <h3>De l'église au domaine</h3>
-          <p style="margin:0">Comptez environ <b id="drive-time"></b> en voiture entre l'église de Lagny-sur-Marne et le Clos du Colombier. Le cocktail commence à 17h30, il y a donc le temps de s'y rendre tranquillement.</p>
+          <p style="margin:0">Comptez environ <b id="drive-time"></b> de route entre l'église de Lagny-sur-Marne et le Clos du Colombier. Le cocktail commence à 17h30, vous avez le temps de vous y rendre tranquillement.</p>
         </div>
 
         <div class="calm">
@@ -246,21 +267,24 @@ body.is-admin .public{display:none}
       </div>
     </section>
 
-    <!-- TENUE -->
+    <!-- DRESS CODE -->
     <section id="tenue">
       <h2>Dress code</h2>
       <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
-      <p class="sub" id="dress-intro"></p>
-      <div class="two">
-        <div class="card">
-          <h3>Couleurs bienvenues</h3>
-          <p class="hint" id="dress-ok-note" style="margin-bottom:.4rem"></p>
-          <ul class="palette" id="palette-ok"></ul>
-        </div>
+      <p class="sub">Aucune couleur n'est imposée : venez dans la tenue qui vous plaît, en évitant simplement les couleurs ci-dessous.</p>
+      <div class="dress-grid">
         <div class="card avoid">
           <h3>Couleurs à éviter</h3>
-          <p class="hint" id="dress-no-note" style="margin-bottom:.4rem"></p>
+          <p class="hint">Le blanc, le noir et toutes les nuances de vert.</p>
           <ul class="palette" id="palette-no"></ul>
+        </div>
+        <div class="card">
+          <h3>À l'église</h3>
+          <p style="margin:0">Une tenue décente est demandée : épaules et décolleté couverts. Si votre tenue est décolletée ou sans manches, emportez un châle, une étole ou une veste pour vous couvrir pendant la cérémonie.</p>
+        </div>
+        <div class="card">
+          <h3>Nous sommes en octobre</h3>
+          <p style="margin:0">Il peut faire frais, surtout en soirée et en extérieur. Prévoyez de quoi vous couvrir : veste, châle ou manteau.</p>
         </div>
       </div>
     </section>
@@ -275,12 +299,13 @@ body.is-admin .public{display:none}
 
     <!-- CADEAUX -->
     <section id="cadeaux">
-      <h2>Liste de cadeaux</h2>
+      <h2>Un petit mot, un coup de pouce</h2>
       <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
-      <p class="sub">Votre présence est le plus beau des cadeaux. Si vous souhaitez tout de même nous gâter, voici quelques idées.</p>
-      <div id="gift-pot"></div>
-      <div class="gifts" id="gifts" aria-live="polite"></div>
-      <p class="msg err" id="gift-error" hidden></p>
+      <p class="sub">Il n'y aura pas de liste de cadeaux. Votre présence est le plus beau des cadeaux.</p>
+      <div class="card" style="text-align:center">
+        <p style="margin:0">Si vous souhaitez tout de même nous faire plaisir, nous serons touchés par un <b>petit mot</b>, ou par une <b>participation pour notre nuit de noces</b>.</p>
+        <div id="gift-pot" style="margin-top:1.2rem"></div>
+      </div>
     </section>
 
     <!-- ALLERGIES -->
@@ -306,16 +331,17 @@ body.is-admin .public{display:none}
       </form>
     </section>
 
-    <!-- FAQ -->
+    <!-- QUESTIONS / RÉPONSES -->
     <section id="faq">
-      <h2>Questions fréquentes</h2>
+      <h2>Questions et réponses</h2>
       <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
       <div id="faq-list"></div>
     </section>
   </main>
 
   <footer>
-    <img class="corner br" src="img/fleurs-br.png" alt="" width="228" height="300">
+    <img class="corner bl" src="img/fleurs-tl.png" alt="" width="405" height="420">
+    <img class="corner br" src="img/fleurs-tl.png" alt="" width="405" height="420">
     <p class="script">À très vite !</p>
     <p style="margin:.3rem 0 0">Cassiana &amp; Matthieu</p>
     <a class="adm" href="#admin">Espace mariés</a>
@@ -343,7 +369,7 @@ body.is-admin .public{display:none}
   <div id="admin-panel" hidden>
     <div class="admin-tabs" role="group" aria-label="Rubriques">
       <button class="btn small" type="button" data-tab="al" aria-pressed="true">Allergies</button>
-      <button class="btn small" type="button" data-tab="gi" aria-pressed="false">Cadeaux</button>
+      <button class="btn small" type="button" data-tab="gi" aria-pressed="false">Cagnotte</button>
       <button class="btn small" type="button" data-tab="so" aria-pressed="false">Chants</button>
     </div>
 
@@ -363,27 +389,11 @@ body.is-admin .public{display:none}
     <div id="tab-gi" hidden>
       <form class="card" id="pot-form" novalidate style="margin-bottom:22px">
         <h3>Cagnotte en ligne</h3>
-        <p class="hint">Collez le lien de votre cagnotte (Leetchi, Lydia, PayPal...). Il apparaît dans la rubrique Cadeaux et dans la FAQ. Laissez vide pour le retirer.</p>
+        <p class="hint">Collez le lien de votre cagnotte pour la nuit de noces (Leetchi, Lydia, PayPal...). Un bouton apparaît alors dans la rubrique Cadeaux et dans les questions. Laissez vide pour le retirer.</p>
         <label for="pot-url">Lien de la cagnotte<input id="pot-url" type="url" placeholder="https://"></label>
         <button class="btn solid" type="submit">Enregistrer</button>
         <p class="msg" id="pot-msg" role="status" hidden></p>
       </form>
-      <form class="card" id="gift-form" novalidate style="margin-bottom:22px">
-        <h3>Ajouter un cadeau</h3>
-        <label for="g-title">Nom du cadeau<input id="g-title" required maxlength="80"></label>
-        <label for="g-desc">Description (facultatif)<textarea id="g-desc" maxlength="240" style="min-height:80px"></textarea></label>
-        <div class="two-f">
-          <label for="g-price">Prix en € (facultatif)<input id="g-price" type="number" min="0" step="1" inputmode="numeric"></label>
-          <label for="g-link">Lien d'achat (facultatif)<input id="g-link" type="url" placeholder="https://"></label>
-        </div>
-        <button class="btn solid" type="submit">Ajouter à la liste</button>
-        <p class="msg" id="g-msg" role="status" hidden></p>
-      </form>
-      <div class="tbl"><table>
-        <thead><tr><th>Cadeau</th><th>Prix</th><th>Offert par</th><th></th></tr></thead>
-        <tbody id="gi-rows"></tbody>
-      </table></div>
-      <p class="empty" id="gi-empty" hidden>La liste est vide. Ajoutez un premier cadeau ci-dessus.</p>
     </div>
 
     <div id="tab-so" hidden>
@@ -424,7 +434,7 @@ const CONTENT = {
   weddingDate: "2027-10-09T13:30:00+02:00",
   church: { name: "Église Notre-Dame des Ardents", address: "1 rue du Docteur-Nodier, 77400 Lagny-sur-Marne" },
   domaine: { name: "Le Clos du Colombier", address: "Ferme de Malassise, D402, 77610 Fontenay-Trésigny" },
-  driveTime: "35 minutes",
+  driveTime: "40 minutes",
   // Lien de la cagnotte en ligne (Leetchi, Lydia, PayPal...). Laisser vide tant qu'il n'existe pas.
   cagnotteUrl: "",
   // Noms à saisir dans Waze, à proximité de l'église.
@@ -434,25 +444,22 @@ const CONTENT = {
     { name: "Parking place des Déportés", where: "Place des Déportés, Lagny-sur-Marne" },
     { name: "Parking place du Maréchal Foch", where: "Place du Maréchal Foch, Lagny-sur-Marne" }
   ],
-  dress: {
-    intro: "Une tenue élégante, de cérémonie, pour une journée qui commence à l'église et se poursuit en extérieur au domaine.",
-    okNote: "Des teintes douces, dans l'esprit des aquarelles de l'invitation.",
-    noNote: "Pour laisser la vedette à la mariée et garder des photos harmonieuses.",
-    ok: [["Vert sauge","#a9b48a"],["Bleu ciel","#a9c4dc"],["Rose poudré","#e2b9b3"],["Terracotta","#c98a6b"],["Lavande","#b9aed0"]],
-    no: [["Blanc","#ffffff"],["Ivoire / crème","#f3ecd9"],["Champagne","#e6d3ae"]]
-  },
+  // Couleurs à éviter (pastilles de la rubrique Dress code)
+  avoid: [["Blanc","#ffffff"],["Noir","#141414"],["Vert foncé","#3f6a3a"],["Vert clair","#a9c48a"]],
   songs: [
     { moment: "Chant de sortie", title: "Je suis dans la joie", author: "Guy Bahi / Glorious", audio: "", query: "Je suis dans la joie chant mariage" }
     // Ajoutez les autres chants ici : { moment, title, author, audio: "lien mp3 ou YouTube", query: "recherche YouTube" }
   ],
   allergens: ["Arachides","Fruits à coque","Gluten","Lactose / lait","Œufs","Poisson","Crustacés","Mollusques","Soja","Sésame","Moutarde","Céleri","Sulfites","Fruits exotiques","Végétarien","Sans porc"],
   faq: [
-    ["Y a-t-il une urne ou une liste de cadeaux ?","Votre présence est le plus beau des cadeaux. Si vous souhaitez en faire un, vous pouvez participer à la cagnotte en ligne ou choisir un cadeau dans notre liste.","gifts"],
-    ["Dois-je confirmer ma présence ?","Oui, merci de répondre avant le 1er juillet 2027, comme indiqué sur l'invitation."],
-    ["À quelle heure dois-je arriver à l'église ?","La cérémonie commence à 13h30. Pensez à arriver 20 à 30 minutes avant pour vous garer et vous installer."],
-    ["Où se garer à l'église ?","Dans l'un des parkings du centre de Lagny-sur-Marne listés dans la section « Venir », puis à pied jusqu'à l'église."],
+    ["Dois-je confirmer ma présence ?","Oui, merci de répondre avant le 9 juillet 2027, soit trois mois avant le mariage."],
+    ["Comment s'y rendre ?","L'église est au 1 rue du Docteur-Nodier à Lagny-sur-Marne. Le domaine, le Clos du Colombier, est à Fontenay-Trésigny, environ 40 minutes de route plus loin. Retrouvez les adresses, les parkings et les liens Waze dans la section dédiée.","route"],
+    ["Où se garer à l'église ?","Dans l'un des parkings du centre de Lagny-sur-Marne listés dans la section « Comment s'y rendre ? », puis à pied jusqu'à l'église."],
     ["Y a-t-il de la place pour se garer au domaine ?","Oui, environ 100 places sur place. Aucun stress."],
-    ["Combien de temps entre l'église et le domaine ?","Environ 35 minutes en voiture. Le cocktail est à 17h30."],
+    ["Combien de temps entre l'église et le domaine ?","Environ 40 minutes en voiture. Le cocktail est à 17h30."],
+    ["À quelle heure dois-je arriver à l'église ?","La cérémonie commence à 13h30. Pensez à arriver 20 à 30 minutes avant pour vous garer et vous installer."],
+    ["Quel est le dress code ?","Aucune couleur n'est imposée, mais évitez le blanc, le noir et toutes les nuances de vert. À l'église, prévoyez une tenue décente : épaules et décolleté couverts, ou de quoi vous couvrir. Nous sommes en octobre, prévoyez aussi de quoi vous couvrir contre le froid."],
+    ["Y a-t-il une urne ou une liste de cadeaux ?","Il n'y aura pas de liste de cadeaux. Si vous souhaitez nous faire plaisir, nous serons touchés par un petit mot ou par une participation pour notre nuit de noces.","gifts"],
     ["Les enfants sont-ils les bienvenus ?","Oui. Indiquez leurs allergies éventuelles dans la rubrique « Allergies », une réponse par enfant."],
     ["Que faire si j'ai une allergie ou un régime particulier ?","Remplissez le formulaire de la rubrique « Allergies ». Le traiteur sera prévenu."],
     ["Jusqu'à quand dure la soirée ?","Le dîner commence à 19h30 et la soirée se termine à 4h00."]
@@ -552,7 +559,7 @@ const store = {
 /* ============ SITE PUBLIC ============ */
 function renderStatic(){
   $("#drive-time").textContent = CONTENT.driveTime;
-  $("#transit-line").textContent = `${CONTENT.driveTime} de route entre l'église et le domaine`;
+  $("#transit-line").textContent = `Environ ${CONTENT.driveTime} de route`;
   $("#waze-church").href = wazeUrl(CONTENT.church.name + ", " + CONTENT.church.address);
   $("#waze-domaine").href = wazeUrl(CONTENT.domaine.name + ", " + CONTENT.domaine.address);
 
@@ -561,11 +568,7 @@ function renderStatic(){
     el("span",{class:"pname"}, el("b",{text:p.name}), el("small",{text:p.where})),
     el("a",{class:"btn small", href:wazeUrl(p.name + ", " + p.where), target:"_blank", rel:"noopener", text:"Ouvrir dans Waze"}))));
 
-  $("#dress-intro").textContent = CONTENT.dress.intro;
-  $("#dress-ok-note").textContent = CONTENT.dress.okNote;
-  $("#dress-no-note").textContent = CONTENT.dress.noNote;
-  const sw = (list, no, host) => list.forEach(([n,c]) => host.append(el("li",{}, el("span",{class:"swatch"+(no?" no":""), style:`background:${c}`, role:"img","aria-label":(no?"À éviter : ":"")+n}), n)));
-  sw(CONTENT.dress.ok, false, $("#palette-ok")); sw(CONTENT.dress.no, true, $("#palette-no"));
+  CONTENT.avoid.forEach(([n,c]) => $("#palette-no").append(el("li",{}, el("span",{class:"swatch no", style:`background:${c}`, role:"img","aria-label":"À éviter : "+n}), n)));
 
   const chips = $("#al-chips");
   CONTENT.allergens.forEach((a,i) => chips.append(el("label",{for:"al-c"+i}, el("input",{type:"checkbox",id:"al-c"+i,name:"allergen",value:a}), el("span",{text:a}))));
@@ -578,10 +581,10 @@ function renderFaq(){
   const faq = $("#faq-list"); faq.replaceChildren();
   CONTENT.faq.forEach(([q,a,extra]) => {
     const body = el("p",{text:a});
-    if (extra === "gifts") {
+    if (extra === "gifts" || extra === "route") {
       const row = el("div",{style:"display:flex;gap:10px;flex-wrap:wrap;margin:0 4px 16px"});
-      if (state.cagnotte) row.append(el("a",{class:"btn small solid",href:state.cagnotte,target:"_blank",rel:"noopener",text:"Accéder à la cagnotte en ligne"}));
-      row.append(el("a",{class:"btn small",href:"#cadeaux",text:"Voir la liste de cadeaux"}));
+      if (extra === "gifts" && state.cagnotte) row.append(el("a",{class:"btn small solid",href:state.cagnotte,target:"_blank",rel:"noopener",text:"Participer à la cagnotte"}));
+      if (extra === "route") row.append(el("a",{class:"btn small solid",href:"#infos",text:"Voir les itinéraires et parkings"}));
       faq.append(el("details",{}, el("summary",{text:q}), body, row));
     } else faq.append(el("details",{}, el("summary",{text:q}), body));
   });
@@ -605,16 +608,6 @@ async function renderSongs(){
   });
 }
 
-function startCountdown(){
-  const n = $("#countdown");
-  const days = Math.ceil((new Date(CONTENT.weddingDate) - new Date()) / 864e5);
-  if (isNaN(days)) return;
-  n.replaceChildren();
-  if (days > 1) n.append("Rendez-vous dans ", el("b",{text:days}), " jours");
-  else if (days === 1) n.append("Rendez-vous ", el("b",{text:"demain"}));
-  else if (days === 0) n.append(el("b",{text:"C'est aujourd'hui !"}));
-}
-
 function highlightTabs(){
   const links = [...document.querySelectorAll(".tabs a")];
   if (!("IntersectionObserver" in window)) return;
@@ -626,38 +619,7 @@ function highlightTabs(){
 
 async function renderGifts(){
   const pot = $("#gift-pot"); pot.replaceChildren();
-  if (state.cagnotte) pot.append(el("div",{class:"calm",style:"margin-bottom:20px"}, el("p",{class:"big",text:"Cagnotte en ligne"}), el("p",{style:"margin:0 0 1rem",text:"Vous préférez participer à notre projet ? Une cagnotte est ouverte."}), el("a",{class:"btn solid",href:state.cagnotte,target:"_blank",rel:"noopener",text:"Participer à la cagnotte"})));
-  const host = $("#gifts"), err = $("#gift-error");
-  host.replaceChildren(); err.hidden = true;
-  let gifts = [];
-  try { gifts = await store.listGifts(false); } catch (e) { showMsg(err, "La liste n'a pas pu être chargée. Réessayez dans un instant.", "err"); return; }
-  if (!gifts.length) { host.append(el("p",{class:"empty",style:"grid-column:1/-1",text:"La liste de cadeaux arrive très bientôt."})); return; }
-  gifts.forEach(g => {
-    const card = el("article",{class:"card gift"+(g.reserved?" done":"")},
-      el("h3",{text:g.title}),
-      g.description ? el("p",{class:"hint",text:g.description}) : "",
-      g.price ? el("p",{class:"price",text:g.price + " €"}) : "",
-      g.reserved ? el("span",{class:"badge",text:"Déjà offert"}) : giftActions(g));
-    host.append(card);
-  });
-}
-function giftActions(g){
-  const wrap = el("div",{style:"display:grid;gap:8px"});
-  if (g.link) wrap.append(el("a",{class:"btn small",href:g.link,target:"_blank",rel:"noopener",text:"Voir le cadeau"}));
-  const btn = el("button",{class:"btn small solid",type:"button",text:"Je l'offre"});
-  btn.addEventListener("click", () => {
-    const box = el("form",{novalidate:true,style:"display:grid;gap:8px"},
-      el("label",{for:"who-"+g.id,text:"Votre prénom et nom"}), el("input",{id:"who-"+g.id,maxlength:"80",required:true}),
-      el("button",{class:"btn small solid",type:"submit",text:"Confirmer"}), el("p",{class:"msg",hidden:true,role:"status"}));
-    box.addEventListener("submit", async ev => {
-      ev.preventDefault();
-      const who = $("input", box).value.trim(), msg = $(".msg", box);
-      if (!who) return showMsg(msg, "Indiquez votre nom pour que les mariés sachent qui remercier.", "err");
-      try { await store.reserveGift(g.id, who); await renderGifts(); } catch { showMsg(msg, "Ce cadeau n'a pas pu être réservé. Quelqu'un vient peut-être de le choisir.", "err"); }
-    });
-    btn.replaceWith(box); $("input", box).focus();
-  });
-  wrap.append(btn); return wrap;
+  if (state.cagnotte) pot.append(el("a",{class:"btn solid",href:state.cagnotte,target:"_blank",rel:"noopener",text:"Participer à la cagnotte en ligne"}));
 }
 
 function bindAllergyForm(){
@@ -691,7 +653,7 @@ async function enterAdmin(){
     $("#logout").hidden = !adminSession;
   }
   login.hidden = adminSession; panel.hidden = !adminSession;
-  if (adminSession) { await Promise.all([renderAllergies(), renderGiftAdmin(), renderSongAdmin(), loadPotField()]); }
+  if (adminSession) { await Promise.all([renderAllergies(), renderSongAdmin(), loadPotField()]); }
 }
 function leaveAdmin(){ document.body.classList.remove("is-admin"); }
 function route(){
@@ -714,20 +676,6 @@ async function renderAllergies(){
     try { await navigator.clipboard.writeText(tsv); showToast("Copié. Collez dans le tableur."); }
     catch { const t = el("textarea",{readonly:true,style:"min-height:140px;margin-top:12px"}); t.value = tsv; $("#tab-al").prepend(t); t.select(); showToast("Sélectionné. Faites Ctrl+C."); }
   };
-}
-
-async function renderGiftAdmin(){
-  const rows = $("#gi-rows"); rows.replaceChildren();
-  let list = [];
-  try { list = await store.listGifts(true); } catch { return; }
-  $("#gi-empty").hidden = list.length > 0;
-  list.forEach(g => rows.append(el("tr",{},
-    el("td",{}, el("b",{text:g.title}), g.description ? el("div",{class:"hint",text:g.description}) : ""),
-    el("td",{text:g.price ? g.price + " €" : "–"}),
-    el("td",{text:g.reserved ? (g.reserved_by || "Réservé") : "–"}),
-    el("td",{style:"white-space:nowrap"},
-      g.reserved ? el("button",{class:"btn small",type:"button",text:"Remettre",onclick: async () => { await store.setGiftReserved(g.id,false,""); renderGiftAdmin(); }}) : "",
-      " ", el("button",{class:"btn small",type:"button",text:"Supprimer","aria-label":"Supprimer " + g.title,onclick: async () => { await store.deleteGift(g.id); renderGiftAdmin(); }})))));
 }
 
 async function renderSongAdmin(){
@@ -763,16 +711,6 @@ function bindAdmin(){
     document.querySelectorAll("[data-tab]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
     $("#tab-al").hidden = b.dataset.tab !== "al"; $("#tab-gi").hidden = b.dataset.tab !== "gi"; $("#tab-so").hidden = b.dataset.tab !== "so";
   }));
-  $("#gift-form").addEventListener("submit", async ev => {
-    ev.preventDefault();
-    const msg = $("#g-msg"), title = $("#g-title").value.trim();
-    if (!title) return showMsg(msg, "Donnez un nom au cadeau.", "err");
-    const price = $("#g-price").value, link = $("#g-link").value.trim();
-    try {
-      await store.addGift({ title, description: $("#g-desc").value.trim(), price: price ? Number(price) : null, link: link || null });
-      ev.target.reset(); showMsg(msg, "Cadeau ajouté.", "ok"); renderGiftAdmin(); renderGifts();
-    } catch { showMsg(msg, "L'ajout a échoué. Vérifiez que vous êtes bien connecté(e).", "err"); }
-  });
   $("#login-form").addEventListener("submit", async ev => {
     ev.preventDefault();
     const msg = $("#login-msg"), email = $("#admin-email").value.trim();
@@ -792,7 +730,7 @@ function showToast(text){
 }
 
 /* ============ DÉMARRAGE ============ */
-renderStatic(); renderFaq(); startCountdown(); highlightTabs(); bindAllergyForm(); bindAdmin(); renderSongs(); renderGifts();
+renderStatic(); renderFaq(); highlightTabs(); bindAllergyForm(); bindAdmin(); renderSongs(); renderGifts();
 store.getSetting("cagnotte_url").then(u => { if (u) { state.cagnotte = u; renderFaq(); renderGifts(); } }).catch(() => {});
 window.addEventListener("hashchange", route); route();
 </script>
