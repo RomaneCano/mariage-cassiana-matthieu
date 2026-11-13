@@ -12,6 +12,7 @@ const isoOf = d => d.toISOString().slice(0, 10);
 const addDays = (iso, n) => isoOf(new Date(Date.parse(iso + "T12:00:00Z") + n * dayMs));
 const todayISO = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
 const daysBetween = (a, b) => Math.round((Date.parse(b + "T12:00:00Z") - Date.parse(a + "T12:00:00Z")) / dayMs);
+const eur2 = n => (Number(n) || 0).toLocaleString("fr-FR", { style: "currency", currency: "EUR", minimumFractionDigits: Number.isInteger(Number(n) || 0) ? 0 : 2, maximumFractionDigits: 2 });
 const eur = n => (Number(n) || 0).toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 const frDate = iso => { try { return new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }); } catch { return iso || ""; } };
 const stripHtml = h => { const d = new DOMParser().parseFromString(String(h || "").replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n\n"), "text/html"); return (d.body.textContent || "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim(); };
@@ -93,7 +94,12 @@ const ORG = {
     { k: "due", l: "Échéance", t: "date" }, { k: "who", l: "Qui", t: "select", o: WHO }, { k: "notes", l: "Notes", t: "text" }] },
   budget: { table: "org_budget", label: "Budget", order: "cat", defaults: { cat: CATS_BUDGET[0] }, fields: [
     { k: "cat", l: "Poste", t: "select", o: CATS_BUDGET, newable: true }, { k: "item", l: "Dépense", t: "text", req: true, wide: true },
-    { k: "estimated", l: "Prévu (€)", t: "number" }, { k: "family", l: "Pris en charge par la famille (€)", t: "number" }, { k: "link", l: "Lien", t: "text", wide: true, ph: "https://… (si c'est à acheter sur internet)" }, { k: "paid", l: "Payé (€)", t: "number" },
+    { k: "estimated", l: "Prévu (€)", t: "number" }, { k: "family", l: "Pris en charge par la famille (€)", t: "number" }, { k: "paid", l: "Payé (€)", t: "number" },
+    { k: "notes", l: "Notes", t: "text" }] },
+  deco: { table: "org_deco", label: "Décoration et papeterie", order: "created_at", defaults: { qty: 1 }, fields: [
+    { k: "name", l: "Article", t: "text", req: true, wide: true, ph: "ex. miroirs, bougies, menus…" },
+    { k: "link", l: "Lien", t: "text", wide: true, ph: "https://… (page du produit)" },
+    { k: "unit", l: "Prix à l'unité (€)", t: "number" }, { k: "qty", l: "Nombre total", t: "number" },
     { k: "notes", l: "Notes", t: "text" }] },
   vendors: { table: "org_vendors", label: "Prestataires", order: "role", defaults: { status: "À contacter", role: "Autre" }, fields: [
     { k: "name", l: "Prestataire", t: "text", req: true, wide: true }, { k: "role", l: "Catégorie", t: "select", o: ROLES, newable: true },
@@ -302,6 +308,9 @@ function orgSummary(key, rows) {
     const done = rows.filter(r => r.done).length, late = rows.filter(r => !r.done && r.due && r.due < todayISO()).length;
     chip("faites", done + " / " + rows.length); chip("en retard", String(late), late ? "warn" : ""); chip("avant le mariage", Math.max(0, daysBetween(todayISO(), WEDDING_ISO)) + " j");
     if (rows.length) box.append(el("div", { class: "bar big" }, el("i", { style: "width:" + Math.round(done / rows.length * 100) + "%" })));
+  } else if (key === "deco") {
+    const articles = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0), total = rows.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0);
+    chip("références", String(rows.length)); chip("articles au total", String(articles)); chip("coût total", eur2(total));
   } else if (key === "budget") {
     const s = f => rows.reduce((a, r) => a + (Number(r[f]) || 0), 0), est = s("estimated"), paid = s("paid"), total = est;
     const fam = s("family"); chip("prévu", eur(est)); chip("pris en charge par la famille", eur(fam)); chip("à notre charge", eur(Math.max(0, est - fam))); chip("payé", eur(paid)); chip("reste à payer", eur(Math.max(0, total - paid)), total - paid > 0 ? "warn" : "");
@@ -465,6 +474,7 @@ async function renderOrg(key) {
   }
   return r;
 }
+async function decoTotal() { try { return (await orgStore.list("org_deco")).reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0); } catch { return null; } }
 async function renderOrgInner(key) {
   const tok = ++orgTok;
   orgState.key = key;
@@ -477,7 +487,8 @@ async function renderOrgInner(key) {
   rows = sortRows(key, rows);
   if (key === "guests") rows.filter(r => r.envoi === "QR code").forEach(r => { r.envoi = "Lien"; orgStore.update(M.table, r.id, { envoi: "Lien" }).catch(() => {}); });   // ancien libellé
   M.fields.filter(f => f.t === "select").forEach(f => rows.forEach(r => { if (r[f.k] && !f.o.includes(r[f.k])) f.o.push(r[f.k]); }));
-  host.append(orgSummary(key, rows));
+  const sumBox = orgSummary(key, rows); host.append(sumBox);
+  if (key === "budget") decoTotal().then(t => { if (t != null && t > 0 && tok === orgTok) sumBox.append(el("div", { class: "sum-chip" }, el("b", { text: eur2(t) }), el("span", { text: "décoration et papeterie (en plus)" }))); });
 
   // barre d'outils : filtres (tâches) et modèle
   const bar = el("div", { class: "org-tools" });
@@ -511,7 +522,7 @@ async function renderOrgInner(key) {
     ev.preventDefault();
     const row = { ...M.defaults };
     for (const f of M.fields) if (inputs[f.k]) row[f.k] = readInput(f, inputs[f.k]);
-    if (key === "budget" && row.link) { const u = cleanUrl(row.link); if (u === false) return showMsg(msg, "Ce lien n'est pas valide : collez l'adresse complète de la page.", "err"); row.link = u; }
+    if (key === "deco" && row.link) { const u = cleanUrl(row.link); if (u === false) return showMsg(msg, "Ce lien n'est pas valide : collez l'adresse complète de la page.", "err"); row.link = u; }
     const miss = M.fields.find(f => f.req && (row[f.k] == null || row[f.k] === ""));
     if (miss) return showMsg(msg, "Renseignez : " + miss.l + ".", "err");
     if (key === "seating") row.position = rows.length;
@@ -525,7 +536,7 @@ async function renderOrgInner(key) {
   let shown = rows;
   if (key === "tasks") shown = rows.filter(r => (orgState.filter.status === "all" || (orgState.filter.status === "done" ? r.done : !r.done)) && (!orgState.filter.cat || r.cat === orgState.filter.cat));
   if (!shown.length) { host.append(el("div", { class: "empty-ico" }, icon("Agneau couché", 44)), el("p", { class: "empty", text: rows.length ? "Aucune ligne avec ce filtre." : "Rien pour l'instant. Ajoutez une première ligne avec « Ajouter »." })); return; }
-  if (key === "vendors" || key === "seating" || key === "budget") {
+  if (key === "vendors" || key === "seating" || key === "budget" || key === "deco") {
     const list = el("div", { class: "org-cards" });
     const bar2 = el("div", { class: "org-fold" },
       el("button", { class: "btn small", type: "button", text: "Tout déplier", onclick: () => list.querySelectorAll("details.org-card").forEach(d => { d.open = true; }) }),
@@ -535,7 +546,8 @@ async function renderOrgInner(key) {
     const badge = st => { const c = RETAINED.includes(st) ? "ok" : st === "Refusé (NON)" ? "no" : /attente|donner/i.test(st || "") ? "wait" : ""; return el("span", { class: "st-badge " + c, text: st || "—" }); };
     const sumFor = r => {
       if (key === "vendors") return [el("b", { text: r.name }), badge(r.status), el("span", { class: "num", text: r.price != null ? eur(r.price) : "" }), el("span", { class: "sm", text: r.phone || r.email || r.contact || r.location || "" })];
-      if (key === "budget") { const sm = el("span", { class: "sm" }); if (r.family) sm.append("famille " + eur(r.family) + " "); if (isUrl(r.link)) sm.append(el("a", { class: "lnk", href: r.link, target: "_blank", rel: "noopener noreferrer", title: r.link, text: "Voir le lien ↗", onclick: e => e.stopPropagation() })); return [el("b", { text: r.item }), sm, el("span", { class: "num", text: "prévu " + eur(r.estimated || 0) }), el("span", { class: "num", text: "payé " + eur(r.paid || 0) })]; }
+      if (key === "deco") { const tot = (Number(r.unit) || 0) * (Number(r.qty) || 0), sm = el("span", { class: "sm" }); if (isUrl(r.link)) sm.append(el("a", { class: "lnk", href: r.link, target: "_blank", rel: "noopener noreferrer", title: r.link, text: "Voir le lien ↗", onclick: e => e.stopPropagation() })); return [el("b", { text: r.name }), sm, el("span", { class: "num", text: (r.qty || 0) + " × " + eur2(r.unit || 0) }), el("span", { class: "num", text: "= " + eur2(tot) })]; }
+      if (key === "budget") return [el("b", { text: r.item }), el("span", { class: "sm", text: r.family ? "famille " + eur(r.family) : "" }), el("span", { class: "num", text: "prévu " + eur(r.estimated || 0) }), el("span", { class: "num", text: "payé " + eur(r.paid || 0) })];
       const g = guestsOf(r).length; return [el("b", { text: r.name }), el("span", { class: "sm", text: r.shape || "Ronde" }), el("span", { class: "num", text: g + " / " + (r.capacity || "?") }), el("span", { class: "sm", text: "" })];
     };
     shown.forEach((r, i) => {
@@ -826,13 +838,13 @@ function buildAdminShell() {
   const today = el("section", { "data-main-sec": "today" }, el("div", { id: "today-body" }));
   const org = el("section", { "data-main-sec": "org", hidden: true },
     el("div", { class: "admin-tabs", role: "group", "aria-label": "Organisation" },
-      ...[["tasks", "Tâches"], ["guests", "Invités"], ["budget", "Budget"], ["games", "Jeux"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["notes", "Notes"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
+      ...[["tasks", "Tâches"], ["guests", "Invités"], ["budget", "Budget"], ["deco", "Décoration et papeterie"], ["games", "Jeux"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["notes", "Notes"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
     el("div", { id: "org-body" }));
   const photos = el("section", { "data-main-sec": "photos", hidden: true }, titled("h3", "cat", "Rameau d'olivier", "Photos du mariage", 28), el("div", { id: "photos-admin" }));
   const pray = el("section", { "data-main-sec": "pray", hidden: true }, titled("h3", "cat", "Calice", "Prière du jour", 28), el("div", { id: "pray-body" }));
   const ICO = { today: "Soleil", site: "Croix", org: "Agneau", photos: "Rameau d'olivier", pray: "Calice" };
   nav.querySelectorAll("[data-main]").forEach(b => b.prepend(icon(ICO[b.dataset.main], 24)));
-  const OICO = { tasks: "Bougie", budget: "Épi de blé", games: "Cartes", guests: "Alliances", seating: "Agneau couché", timeline: "Croix", notes: "Rameau d'olivier" };
+  const OICO = { tasks: "Bougie", budget: "Épi de blé", deco: "Bougie", games: "Cartes", guests: "Alliances", seating: "Agneau couché", timeline: "Croix", notes: "Rameau d'olivier" };
   org.querySelectorAll("[data-org]").forEach(b => b.prepend(icon(OICO[b.dataset.org], 22)));
   const SICO = { al: "Épi de blé", so: "Musique", fq: "Bougie", gi: "Poisson" };
   site.querySelectorAll("[data-tab]").forEach(b => { if (SICO[b.dataset.tab]) b.prepend(icon(SICO[b.dataset.tab], 22)); });

@@ -176,3 +176,20 @@ alter table public.org_budget add column if not exists link text;
 -- ============================================================
 alter table public.org_guests add column if not exists email text;
 alter table public.org_guests add column if not exists invite_sent_at timestamptz;
+
+-- ============================================================
+-- 18. DÉCORATION ET PAPETERIE (petites dépenses en quantité)
+-- ============================================================
+create table if not exists public.org_deco (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  name text not null,
+  link text,
+  unit numeric,
+  qty numeric default 1,
+  notes text
+);
+alter table public.org_deco enable row level security;
+drop policy if exists org_deco_admin on public.org_deco;
+create policy org_deco_admin on public.org_deco for all to authenticated using (public.is_admin()) with check (public.is_admin());
+revoke all on public.org_deco from anon;
