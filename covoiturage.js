@@ -4,7 +4,7 @@
 (function () {
   const LS_MINE = "mariage:covoit-mine";
   const LS_LOCAL = "mariage:covoit";
-  const SENS = { aller: "Aller (vers le domaine)", retour: "Retour (après la soirée, vers 4 h)" };
+  const SENS = { aller: "De l'église au domaine", retour: "Du domaine à l'hébergement (après la soirée, vers 4 h)" };
   let list = [], filter = "all", isAdm = false, panelBuilt = false;
 
   const mine = () => { try { return JSON.parse(localStorage.getItem(LS_MINE) || "{}"); } catch { return {}; } };
@@ -104,7 +104,7 @@
     }
     return el("article", { class: "cv-item" + (full ? " full" : "") + (r.type === "demande" ? " ask" : "") },
       el("div", { class: "cv-top" }, el("b", { text: r.prenom }), el("span", { class: "cv-badge", text: kind })),
-      el("p", { class: "cv-line", text: (r.type === "demande" ? "Part de " : "Départ de ") + r.lieu + (r.heure ? " · vers " + r.heure : "") }),
+      el("p", { class: "cv-line", text: (r.type === "demande" ? "Part de " : "Va à ") + r.lieu + (r.heure ? " · vers " + r.heure : "") }),
       r.note ? el("p", { class: "cv-note", text: r.note }) : "",
       el("p", { class: "cv-contact", text: "Contact : " + ct }),
       actions, extra, own);
@@ -168,7 +168,13 @@
       }
     });
     const typeSel = form.querySelector("[name=type]"), placesLbl = $("#cv-places-l");
-    typeSel.addEventListener("change", () => { placesLbl.hidden = typeSel.value !== "offre"; });
+    const lieuT = $("#cv-lieu-t"), lieuIn = form.querySelector("[name=lieu]");
+    const syncType = () => {
+      const offre = typeSel.value === "offre"; placesLbl.hidden = !offre;
+      lieuT.textContent = offre ? "Où allez-vous ?" : "D'où partez-vous ?";
+      lieuIn.placeholder = offre ? "ex. Paris 12e, Meaux, Lagny-sur-Marne…" : "ex. l'église, Lagny-sur-Marne, un hôtel…";
+    };
+    typeSel.addEventListener("change", syncType); syncType();
   }
 
   window.covoitInit = async function () {
