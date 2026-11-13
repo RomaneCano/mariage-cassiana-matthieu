@@ -70,7 +70,7 @@ function doPost(e) {
 /* ---------------------------------------------------------------------------
    ENVOI DU LIEN D'INVITATION PAR E-MAIL (depuis votre compte Gmail)
    Installation : Paramètres du projet (roue dentée) > Propriétés du script > Ajouter une propriété
-      nom : INVITE_KEY      valeur : un mot de passe de votre choix (c'est la « clé d'envoi » à saisir sur le site)
+      nom : INVITE_KEY      valeur : un mot de passe de votre choix (c'est le « mot de passe d'envoi » à saisir sur le site)
    Puis Déployer > Gérer les déploiements > modifier > Nouvelle version, et accepter l'autorisation d'envoyer des e-mails.
    --------------------------------------------------------------------------- */
 const SITE_URL_PAR_DEFAUT = "https://romanecano.github.io/mariage-cassiana-matthieu/";
@@ -80,8 +80,8 @@ function jsonOut(o) { return ContentService.createTextOutput(JSON.stringify(o)).
 
 function handleInvite(rec) {
   const key = PropertiesService.getScriptProperties().getProperty("INVITE_KEY");
-  if (!key) return jsonOut({ ok: false, error: "Clé d'envoi non configurée dans le script (propriété INVITE_KEY)." });
-  if (String(rec.key || "") !== key) return jsonOut({ ok: false, error: "Clé d'envoi incorrecte." });
+  if (!key) return jsonOut({ ok: false, error: "Mot de passe d'envoi non configuré (propriété INVITE_KEY du script)." });
+  if (String(rec.key || "") !== key) return jsonOut({ ok: false, error: "Mot de passe d'envoi incorrect." });
   const to = String(rec.to || "").trim(), prenom = String(rec.prenom || "").replace(/[<>]/g, "").trim().slice(0, 60);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || to.length > 120) return jsonOut({ ok: false, error: "Adresse e-mail invalide." });
   if (MailApp.getRemainingDailyQuota() < 1) return jsonOut({ ok: false, error: "Quota quotidien d'e-mails atteint : réessayez demain." });

@@ -278,9 +278,9 @@ const INVITE_KEY_LS = "mariage:invite-key";
 /* Envoi du lien d'invitation par e-mail : le script Google envoie le message depuis le Gmail des mariés (clé d'envoi requise) */
 async function sendInvite(g) {
   const url = (typeof CONFIG !== "undefined" && CONFIG.APPS_SCRIPT_URL) || "";
-  if (!url) throw new Error("Le script Google n'est pas relié au site.");
+  if (!url) throw new Error("L'envoi par e-mail n'est pas encore activé.");
   let key = ""; try { key = sessionStorage.getItem(INVITE_KEY_LS) || ""; } catch {}
-  if (!key) throw new Error("Saisissez d'abord la clé d'envoi (bloc « Envoi du lien par e-mail »).");
+  if (!key) throw new Error("Saisissez d'abord le mot de passe d'envoi (bloc « Envoyer le lien d'invitation par e-mail »).");
   const body = JSON.stringify({ action: "invite", key, to: g.email.trim(), prenom: g.prenom || "", site: location.origin + location.pathname });
   try {
     const r = await fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body });
@@ -428,9 +428,9 @@ async function seatPlan(rows) {
 
 
 function invitePanel(rows) {
-  const box = el("details", { class: "card org-invite" }, el("summary", {}, icon("Alliances", 22), " Envoi du lien d'invitation par e-mail (depuis votre Gmail)"));
+  const box = el("details", { class: "card org-invite" }, el("summary", {}, icon("Alliances", 22), " Envoyer le lien d'invitation par e-mail"));
   const eligible = () => rows.filter(r => r.envoi === "Lien" && isMail(r.email) && !r.invite_sent_at);
-  const keyIn = el("input", { type: "password", autocomplete: "off", placeholder: "Clé d'envoi (celle du script Google)", "aria-label": "Clé d'envoi", style: "max-width:320px" });
+  const keyIn = el("input", { type: "password", autocomplete: "off", placeholder: "Mot de passe d'envoi", "aria-label": "Mot de passe d'envoi", style: "max-width:320px" });
   try { keyIn.value = sessionStorage.getItem(INVITE_KEY_LS) || ""; } catch {}
   keyIn.addEventListener("input", () => { try { sessionStorage.setItem(INVITE_KEY_LS, keyIn.value); } catch {} });
   const status = el("p", { class: "hint", role: "status" });
@@ -449,7 +449,7 @@ function invitePanel(rows) {
     showToast(ok + " invitation(s) envoyée(s)"); renderOrg("guests");
   });
   box.append(
-    el("p", { class: "hint", text: "Le message contient le lien du site et un bouton pour confirmer la présence (avant le 9 juillet 2027). Il part du Gmail des mariés, via votre script Google. Ajoutez les adresses dans la colonne « E-mail », choisissez « Lien » dans « Invitation », puis envoyez : à tous d'un coup ici, ou ligne par ligne avec le bouton « Envoyer le lien ». Chacun ne reçoit le message qu'une fois." }),
+    el("p", { class: "hint", text: "Renseignez l'e-mail de l'invité et choisissez « Lien » dans la colonne Invitation. Il reçoit le lien du site et un bouton pour confirmer sa présence, une seule fois." }),
     el("div", { style: "display:flex;gap:10px;flex-wrap:wrap;align-items:center" }, keyIn, btn), status);
   return box;
 }

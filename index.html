@@ -399,7 +399,7 @@ body.post .pre{display:none}
 body.sorting .mv{display:inline-flex}
 body.sorting .admin-main button,body.sorting .admin-tabs button{outline:1.5px dashed var(--olive-soft);outline-offset:2px}
 .sort-hint{text-align:center;margin:-6px 0 10px}
-.org-invite{margin-bottom:12px;padding:10px 14px}.org-invite>summary{cursor:pointer;font-weight:700;display:flex;align-items:center;gap:8px;min-height:0;font-size:.9rem}.org-invite>summary::after{content:none}.org-invite .hint{margin:8px 0}
+.org-invite{margin-bottom:12px;padding:10px 14px}.org-invite>summary{cursor:pointer;font-weight:700;display:flex;align-items:center;gap:8px;min-height:0;font-size:.9rem}.org-invite>summary,details[open].org-invite>summary{justify-content:flex-start}.org-invite>summary::after,details[open].org-invite>summary::after{content:none}.org-invite .hint{margin:8px 0}
 .sendcell{white-space:nowrap}.sendcell small{display:block;opacity:.75;font-size:.72rem}
 .org-fold{display:flex;gap:6px;justify-content:flex-end;margin:0 0 6px}
 @media(max-width:640px){.org-sum-row{grid-template-columns:minmax(0,1fr) auto}.org-sum-row .sm,.org-sum-row .num:nth-of-type(2){display:none}}
