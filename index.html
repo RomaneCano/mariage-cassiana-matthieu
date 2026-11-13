@@ -53,7 +53,7 @@ a{color:var(--olive)}
 
 /* Onglets : bandeau fixe, tous visibles, ne bouge jamais */
 :root{--tabs-h:56px;--flower-w:clamp(70px,min(18vw,22vh),190px)}
-@media(max-width:1230px){:root{--tabs-h:100px}}
+@media(max-width:1330px){:root{--tabs-h:100px}}
 body{padding-top:calc(var(--tabs-h) + env(safe-area-inset-top,0px))}
 .tabs{position:fixed;top:0;left:0;right:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--line);
   padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-left,0px)) 0 max(16px,env(safe-area-inset-right,0px))}
@@ -61,11 +61,11 @@ body{padding-top:calc(var(--tabs-h) + env(safe-area-inset-top,0px))}
 .tabs li{display:flex}
 .tabs a{display:flex;align-items:center;justify-content:center;white-space:nowrap;text-decoration:none;padding:0 14px;border-radius:999px;font-size:.9rem;letter-spacing:.04em;min-height:44px;color:var(--olive)}
 .tabs a:hover,.tabs a[aria-current="true"]{background:var(--paper-2)}
-@media(min-width:1231px){.tabs a{font-size:clamp(11.5px,.98vw,14px);letter-spacing:.02em;padding:0 clamp(6px,.75vw,12px)}.tabs .tab-conn a{font-size:clamp(11px,.9vw,13px)}}
+@media(min-width:1331px){.tabs a{font-size:clamp(11.5px,.98vw,14px);letter-spacing:.02em;padding:0 clamp(6px,.75vw,12px)}.tabs .tab-conn a{font-size:clamp(11px,.9vw,13px)}}
 /* Espace mariés : petit onglet tout à droite de la barre */
 .tabs .tab-conn{position:absolute;right:calc(var(--flower-w) + 12px);top:calc(env(safe-area-inset-top,0px) + 6px)}
 .tabs .tab-conn a{font-size:.8rem;padding:0 10px}
-@media(max-width:1230px){
+@media(max-width:1330px){
   .tabs ul{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:44px;gap:0 2px;align-content:start;padding:6px calc(var(--flower-w) * .45) 6px calc(var(--flower-w) * .45)}
   .tabs li{display:block}
   .tabs a{width:100%;padding:0 1px;font-size:clamp(10px,2.8vw,13.5px);letter-spacing:0}
@@ -261,6 +261,76 @@ body.editing [data-ed].ed-active{outline:2px solid var(--olive);background:#fffd
 body.editing [data-ed]{white-space:pre-wrap;outline:1.5px dashed var(--olive-soft);outline-offset:3px;border-radius:3px;cursor:text}
 body.editing [data-ed]:focus{outline:2px solid var(--olive);background:#fffdf3}
 
+/* Espace mariés étendu : navigation, aujourd'hui, organisation, photos, prière */
+.admin-bar2{display:flex;justify-content:space-between;align-items:center;gap:8px 14px;flex-wrap:wrap;margin:0 0 16px}
+.admin-main{display:flex;gap:6px;flex-wrap:wrap}
+.admin-main button{font:inherit;font-size:var(--fs-small);padding:8px 16px;min-height:40px;border-radius:999px;border:1.5px solid var(--olive);background:transparent;color:var(--olive);cursor:pointer}
+.admin-main button[aria-pressed="true"]{background:var(--olive);color:var(--paper)}
+.today-head{display:grid;gap:14px;margin-bottom:14px}
+@media(min-width:900px){.today-head{grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr);align-items:stretch}}
+.today-head .count{display:grid;align-content:center;justify-items:center;text-align:center;background:var(--olive);color:var(--paper);border-radius:16px;padding:18px}
+.today-head .count b{font-family:var(--script);font-weight:400;font-size:3rem;line-height:1.1}
+.today-head .count span{font-size:var(--fs-small);opacity:.92}
+.today-cols{display:grid;gap:14px}
+@media(min-width:760px){.today-cols{grid-template-columns:1.4fr 1fr}}
+.today-list{list-style:none;margin:0 0 10px;padding:0}
+.today-list li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-small)}
+.today-list li:first-child{border-top:0}.today-list li.late small{color:var(--alert);font-weight:700}
+.bignum{font-family:var(--script);font-size:2.2rem;line-height:1.1;margin:0}
+.verse-card{background:var(--paper-2);border-radius:16px;padding:16px 20px;text-align:center}
+.verse-cross{width:30px;height:30px;color:var(--olive-soft)}
+.verse-day{margin:.2rem 0 0;font-size:var(--fs-label);letter-spacing:.1em;text-transform:uppercase}
+.verse-text{font-family:var(--script);font-size:1.55rem;color:var(--olive);line-height:1.35;margin:.4rem auto;max-width:36em}
+.verse-ref{margin:0;font-size:var(--fs-small);font-style:italic}
+.verse-more{margin-top:8px;text-align:left}
+.verse-more summary{font-size:var(--fs-small);justify-content:center;min-height:40px}
+.verse-full{white-space:pre-line;font-size:var(--fs-small);line-height:1.7;max-height:40vh;overflow:auto;padding:4px 8px}
+.verse-link{margin:.4rem 0 0;font-size:var(--fs-label)}
+.org-sum{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch;margin-bottom:12px}
+.sum-chip{display:grid;background:var(--paper-2);border-radius:12px;padding:7px 14px;min-width:90px}
+.sum-chip b{font-size:1.05rem}.sum-chip span{font-size:var(--fs-label);opacity:.85}
+.sum-chip.warn{background:#f1ddd6;color:#6e2c1f}
+.bar.big{flex-basis:100%;height:7px;background:var(--line);border-radius:6px;overflow:hidden}.bar.big i{display:block;height:100%;background:var(--olive-soft)}
+.org-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.org-tools select{width:auto;min-height:38px;padding:4px 10px;font-size:var(--fs-small)}
+.org-add{padding:12px 14px;margin-bottom:14px}.org-add h3{margin:0 0 8px}
+.org-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 10px;margin-bottom:10px}
+.org-grid label{font-size:var(--fs-label);font-weight:400;gap:3px}.org-grid label.wide{grid-column:span 2}
+.org-grid input,.org-grid select,.org-grid textarea{min-height:38px;padding:5px 9px;font-size:var(--fs-small);border-radius:8px}
+.org-wrap{max-width:100%}
+.org-table{border-collapse:collapse;width:100%;min-width:780px;font-size:var(--fs-small)}
+.org-table th,.org-table td{padding:4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.org-table th{font-size:var(--fs-label);letter-spacing:.05em;text-transform:uppercase;background:var(--paper-2);padding:7px 6px;position:sticky;top:0}
+.org-table input,.org-table select,.org-table textarea{min-height:36px;padding:4px 7px;font-size:var(--fs-small);border-radius:8px;width:100%;border-width:1px}
+.org-table input[type=checkbox]{width:22px;height:22px;min-height:0}
+.org-table tr.grp td{background:var(--paper-2);font-weight:700;padding:6px 10px}
+.org-table tr.late td:nth-child(4) input{color:var(--alert);font-weight:700}
+.org-table tr.done input[type=text]{text-decoration:line-through;opacity:.55}
+.org-notes{width:100%;min-height:50vh;font-size:var(--fs-small);line-height:1.6}
+.pub-card{display:flex;align-items:center;justify-content:space-between;gap:12px 18px;flex-wrap:wrap;margin-bottom:14px}.pub-card h3{margin:0 0 4px}.pub-card .hint{margin:0}.pub-card.on{background:#e3e9d3}
+.drop{display:grid;gap:4px;justify-items:center;text-align:center;padding:22px;border:2px dashed var(--olive-soft);border-radius:14px;cursor:pointer;margin-bottom:8px;font-weight:400}
+.drop b{font-size:1rem}.drop span{font-size:var(--fs-small)}.drop.over{background:var(--paper-2)}
+.pg-admin,.pray-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.pg-item,.pray-item{margin:0;display:grid;gap:6px;align-content:start}
+.pg-item img,.pray-item img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;background:var(--paper-2)}
+.pray-item img{aspect-ratio:auto;max-height:340px;object-fit:contain}
+.pray-item figcaption{font-size:var(--fs-label);line-height:1.4}
+.pg-item input{min-height:36px;padding:4px 8px;font-size:var(--fs-small)}
+.pg-actions{display:flex;gap:6px;flex-wrap:wrap}
+.panel#panel-photos{max-width:min(96vw,1400px)}
+.gallery{columns:3 260px;column-gap:10px}
+.gal-item{display:block;width:100%;margin:0 0 10px;padding:0;border:0;background:none;cursor:zoom-in;break-inside:avoid}
+.gal-item img{width:100%;height:auto;display:block;border-radius:6px}
+#lightbox{position:fixed;inset:0;z-index:100;background:rgba(20,20,10,.92);display:none;align-items:center;justify-content:center}
+#lightbox.open{display:flex}
+#lightbox figure{margin:0;max-width:92vw;max-height:90vh;display:grid;gap:8px;justify-items:center}
+#lightbox img{max-width:92vw;max-height:82vh;object-fit:contain;border-radius:4px}
+#lightbox figcaption{color:var(--paper);font-size:var(--fs-small)}
+.lb-close,.lb-nav{position:absolute;background:rgba(255,255,255,.14);color:#fff;border:0;border-radius:999px;width:48px;height:48px;font-size:2rem;line-height:1;cursor:pointer}
+.lb-close{top:14px;right:14px}.lb-nav{top:50%;transform:translateY(-50%)}.lb-nav.prev{left:12px}.lb-nav.next{right:12px}
+body.lb-open{overflow:hidden}
+body.post .pre{display:none}
+
 /* Chants */
 .song{display:grid;gap:10px}
 .song .moment{font-size:var(--fs-label);letter-spacing:.12em;text-transform:uppercase}
@@ -332,12 +402,12 @@ footer .adm{display:inline-block;margin-top:2rem;font-size:.8rem;opacity:.65}
 .tbl table{border-collapse:collapse;width:100%;min-width:520px;font-size:.92rem}
 .tbl th,.tbl td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
 .tbl th{background:var(--paper-2);font-size:.8rem;letter-spacing:.06em;text-transform:uppercase}
-.admin-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin:0 0 20px}
-.edit-card{flex:1 1 320px;display:flex;align-items:center;justify-content:space-between;gap:12px 16px;flex-wrap:wrap;background:var(--olive);color:var(--paper);border-radius:14px;padding:14px 18px}
-.edit-card div{display:grid;gap:2px;min-width:0}
-.edit-card span{font-size:.82rem;opacity:.9}
-.edit-card .btn{background:var(--paper);color:var(--olive);border-color:var(--paper);min-height:42px;padding:6px 18px;font-size:.9rem}
-.edit-card .btn:hover{background:var(--paper-2)}
+.admin-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin:0 0 14px}
+.edit-card{display:flex;align-items:center;justify-content:space-between;gap:8px 14px;flex-wrap:wrap;background:var(--paper-2);color:var(--olive);border-radius:12px;padding:8px 12px;margin:0 0 14px;font-size:var(--fs-small)}
+.edit-card div{display:flex;gap:4px 10px;align-items:baseline;flex-wrap:wrap;min-width:0}
+.edit-card span{font-size:var(--fs-label);opacity:.85}
+.edit-card .btn{background:var(--olive);color:var(--paper);border-color:var(--olive);min-height:36px;padding:3px 16px;font-size:var(--fs-small)}
+.edit-card .btn:hover{background:var(--olive-soft);border-color:var(--olive-soft)}
 .link{background:none;border:0;padding:8px 4px;font:inherit;font-size:.85rem;color:var(--olive);text-decoration:underline;cursor:pointer;min-height:44px}
 .admin-tabs{display:flex;gap:2px;border-bottom:1.5px solid var(--line);margin:0 0 20px}
 .admin-tabs button{flex:0 1 auto;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-1.5px;padding:10px 16px;font:inherit;font-size:.95rem;color:var(--olive);cursor:pointer;min-height:44px;opacity:.75}
@@ -363,6 +433,24 @@ footer .adm{display:inline-block;margin-top:2rem;font-size:.8rem;opacity:.65}
 #panel-connexion .tbl table{font-size:.85rem}
 body.on-conn #edit-fab{display:none}
 .tag{display:inline-block;padding:1px 10px;border-radius:999px;background:var(--paper-2);border:1px solid var(--line);font-size:.8rem;margin:2px 4px 2px 0}
+#panel-covoiturage{max-width:960px;margin-inline:auto}
+.cv-bar{display:flex;justify-content:space-between;align-items:center;gap:10px 14px;flex-wrap:wrap;margin:0 0 14px}
+.cv-filter{display:flex;gap:6px}
+.cv-filter .btn[aria-pressed="true"]{background:var(--olive);color:var(--paper)}
+.cv-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 14px;margin:0 0 18px;position:relative}
+.cv-form .cv-ok,.cv-form .msg,.cv-form .btn{grid-column:1/-1}
+.cv-form .cv-ok{display:flex;gap:10px;align-items:flex-start;font-weight:400;font-size:var(--fs-small)}
+.cv-form .cv-ok input{width:auto;min-height:0;margin-top:3px}
+.cv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-bottom:10px}
+.cv-item{background:var(--paper-2);border-radius:14px;padding:14px;display:grid;gap:6px;align-content:start;min-width:0;font-size:var(--fs-small)}
+.cv-item.full{opacity:.65}
+.cv-top{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.cv-badge{font-size:var(--fs-label);background:var(--olive);color:var(--paper);border-radius:999px;padding:2px 10px}
+.cv-item.ask .cv-badge{background:var(--olive-soft)}
+.cv-item p{margin:0;overflow-wrap:anywhere}
+.cv-note{font-style:italic}
+.cv-actions,.cv-own{display:flex;gap:6px;flex-wrap:wrap}
+#panel-covoiturage .cat{margin:1rem 0 .6rem}
 .demo-note{background:#f6ead0;border-radius:10px;padding:12px 16px;font-size:.88rem;margin:0 0 18px}
 </style>
 </head>
@@ -378,10 +466,12 @@ body.on-conn #edit-fab{display:none}
     <ul>
       <li><a href="#accueil">Accueil</a></li>
       <li><a href="#programme">Programme</a></li>
-      <li><a href="#infos">S'y rendre</a></li>
-      <li><a href="#logement">Logement</a></li>
-      <li><a href="#tenue">Dress code</a></li>
-      <li><a href="#chants">Chants</a></li>
+      <li class="pre"><a href="#infos">S'y rendre</a></li>
+      <li class="pre"><a href="#logement">Logement</a></li>
+      <li class="pre"><a href="#tenue">Dress code</a></li>
+      <li class="pre"><a href="#chants">Chants</a></li>
+      <li class="pre"><a href="#covoiturage">Covoiturage</a></li>
+      <li id="nav-photos" hidden><a href="#photos">Photos</a></li>
       <li><a href="#faq">Questions</a></li>
       <li class="tab-conn"><a href="#connexion">Espace mariés</a></li>
     </ul>
@@ -498,6 +588,44 @@ body.on-conn #edit-fab{display:none}
       <div class="stack" id="songs"></div>
     </section>
 
+    <!-- COVOITURAGE -->
+    <section class="panel" id="panel-covoiturage">
+      <h2>Covoiturage</h2>
+      <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
+      <p class="sub">Le domaine est à environ 40 minutes de l'église, et la soirée se termine à 4 h. Proposez des places ou cherchez-en une : contactez-vous directement. Le conducteur du retour doit rester sobre.</p>
+      <div class="cv-bar">
+        <div class="cv-filter" role="group" aria-label="Filtrer les annonces">
+          <button class="btn small" type="button" data-cv="all" aria-pressed="true">Tout</button>
+          <button class="btn small" type="button" data-cv="aller" aria-pressed="false">Aller</button>
+          <button class="btn small" type="button" data-cv="retour" aria-pressed="false">Retour</button>
+        </div>
+        <button class="btn small solid" type="button" id="cv-open" aria-expanded="false" aria-controls="cv-form">Publier une annonce</button>
+      </div>
+      <form class="card cv-form" id="cv-form" hidden novalidate>
+        <label>Je…<select name="type"><option value="offre">propose des places</option><option value="demande">cherche une place</option></select></label>
+        <label>Trajet<select name="sens"><option value="aller">Aller (vers le domaine)</option><option value="retour">Retour (après la soirée)</option><option value="both">Aller et retour</option></select></label>
+        <label>Prénom<input name="prenom" maxlength="40" autocomplete="given-name" required></label>
+        <label>Ville ou lieu de départ<input name="lieu" maxlength="80" placeholder="ex. Lagny-sur-Marne, Paris 12e…" required></label>
+        <label>Heure approximative<input name="heure" maxlength="20" placeholder="ex. 12 h 45 ou 4 h"></label>
+        <label id="cv-places-l">Nombre de places<input name="places" type="number" min="1" max="8" value="3"></label>
+        <label>Téléphone ou e-mail<input name="contact" maxlength="80" placeholder="06 12 34 56 78" autocomplete="off" required></label>
+        <label>Précision (facultatif)<input name="note" maxlength="200" placeholder="ex. je reste sobre, petit détour possible"></label>
+        <input name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;min-height:0;opacity:0">
+        <label class="cv-ok"><input type="checkbox" name="ok"><span>J'accepte que mon prénom et mon contact soient visibles par les invités sur cette page.</span></label>
+        <p class="msg" id="cv-msg" hidden></p>
+        <button class="btn solid" type="submit">Publier</button>
+      </form>
+      <div id="cv-list"></div>
+    </section>
+
+    <!-- PHOTOS DU MARIAGE (publiées par les mariés) -->
+    <section class="panel" id="panel-photos">
+      <h2>Les photos du mariage</h2>
+      <div class="rule"><img src="img/fleur-centre.png" alt=""></div>
+      <p class="sub">Merci d'avoir partagé cette journée avec nous. Cliquez sur une photo pour l'agrandir.</p>
+      <div class="gallery" id="gallery"></div>
+    </section>
+
     <!-- QUESTIONS / RÉPONSES -->
     <section class="panel" id="panel-faq">
       <h2>Questions et réponses</h2>
@@ -602,6 +730,9 @@ body.on-conn #edit-fab{display:none}
       </div>
 
         <div id="tab-fq" hidden>
+      <h3 class="cat">Ordre des questions</h3>
+          <p class="hint" style="margin-bottom:10px">Utilisez les flèches ▲ ▼ pour changer l'ordre d'affichage sur la page Questions.</p>
+          <div class="tbl" style="margin-bottom:22px"><table><tbody id="fq-order"></tbody></table></div>
       <h3 class="cat">Questions ajoutées</h3>
           <form class="card" id="faq-form" novalidate style="margin-bottom:22px">
             <h3>Ajouter une question</h3>
@@ -718,7 +849,7 @@ const CONFIG = {
   SUPABASE_URL: "https://hbwnpxsrrzuyujywzslm.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_WvBgELdH6yQhDtJmykr81w_ZbLRPbUN",
   // Facultatif : URL du script Google Apps Script qui écrit dans la colonne « Présence » et « Allergie » du tableur.
-  APPS_SCRIPT_URL: ""
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwGZRiZlNu0B4OORZuQExMUC2iJ1xFgizDVvsCvWVyRBYtmqEX8n4g3l6U_CyCQLHL-/exec"
 };
 
 /* ============ CONTENU (à modifier ici) ============ */
@@ -952,11 +1083,18 @@ function renderStatic(){
 
 }
 
-const state = { cagnotte: CONTENT.cagnotteUrl || "", faqExtra: [] };
+const state = { cagnotte: CONTENT.cagnotteUrl || "", faqExtra: [], faqOrder: [] };
+/* Toutes les questions (de base + ajoutées), dans l'ordre choisi par les mariés */
+function faqItems(){
+  const all = [...CONTENT.faq.map((f, i) => ({ key: "d" + i, f })), ...state.faqExtra.map(x => ({ key: "x" + x.id, f: [x.q, x.a], x }))];
+  const rank = k => { const i = state.faqOrder.indexOf(k); return i < 0 ? 1e6 : i; };
+  return all.map((it, i) => [it, i]).sort((a, b) => rank(a[0].key) - rank(b[0].key) || a[1] - b[1]).map(a => a[0]);
+}
+const loadFaqOrder = () => store.getSetting("faq_order").then(v => { try { const a = JSON.parse(v || "[]"); state.faqOrder = Array.isArray(a) ? a : []; } catch { state.faqOrder = []; } }).catch(() => {});
 
 function renderFaq(){
   const faq = $("#faq-list"), form = $("#rsvp-form"); faq.replaceChildren();
-  [...CONTENT.faq, ...state.faqExtra.map(x => [x.q, x.a])].forEach(([q,a,extra]) => {
+  faqItems().forEach(({ f: [q,a,extra] }) => {
     const d = el("details",{}, el("summary",{text:q}), el("p",{text:a}));
     const row = el("div",{style:"display:flex;gap:10px;flex-wrap:wrap;margin:0 4px 16px"});
     if (extra === "form") { d.id = "q-presence"; d.append(form); }
@@ -1104,8 +1242,9 @@ async function renderConnexion(){
   box.hidden = ok; panel.hidden = !ok;
   if (data.session && !ok) { await remote.auth.signOut(); showMsg(msg, "Ce compte n'est pas autorisé à modifier le site.", "err"); }
   if (ok) await Promise.all([renderResponses(), renderSongAdmin(), renderFaqAdmin(), loadPotField()]);
+  if (ok && typeof adminExtraRefresh === "function") adminExtraRefresh();
 }
-const PANELS = ["accueil","programme","infos","logement","tenue","chants","faq","connexion"];
+const PANELS = ["accueil","programme","infos","logement","tenue","chants","covoiturage","photos","faq","connexion"];
 /* Agrandit les pages courtes pour qu'elles occupent tout l'écran (jamais plus que le facteur indiqué, jamais plus large que l'écran) */
 const FIT = ["infos", "logement", "tenue", "chants", "faq"];
 function fitPanel(){
@@ -1127,12 +1266,14 @@ function showPanel(id){
   document.querySelectorAll(".tabs a").forEach(a => a.setAttribute("aria-current", String(a.getAttribute("href") === "#" + id)));
   document.body.classList.toggle("home", id === "accueil");
   document.body.classList.toggle("on-conn", id === "connexion");
+  if (id === "covoiturage" && typeof covoitInit === "function") covoitInit();
   requestAnimationFrame(() => requestAnimationFrame(() => { drawLoops(); fitPanel(); }));
   window.scrollTo(0, 0);
 }
 function route(){
   const h = location.hash.slice(1);
   if (h === "connexion" || h === "admin" || h.startsWith("access_token") || h.includes("type=")) { showPanel("connexion"); renderConnexion(); return; }
+  if (h === "photos" && !document.body.classList.contains("post")) { showPanel("accueil"); return; }
   if (h === "presence") {
     showPanel("faq");
     const d = $("#q-presence"); if (d) { d.open = true; d.scrollIntoView({ block: "start" }); }
@@ -1207,11 +1348,27 @@ function toggleLyricsEditor(tr, x){
   tr.after(el("tr",{class:"lyr-edit"}, el("td",{colspan:"5"}, el("div",{style:"display:grid;gap:8px;padding:6px 0"}, ta, el("div",{style:"display:flex;gap:8px;flex-wrap:wrap"}, save, el("button",{class:"btn small",type:"button",text:"Fermer",onclick:() => tr.nextElementSibling.remove()})), msg))));
   ta.focus();
 }
+function renderFaqOrder(){
+  const host = $("#fq-order"); if (!host) return; host.replaceChildren();
+  const items = faqItems();
+  const move = async (i, d) => {
+    const j = i + d; if (j < 0 || j >= items.length) return;
+    const keys = items.map(x => x.key); [keys[i], keys[j]] = [keys[j], keys[i]];
+    try { await store.setSetting("faq_order", JSON.stringify(keys)); state.faqOrder = keys; renderFaqOrder(); renderFaq(); showToast("Ordre enregistré"); }
+    catch (e) { showToast("Ordre non enregistré : " + explainErr(e)); }
+  };
+  items.forEach((it, i) => host.append(el("tr", {},
+    el("td", { text: it.f[0] }),
+    el("td", { style: "white-space:nowrap" },
+      el("button", { class: "btn small", type: "button", text: "▲", "aria-label": "Monter la question " + it.f[0], disabled: i === 0, onclick: () => move(i, -1) }), " ",
+      el("button", { class: "btn small", type: "button", text: "▼", "aria-label": "Descendre la question " + it.f[0], disabled: i === items.length - 1, onclick: () => move(i, 1) })))));
+}
 async function renderFaqAdmin(){
+  await loadFaqOrder(); 
   const rows = $("#fq-rows"); rows.replaceChildren();
   let list = [];
   try { list = await store.listFaqExtra(); } catch { $("#fq-empty").hidden = false; return; }
-  state.faqExtra = list; $("#fq-empty").hidden = list.length > 0;
+  state.faqExtra = list; $("#fq-empty").hidden = list.length > 0; renderFaqOrder(); renderFaq();
   list.forEach(x => rows.append(el("tr",{}, el("td",{text:x.q}), el("td",{text:x.a}),
     el("td",{}, el("button",{class:"btn small danger",type:"button",text:"Supprimer","aria-label":"Supprimer la question " + x.q,onclick: async () => { await store.deleteFaqExtra(x.id); renderFaqAdmin(); renderFaq(); }})))));
 }
@@ -1380,6 +1537,7 @@ async function saveText(n){
 /* --- Explication claire des erreurs d'enregistrement --- */
 function explainErr(e){
   const m = String((e && (e.message || e.details)) || e || ""), c = (e && e.code) || "";
+  if (/bucket not found|resource was not found/i.test(m)) return "le dossier de photos n'existe pas : exécutez supabase-tout-en-un.sql dans Supabase.";
   if (c === "PGRST204" || c === "42703" || /lyrics/i.test(m)) return "la colonne des paroles n'existe pas : exécutez le SQL « supabase-migration-paroles.sql » dans Supabase.";
   if (c === "PGRST205" || c === "42P01" || /could not find the table|does not exist/i.test(m)) return "la table « textes » n'existe pas dans Supabase : exécutez le fichier supabase-migration-textes.sql dans le SQL Editor.";
   if (c === "42501" || c === "PGRST301" || /row-level security|permission denied|not allowed/i.test(m)) return "ce compte n'a pas le droit d'écrire : vérifiez que votre adresse est dans la table « admins » et que vous êtes connecté(e).";
@@ -1461,7 +1619,7 @@ async function runDiag(){
   add(true, "Connecté(e) avec " + (s.session.user.email || "ce compte"));
   const adm = await remote.rpc("is_admin");
   add(adm.data === true, adm.data === true ? "Adresse reconnue comme compte des mariés" : "Adresse absente de la table « admins » : exécutez insert into admins(email) values ('votre-adresse');");
-  const reads = [["textes", "supabase-migration-textes.sql"], ["songs", "supabase-schema.sql"], ["faq_extra", "supabase-migration-comptes.sql"], ["reponses", "supabase-migration-reponses.sql"], ["settings", "supabase-schema.sql"]];
+  const reads = [["org_tasks", "supabase-tout-en-un.sql"], ["photos", "supabase-tout-en-un.sql"], ["textes", "supabase-migration-textes.sql"], ["songs", "supabase-schema.sql"], ["faq_extra", "supabase-migration-comptes.sql"], ["reponses", "supabase-migration-reponses.sql"], ["settings", "supabase-schema.sql"]];
   for (const [t, file] of reads) {
     const { error } = await remote.from(t).select("*").limit(1);
     add(!error, error ? `Lecture de « ${t} » impossible (${explainErr(error)}) Fichier à exécuter : ${file}` : `Lecture de « ${t} » : OK`);
@@ -1523,7 +1681,7 @@ async function refreshEditorAccess(){
 /* ============ DÉMARRAGE ============ */
 renderStatic(); renderFaq(); bindRsvpForm(); bindAdmin(); renderSongs(); bindEditor(); prepareTexts();
 store.loadTexts().then(t => { texts = t; prepareTexts(); }).catch(() => {});
-store.listFaqExtra().then(l => { state.faqExtra = l; renderFaq(); }).catch(() => {});
+Promise.all([store.listFaqExtra().then(l => { state.faqExtra = l; }).catch(() => {}), loadFaqOrder()]).then(() => renderFaq());
 setAuthMode("login");
 refreshEditorAccess();
 if (remote) remote.auth.onAuthStateChange(ev => {
@@ -1535,5 +1693,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
+<script src="organisation.js"></script>
+<script src="covoiturage.js"></script>
 </body>
 </html>

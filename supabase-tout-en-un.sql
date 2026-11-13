@@ -116,5 +116,111 @@ drop trigger if exists only_admin_signup on auth.users;
 create trigger only_admin_signup before insert on auth.users
   for each row execute function public.only_admin_signup();
 
+-- 7. Organisation du mariage (tâches, budget, prestataires, plan de tables, jour J) : réservé aux mariés
+create table if not exists org_tasks (
+  id uuid primary key default gen_random_uuid(), created_at timestamptz not null default now(),
+  done boolean not null default false, title text not null check (char_length(title) between 1 and 300),
+  cat text, due date, who text, notes text
+);
+create table if not exists org_budget (
+  id uuid primary key default gen_random_uuid(), created_at timestamptz not null default now(),
+  cat text, item text not null check (char_length(item) between 1 and 200),
+  estimated numeric, actual numeric, paid numeric, vendor text, notes text
+);
+create table if not exists org_vendors (
+  id uuid primary key default gen_random_uuid(), created_at timestamptz not null default now(),
+  name text not null check (char_length(name) between 1 and 200), role text, status text,
+  contact text, phone text, email text, price numeric, deposit numeric, notes text
+);
+create table if not exists org_tables (
+  id uuid primary key default gen_random_uuid(), created_at timestamptz not null default now(),
+  name text not null check (char_length(name) between 1 and 100), capacity int, guests text, notes text,
+  position int not null default 0
+);
+create table if not exists org_timeline (
+  id uuid primary key default gen_random_uuid(), created_at timestamptz not null default now(),
+  time text not null, title text not null check (char_length(title) between 1 and 300), who text, notes text
+);
+do $$
+declare t text;
+begin
+  foreach t in array array['org_tasks','org_budget','org_vendors','org_tables','org_timeline'] loop
+    execute format('alter table %I enable row level security', t);
+    execute format('drop policy if exists %I on %I', t || '_admin', t);
+    execute format('create policy %I on %I for all to authenticated using (public.is_admin()) with check (public.is_admin())', t || '_admin', t);
+    execute format('grant select, insert, update, delete on %I to authenticated', t);
+  end loop;
+end $$;
+
+-- 8. Photos du mariage : dépôt par les mariés, galerie publique une fois publiée
+create table if not exists photos (
+  id uuid primary key default gen_random_uuid(), created_at timestamptz not null default now(),
+  path text not null, caption text check (caption is null or char_length(caption) <= 120),
+  position int not null default 0
+);
+alter table photos enable row level security;
+drop policy if exists photos_read on photos;
+drop policy if exists photos_admin on photos;
+create policy photos_read on photos for select to anon, authenticated using (true);
+create policy photos_admin on photos for all to authenticated using (is_admin()) with check (is_admin());
+grant select on photos to anon;
+grant select, insert, update, delete on photos to authenticated;
+
+-- 9. Espaces de stockage : « photos » (public, lecture seule pour les invités) et « prive » (images de prière, mariés uniquement)
+insert into storage.buckets (id, name, public) values ('photos', 'photos', true) on conflict (id) do update set public = true;
+insert into storage.buckets (id, name, public) values ('prive', 'prive', false) on conflict (id) do update set public = false;
+drop policy if exists photos_storage_read on storage.objects;
+create policy photos_storage_read on storage.objects for select to anon, authenticated using (bucket_id = 'photos');
+drop policy if exists photos_storage_admin on storage.objects;
+create policy photos_storage_admin on storage.objects for all to authenticated
+  using (bucket_id = 'photos' and public.is_admin()) with check (bucket_id = 'photos' and public.is_admin());
+drop policy if exists prive_storage_admin on storage.objects;
+create policy prive_storage_admin on storage.objects for all to authenticated
+  using (bucket_id = 'prive' and public.is_admin()) with check (bucket_id = 'prive' and public.is_admin());
+
 -- 6. Nettoyage : efface d'éventuels textes contenant un lien collé par erreur
 delete from textes where value ilike '%google.com/maps%';
+
+-- ============================================================
+-- 10. COVOITURAGE (annonces des invités : aller / retour après la soirée)
+-- ============================================================
+create table if not exists public.covoiturage (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  type text not null check (type in ('offre','demande')),
+  sens text not null check (sens in ('aller','retour','both')),
+  prenom text not null check (char_length(prenom) between 1 and 40),
+  lieu text not null check (char_length(lieu) between 1 and 80),
+  heure text check (heure is null or char_length(heure) <= 20),
+  places int not null default 0 check (places between 0 and 8),
+  contact text not null check (char_length(contact) between 5 and 80),
+  note text check (note is null or char_length(note) <= 200),
+  edit_code text not null check (char_length(edit_code) between 16 and 64)
+);
+alter table public.covoiturage enable row level security;
+drop policy if exists covoit_select on public.covoiturage;
+drop policy if exists covoit_insert on public.covoiturage;
+drop policy if exists covoit_admin_delete on public.covoiturage;
+create policy covoit_select on public.covoiturage for select using (true);
+create policy covoit_insert on public.covoiturage for insert with check (true);
+create policy covoit_admin_delete on public.covoiturage for delete to authenticated using (public.is_admin());
+-- le code secret n'est jamais lisible par le public
+revoke all on public.covoiturage from anon, authenticated;
+grant select (id, created_at, type, sens, prenom, lieu, heure, places, contact, note) on public.covoiturage to anon, authenticated;
+grant insert on public.covoiturage to anon, authenticated;
+grant delete on public.covoiturage to authenticated;
+create or replace function public.covoit_supprimer(p_id uuid, p_code text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  delete from public.covoiturage where id = p_id and edit_code = p_code;
+  if not found then raise exception 'code invalide'; end if;
+end $$;
+create or replace function public.covoit_places(p_id uuid, p_code text, p_places int) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if p_places < 0 or p_places > 8 then raise exception 'places invalides'; end if;
+  update public.covoiturage set places = p_places where id = p_id and edit_code = p_code and type = 'offre';
+  if not found then raise exception 'code invalide'; end if;
+end $$;
+grant execute on function public.covoit_supprimer(uuid, text) to anon, authenticated;
+grant execute on function public.covoit_places(uuid, text, int) to anon, authenticated;
