@@ -604,7 +604,6 @@ async function applyPostWedding() {
 /* ---------------------------------------------------------------------------
    4. Prière : Évangile du jour et images (espace privé)
    --------------------------------------------------------------------------- */
-const COMMONS = f => "https://commons.wikimedia.org/wiki/Special:FilePath/" + encodeURIComponent(f) + "?width=900";
 
 /* ---------------------------------------------------------------------------
    Icônes dessinées (traits, sans fichier externe) : agneaux, colombe, croix, calice…
@@ -629,39 +628,10 @@ const icon = (name, size) => { const s = el("span", { class: "ico", role: "img",
 const titled = (tag, cls, name, text, size) => el(tag, { class: cls }, icon(name, size || 24), " ", text);
 const iconRow = (names, size) => el("div", { class: "ico-row", "aria-hidden": "true" }, ...names.map(n => icon(n, size)));
 
-const SACRED = [
-  { f: "Christ Pantocrator Deesis mosaic Hagia Sophia.jpg", c: "Christ Pantocrator, mosaïque de la Déisis, Sainte-Sophie (XIIIe siècle). Domaine public, via Wikimedia Commons." },
-  { f: "\"The good Shepherd\" mosaic - Mausoleum of Galla Placidia.jpg", c: "Le Bon Pasteur, mosaïque du mausolée de Galla Placidia, Ravenne (Ve siècle). Photo : Petar Milošević, CC BY-SA 4.0, via Wikimedia Commons." }
-];
 async function renderPrayer() {
   const host = $("#pray-body"); host.replaceChildren();
   const verse = el("div", { class: "verse-card" }); host.append(verse);
   renderVerse(verse);
-  host.append(titled("h3", "cat", "Croix", "Images", 24), el("p", { class: "hint", text: "Cet espace est privé : rien de ce qui se trouve ici n'apparaît sur le site public." }));
-  const grid = el("div", { class: "pray-grid" });
-  SACRED.forEach(s => { const img = el("img", { src: COMMONS(s.f), alt: s.c.split(".")[0], loading: "lazy", referrerpolicy: "no-referrer" }); const fig = el("figure", { class: "pray-item" }, img, el("figcaption", { text: s.c })); img.addEventListener("error", () => fig.remove()); grid.append(fig); });
-  host.append(grid);
-  // images privées déposées par les mariés
-  const mine = el("div", { class: "pray-mine" }); host.append(titled("h3", "cat", "Colombe", "Vos images", 26));
-  const drop = el("label", { class: "drop", for: "pray-input" }, el("b", { text: "Ajouter une image" }), el("span", { text: "Une icône, une image de Jésus, de la Vierge, une prière… Privé, visible uniquement ici." }));
-  const input = el("input", { id: "pray-input", type: "file", accept: "image/*", multiple: true, hidden: true });
-  const status = el("p", { class: "hint", role: "status" });
-  input.addEventListener("change", async () => { const r = await uploadPhotos(input.files, "prive", (i, n, name) => { status.textContent = "Envoi " + i + " / " + n + " : " + name; }); status.textContent = r.ok + " image(s) ajoutée(s)." + (r.fail.length ? " Échecs : " + r.fail.join(" ; ") : ""); loadMine(); });
-  host.append(drop, input, status, mine);
-  async function loadMine() {
-    mine.replaceChildren();
-    const { data, error } = await remote.storage.from("prive").list("", { limit: 100, sortBy: { column: "created_at", order: "desc" } });
-    if (error) { mine.append(el("p", { class: "msg err", text: "Espace privé indisponible : " + explainErr(error) + " Exécutez supabase-tout-en-un.sql dans Supabase." })); return; }
-    const files = (data || []).filter(f => f.name && !f.name.startsWith("."));
-    if (!files.length) { mine.append(el("p", { class: "empty", text: "Aucune image pour l'instant." })); return; }
-    const { data: urls } = await remote.storage.from("prive").createSignedUrls(files.map(f => f.name), 3600);
-    const g = el("div", { class: "pray-grid" });
-    files.forEach((f, i) => { const u = urls && urls[i] && urls[i].signedUrl; if (!u) return;
-      g.append(el("figure", { class: "pray-item" }, el("img", { src: u, alt: "Image privée", loading: "lazy" }),
-        el("button", { class: "btn small danger", type: "button", text: "Supprimer", onclick: async () => { await remote.storage.from("prive").remove([f.name]); loadMine(); } }))); });
-    mine.append(g);
-  }
-  loadMine();
 }
 
 /* ---------------------------------------------------------------------------
