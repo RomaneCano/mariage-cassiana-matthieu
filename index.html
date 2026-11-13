@@ -611,6 +611,7 @@ body.on-conn #edit-fab{display:none}
 /* dress code : les fleurs éclosent, puis le trait les barre */
 #panel-tenue.active .flo{animation:bloom 1s cubic-bezier(.2,.7,.2,1) backwards}
 #panel-tenue.active .palette li:nth-child(1) .flo{animation-delay:.3s}#panel-tenue.active .palette li:nth-child(2) .flo{animation-delay:.5s}#panel-tenue.active .palette li:nth-child(3) .flo{animation-delay:.7s}
+#panel-tenue.active .palette li:nth-child(1) .flo .slash.slash2{animation-delay:2.25s}#panel-tenue.active .palette li:nth-child(2) .flo .slash.slash2{animation-delay:2.45s}#panel-tenue.active .palette li:nth-child(3) .flo .slash.slash2{animation-delay:2.65s}
 #panel-tenue.active .flo .ring,#panel-tenue.active .flo .slash{stroke-dasharray:1;stroke-dashoffset:1;animation:slashDraw .9s ease-out forwards}
 #panel-tenue.active .palette li:nth-child(1) .flo .ring{animation-delay:1.2s}#panel-tenue.active .palette li:nth-child(2) .flo .ring{animation-delay:1.4s}#panel-tenue.active .palette li:nth-child(3) .flo .ring{animation-delay:1.6s}
 #panel-tenue.active .palette li:nth-child(1) .flo .slash{animation-delay:1.9s}#panel-tenue.active .palette li:nth-child(2) .flo .slash{animation-delay:2.1s}#panel-tenue.active .palette li:nth-child(3) .flo .slash{animation-delay:2.3s}
@@ -1169,7 +1170,7 @@ function flowerSVG(c, idx){
   P.push(`<g filter="url(#${id}w)">${g.join("")}</g>`);
   P.push(`<circle cx="80" cy="80" r="4.6" fill="${pal[2]}" fill-opacity=".9"/>`);
   for (let i = 0; i < 7; i++) { const a = i * 0.698 + .2, r1 = 6 + (i % 3), x = 80 + Math.cos(a) * 12, y = 80 + Math.sin(a) * 12; P.push(`<path d="M80 80Q${(80 + Math.cos(a) * 6).toFixed(1)} ${(80 + Math.sin(a) * 4).toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)}" fill="none" stroke="${pal[3]}" stroke-width=".45" stroke-opacity=".6"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.05" fill="#d9c27a" fill-opacity=".85"/>`); }
-  P.push(`<line class="slash" pathLength="1" x1="26" y1="134" x2="134" y2="26" stroke="#8a3b2b" stroke-width="1.6" stroke-linecap="round" stroke-opacity=".72"/>`);
+  P.push(`<line class="slash" pathLength="1" x1="28" y1="132" x2="132" y2="28" stroke="#8a3b2b" stroke-width="2.2" stroke-linecap="round" stroke-opacity=".92"/><line class="slash slash2" pathLength="1" x1="28" y1="28" x2="132" y2="132" stroke="#8a3b2b" stroke-width="2.2" stroke-linecap="round" stroke-opacity=".92"/>`);
   return `<svg viewBox="0 0 160 160" width="100%" height="100%" aria-hidden="true">${P.join("")}</svg>`;
 }
 
