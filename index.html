@@ -1374,13 +1374,13 @@ function toggleLyricsEditor(tr, x){
   tr.after(el("tr",{class:"lyr-edit"}, el("td",{colspan:"5"}, el("div",{style:"display:grid;gap:8px;padding:6px 0"}, ta, el("div",{style:"display:flex;gap:8px;flex-wrap:wrap"}, save, el("button",{class:"btn small",type:"button",text:"Fermer",onclick:() => tr.nextElementSibling.remove()})), msg))));
   ta.focus();
 }
-function renderFaqOrder(){
-  const host = $("#fq-order"); if (!host) return; host.replaceChildren();
+function renderFaqOrder(host = $("#fq-order")){
+  if (!host) return; host.replaceChildren();
   const items = faqItems();
   const move = async (i, d) => {
     const j = i + d; if (j < 0 || j >= items.length) return;
     const keys = items.map(x => x.key); [keys[i], keys[j]] = [keys[j], keys[i]];
-    try { await store.setSetting("faq_order", JSON.stringify(keys)); state.faqOrder = keys; renderFaqOrder(); renderFaq(); showToast("Ordre enregistré"); }
+    try { await store.setSetting("faq_order", JSON.stringify(keys)); state.faqOrder = keys; renderFaqOrder(host); renderFaq(); showToast("Ordre enregistré"); }
     catch (e) { showToast("Ordre non enregistré : " + explainErr(e)); }
   };
   items.forEach((it, i) => host.append(el("tr", {},

@@ -268,6 +268,15 @@ async function renderOrg(key) {
   document.querySelectorAll("[data-org]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.org === key)));
   const host = $("#org-body"); host.replaceChildren();
   if (key === "notes") return renderNotes(host);
+  if (key === "faq") {
+    try { state.faqExtra = await store.listFaqExtra(); } catch {}
+    await loadFaqOrder();
+    const tb = el("tbody");
+    host.append(el("h3", { class: "cat", text: "Ordre des questions du site" }), el("p", { class: "hint", text: "Utilisez les flèches ▲ ▼ : la page publique « Questions » suit cet ordre. Les textes se modifient avec « Modifier les textes » dans Le site." }),
+      el("div", { class: "tbl", style: "margin-top:10px" }, el("table", {}, tb)));
+    renderFaqOrder(tb);
+    return;
+  }
   const M = ORG[key]; let rows = [];
   try { rows = await orgStore.list(M.table); } catch (e) { host.append(el("p", { class: "msg err", text: "Impossible de charger : " + explainErr(e) + " Exécutez supabase-tout-en-un.sql dans Supabase." })); return; }
   rows = sortRows(key, rows);
@@ -315,7 +324,7 @@ async function renderOrg(key) {
   if (key === "tasks") shown = rows.filter(r => (orgState.filter.status === "all" || (orgState.filter.status === "done" ? r.done : !r.done)) && (!orgState.filter.cat || r.cat === orgState.filter.cat));
   if (!shown.length) { host.append(el("p", { class: "empty", text: rows.length ? "Aucune ligne avec ce filtre." : "Rien pour l'instant. Utilisez « Charger le modèle type » ou ajoutez une première ligne." })); return; }
   const table = el("table", { class: "org-table" });
-  table.append(el("thead", {}, el("tr", {}, ...M.fields.map(f => el("th", { text: f.l })), el("th", {}))));
+  table.append(el("thead", {}, el("tr", {}, ...M.fields.map(f => el("th", { text: f.l })), ...(key === "seating" ? [el("th", { text: "Ordre" })] : []), el("th", {}))));
   const tb = el("tbody");
   let lastCat = null;
   shown.forEach(r => {
@@ -334,6 +343,10 @@ async function renderOrg(key) {
       });
       tr.append(el("td", { "data-label": f.l }, inp));
     });
+    if (key === "seating") {
+      const i = shown.indexOf(r), swap = async d => { const o = shown[i + d]; if (!o) return; try { await orgStore.update(M.table, r.id, { position: o.position }); await orgStore.update(M.table, o.id, { position: r.position }); renderOrg(key); } catch (e) { showToast(orgErr(e)); } };
+      tr.append(el("td", {}, el("button", { class: "btn small", type: "button", text: "▲", "aria-label": "Monter la table", disabled: i === 0, onclick: () => swap(-1) }), " ", el("button", { class: "btn small", type: "button", text: "▼", "aria-label": "Descendre la table", disabled: i === shown.length - 1, onclick: () => swap(1) })));
+    }
     tr.append(el("td", {}, el("button", { class: "btn small danger", type: "button", text: "Supprimer", "aria-label": "Supprimer la ligne", onclick: async () => {
       try { await orgStore.remove(M.table, r.id); renderOrg(key); } catch (e) { showToast(orgErr(e)); }
     } })));
@@ -582,7 +595,7 @@ function buildAdminShell() {
   const today = el("section", { "data-main-sec": "today" }, el("div", { id: "today-body" }));
   const org = el("section", { "data-main-sec": "org", hidden: true },
     el("div", { class: "admin-tabs", role: "group", "aria-label": "Organisation" },
-      ...[["tasks", "Tâches"], ["budget", "Budget"], ["vendors", "Prestataires"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["notes", "Notes"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
+      ...[["tasks", "Tâches"], ["budget", "Budget"], ["vendors", "Prestataires"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["faq", "Questions"], ["notes", "Notes"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
     el("div", { id: "org-body" }));
   const photos = el("section", { "data-main-sec": "photos", hidden: true }, el("h3", { class: "cat", text: "Photos du mariage" }), el("div", { id: "photos-admin" }));
   const pray = el("section", { "data-main-sec": "pray", hidden: true }, el("h3", { class: "cat", text: "Prière du jour" }), el("div", { id: "pray-body" }));
