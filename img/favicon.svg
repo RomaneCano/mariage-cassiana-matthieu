@@ -1,10 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs><clipPath id="c"><circle cx="32" cy="32" r="30"/></clipPath></defs>
   <circle cx="32" cy="32" r="31" fill="#f5f2eb" stroke="#c9c8a6" stroke-width="1.5"/>
-  <g fill="none" stroke-linecap="round">
-    <circle cx="25" cy="34" r="12.5" stroke="#4f5020" stroke-width="3.2"/>
-    <circle cx="39" cy="34" r="12.5" stroke="#76773f" stroke-width="3.2"/>
+  <g clip-path="url(#c)">
+    <path d="M-2 46 L14 30 Q17 27 20 30 L26 36 L30 31 L34 36 L40 30 Q43 27 46 30 L66 48 L66 70 L-2 70 Z" fill="#76773f" opacity=".55"/>
+    <path d="M6 50 L26 19 Q30 12 35 18 L41 27 L46 23 Q49 20 52 24 L62 50 Z" fill="#4f5020"/>
+    <path d="M23.500 24 L26 19 Q30 12 35 18 L38 22.500 L34.500 21.500 L32 26 L29 22 L26.500 26 Z" fill="#fdfcf7"/>
+    <path d="M45 26 L46 23 Q49 20 52 24 L54 28 L51 26.500 L49 29 L47.500 26.500 Z" fill="#fdfcf7"/>
+    <path d="M-2 52 Q16 47 32 51 T66 49 L66 70 L-2 70 Z" fill="#a9b07a"/>
   </g>
-  <path d="M32 21.5c-3.2-3.2-3.2-6.8 0-9.6 3.200 2.800 3.200 6.400 0 9.600z" fill="#76773f"/>
-  <path d="M32 21.5c3.800-.4 6.200-2.600 7.200-5.800-3.600-.2-6.400 1.200-7.200 5.800z" fill="#4f5020" opacity=".85"/>
-  <path d="M32 21.5c-3.800-.4-6.200-2.600-7.200-5.800 3.600-.2 6.400 1.200 7.200 5.800z" fill="#4f5020" opacity=".85"/>
+  <circle cx="32" cy="32" r="30" fill="none" stroke="#4f5020" stroke-width="1.2" opacity=".5"/>
 </svg>
