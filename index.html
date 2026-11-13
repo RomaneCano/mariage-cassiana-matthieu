@@ -79,6 +79,13 @@ main.stage{position:relative;z-index:1;width:100%;max-width:2000px;margin:0 auto
 .panel.active{display:block}
 .panel:not(.hero){width:100%;max-width:860px;margin-inline:auto}
 #panel-connexion .tbl{max-width:100%}
+.panel:not(.hero)#panel-connexion.wide{max-width:min(97vw,1700px)}
+#panel-connexion.wide .org-table{min-width:0;table-layout:auto}
+#panel-connexion.wide .org-wrap{overflow-x:visible}
+#panel-connexion.wide .org-table td:nth-child(2){min-width:0;width:26%}
+#panel-connexion.wide .org-table input[type=text],#panel-connexion.wide .org-table select,#panel-connexion.wide .org-table input[type=date],#panel-connexion.wide .org-table input[type=time]{min-width:80px}
+#panel-connexion.wide .org-table input[type=number]{min-width:70px}
+.org-wrap{overflow-x:auto}
 
 /* Accueil */
 html:has(body.home),body.home{overflow:hidden}

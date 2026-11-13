@@ -735,7 +735,7 @@ async function seedInner() {
     if (typeof orgState !== "undefined" && !$("#org-body").closest("[hidden]")) renderOrg(orgState.key);
   } catch (e) { console.warn("Reprise du tableur :", e); }
 }
-function adminExtraRefresh() { seedFromSheet(); buildAdminShell(); let k = "today"; try { k = sessionStorage.getItem("mariage:main") || "today"; } catch {} showMain(MAINS.includes(k) ? k : "today"); }
+function adminExtraRefresh() { seedFromSheet(); buildAdminShell(); const pc = $("#panel-connexion"); if (pc) pc.classList.add("wide"); let k = "today"; try { k = sessionStorage.getItem("mariage:main") || "today"; } catch {} showMain(MAINS.includes(k) ? k : "today"); }
 
 buildAdminShell();
 applyPostWedding();
