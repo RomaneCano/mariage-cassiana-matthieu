@@ -87,14 +87,14 @@ const WHO = ["Cassiana", "Matthieu", "Les deux", "Autre"];
 
 const ORG = {
   tasks: { table: "org_tasks", label: "Tâches", order: "due", defaults: { done: false, cat: CATS_TASK[0], who: "Les deux" }, fields: [
-    { k: "done", l: "Fait", t: "check" }, { k: "title", l: "Tâche", t: "text", req: true, wide: true }, { k: "cat", l: "Catégorie", t: "select", o: CATS_TASK },
+    { k: "done", l: "Fait", t: "check" }, { k: "title", l: "Tâche", t: "text", req: true, wide: true }, { k: "cat", l: "Catégorie", t: "select", o: CATS_TASK, newable: true },
     { k: "due", l: "Échéance", t: "date" }, { k: "who", l: "Qui", t: "select", o: WHO }, { k: "notes", l: "Notes", t: "text" }] },
   budget: { table: "org_budget", label: "Budget", order: "cat", defaults: { cat: CATS_BUDGET[0] }, fields: [
-    { k: "cat", l: "Poste", t: "select", o: CATS_BUDGET }, { k: "item", l: "Dépense", t: "text", req: true, wide: true },
+    { k: "cat", l: "Poste", t: "select", o: CATS_BUDGET, newable: true }, { k: "item", l: "Dépense", t: "text", req: true, wide: true },
     { k: "estimated", l: "Prévu (€)", t: "number" }, { k: "actual", l: "Réel (€)", t: "number" }, { k: "paid", l: "Payé (€)", t: "number" },
     { k: "vendor", l: "Prestataire", t: "text" }, { k: "notes", l: "Notes", t: "text" }] },
   vendors: { table: "org_vendors", label: "Prestataires", order: "created_at", defaults: { status: "À contacter", role: "Autre" }, fields: [
-    { k: "name", l: "Nom", t: "text", req: true, wide: true }, { k: "role", l: "Rôle", t: "select", o: ROLES },
+    { k: "name", l: "Nom", t: "text", req: true, wide: true }, { k: "role", l: "Rôle", t: "select", o: ROLES, newable: true },
     { k: "status", l: "Statut", t: "select", o: ["À contacter", "Devis demandé", "Réservé", "Acompte versé", "Soldé"] },
     { k: "contact", l: "Contact", t: "text" }, { k: "phone", l: "Téléphone", t: "text" }, { k: "email", l: "E-mail", t: "text" },
     { k: "price", l: "Prix (€)", t: "number" }, { k: "deposit", l: "Acompte (€)", t: "number" }, { k: "notes", l: "Notes", t: "text" }] },
@@ -171,7 +171,20 @@ function sortRows(key, rows) {
 
 function fieldInput(f, value) {
   let inp;
-  if (f.t === "select") { inp = el("select", {}, ...["", ...f.o].map(o => el("option", { value: o, text: o || "—" }))); inp.value = value || ""; }
+  if (f.t === "select") {
+    const opts = ["", ...f.o]; if (value && !opts.includes(value)) opts.push(value);
+    inp = el("select", {}, ...opts.map(o => el("option", { value: o, text: o || "—" })));
+    if (f.newable) inp.append(el("option", { value: "__new__", text: "➕ Nouvelle catégorie…" }));
+    inp.value = value || ""; inp.dataset.prev = inp.value;
+    if (f.newable) inp.addEventListener("change", () => {
+      if (inp.value !== "__new__") { inp.dataset.prev = inp.value; return; }
+      const name = (window.prompt("Nom de la nouvelle catégorie :") || "").trim().slice(0, 60);
+      if (!name) { inp.value = inp.dataset.prev; return; }
+      if (![...inp.options].some(o => o.value === name)) inp.insertBefore(el("option", { value: name, text: name }), inp.querySelector('option[value="__new__"]'));
+      inp.value = name; inp.dataset.prev = name;
+      if (!f.o.includes(name)) f.o.push(name);
+    });
+  }
   else if (f.t === "check") { inp = el("input", { type: "checkbox" }); inp.checked = !!value; }
   else if (f.t === "long") { inp = el("textarea", { rows: "3" }); inp.value = value || ""; }
   else { inp = el("input", { type: f.t === "number" ? "number" : f.t === "date" ? "date" : f.t === "time" ? "time" : "text", step: f.t === "number" ? "any" : null }); inp.value = value == null ? "" : value; }
@@ -263,6 +276,72 @@ async function seatPlan(rows) {
   return wrap;
 }
 
+
+/* ---------------------------------------------------------------------------
+   Import depuis un tableur (CSV / copier-coller depuis Google Sheets ou Excel)
+   --------------------------------------------------------------------------- */
+const ALIASES = {
+  title: ["tache", "titre", "action", "todo", "a faire"], cat: ["categorie", "poste", "rubrique", "type"], due: ["echeance", "date", "deadline", "avant le"], who: ["qui", "responsable"], notes: ["notes", "note", "remarque", "commentaire", "observation"], done: ["fait", "termine", "ok", "statut"],
+  item: ["depense", "libelle", "designation", "description", "article", "nom", "poste"], estimated: ["prevu", "estime", "previsionnel", "budget", "devis"], actual: ["reel", "cout", "montant", "total"], paid: ["paye", "regle", "acompte verse"], vendor: ["prestataire", "fournisseur"],
+  name: ["nom", "prestataire", "societe", "table", "invite"], role: ["role", "service", "metier", "type", "categorie"], status: ["statut", "etat", "avancement"], contact: ["contact", "interlocuteur"], phone: ["telephone", "tel", "portable", "mobile"], email: ["email", "e-mail", "mail", "courriel"], price: ["prix", "tarif", "montant", "cout"], deposit: ["acompte", "arrhes"],
+  capacity: ["places", "capacite", "nombre"], guests: ["invites", "convives", "personnes", "noms"], time: ["heure", "horaire"]
+};
+function parseTable(text) {
+  const first = text.split(/\r?\n/)[0] || "";
+  const delim = [["\t", first.split("\t").length], [";", first.split(";").length], [",", first.split(",").length]].sort((a, b) => b[1] - a[1])[0][0];
+  const out = []; let row = [], cur = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === delim) { row.push(cur); cur = ""; }
+    else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(cur); cur = ""; if (row.some(x => x.trim())) out.push(row); row = []; }
+    else cur += c;
+  }
+  row.push(cur); if (row.some(x => x.trim())) out.push(row);
+  return out;
+}
+const toNum = v => { const n = parseFloat(String(v).replace(/\s| /g, "").replace(/[€$]/g, "").replace(",", ".")); return isNaN(n) ? null : n; };
+const toISO = v => { v = String(v).trim(); let m = v.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/); if (m) return (m[3].length === 2 ? "20" + m[3] : m[3]) + "-" + m[2].padStart(2, "0") + "-" + m[1].padStart(2, "0"); return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null; };
+const toTime = v => { const m = String(v).match(/(\d{1,2})\s*[h:]\s*(\d{2})?/i); return m ? m[1].padStart(2, "0") + ":" + (m[2] || "00") : null; };
+function mapTable(key, grid) {
+  const M = ORG[key], fields = M.fields;
+  let hi = -1, map = null;
+  for (let i = 0; i < Math.min(6, grid.length) && !map; i++) {
+    const cols = {}; let hits = 0;
+    grid[i].forEach((h, c) => { const n = norm(h); if (!n) return; const f = fields.find(f => !cols[f.k] && (norm(f.l) === n || f.k === n || (ALIASES[f.k] || []).some(a => n === a || n.startsWith(a)))); if (f) { cols[f.k] = c + 1; hits++; } });
+    if (hits >= 2 || (hits >= 1 && grid[i].length <= 2)) { hi = i; map = cols; }
+  }
+  if (!map) { hi = -1; map = {}; fields.forEach((f, i) => { if (i < (grid[0] || []).length) map[f.k] = i + 1; }); }
+  const rows = [];
+  grid.slice(hi + 1).forEach(r => {
+    const rec = { ...M.defaults };
+    fields.forEach(f => {
+      if (!map[f.k]) return; const raw = (r[map[f.k] - 1] || "").trim(); if (!raw) return;
+      rec[f.k] = f.t === "number" ? toNum(raw) : f.t === "date" ? toISO(raw) : f.t === "time" ? toTime(raw) : f.t === "check" ? /^(oui|x|✓|✔|vrai|true|1|fait|ok|termin)/i.test(raw) : f.t === "long" ? raw.replace(/\s*[;,|]\s*/g, "\n") : raw;
+    });
+    const need = fields.find(f => f.req); if (need && !rec[need.k]) return;
+    if (key === "seating") rec.position = rows.length;
+    rows.push(rec);
+  });
+  return rows;
+}
+function importBox(key, onDone) {
+  const M = ORG[key];
+  const box = el("details", { class: "card org-import" }, el("summary", { text: "Importer depuis un tableur (Google Sheets, Excel)" }));
+  const ta = el("textarea", { rows: "5", placeholder: "Dans Google Sheets : sélectionnez les cellules (avec la ligne d'en-tête), copiez (Ctrl+C), puis collez ici (Ctrl+V).", "aria-label": "Données du tableur" });
+  const file = el("input", { type: "file", accept: ".csv,.tsv,.txt,text/csv" });
+  const info = el("p", { class: "hint", role: "status" });
+  const go = el("button", { class: "btn small solid", type: "button", text: "Importer", disabled: true });
+  let pending = [];
+  const analyse = () => { const g = parseTable(ta.value); pending = g.length ? mapTable(key, g) : []; go.disabled = !pending.length; info.textContent = pending.length ? pending.length + " ligne(s) reconnue(s) pour « " + M.label + " ». Vérifiez puis cliquez sur Importer." : (ta.value.trim() ? "Aucune ligne reconnue : vérifiez que la ligne d'en-tête contient des titres comme " + M.fields.slice(0, 3).map(f => "« " + f.l + " »").join(", ") + "." : ""); };
+  ta.addEventListener("input", analyse);
+  file.addEventListener("change", async () => { const f = file.files[0]; if (f) { ta.value = await f.text(); analyse(); } });
+  go.addEventListener("click", async () => { go.disabled = true; try { await orgStore.insert(M.table, pending); showToast(pending.length + " ligne(s) importée(s)"); onDone(); } catch (e) { info.textContent = orgErr(e); go.disabled = false; } });
+  box.append(el("p", { class: "hint", text: "Les colonnes sont reconnues par leur titre (ex. " + M.fields.filter(f => f.t !== "check").slice(0, 4).map(f => f.l).join(", ") + "…). Les catégories inconnues sont créées automatiquement." }), el("div", { style: "display:grid;gap:8px;margin-top:8px" }, ta, file, info, go));
+  return box;
+}
+
 async function renderOrg(key) {
   orgState.key = key;
   document.querySelectorAll("[data-org]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.org === key)));
@@ -280,13 +359,14 @@ async function renderOrg(key) {
   const M = ORG[key]; let rows = [];
   try { rows = await orgStore.list(M.table); } catch (e) { host.append(el("p", { class: "msg err", text: "Impossible de charger : " + explainErr(e) + " Exécutez supabase-tout-en-un.sql dans Supabase." })); return; }
   rows = sortRows(key, rows);
+  M.fields.filter(f => f.t === "select").forEach(f => rows.forEach(r => { if (r[f.k] && !f.o.includes(r[f.k])) f.o.push(r[f.k]); }));
   host.append(orgSummary(key, rows));
 
   // barre d'outils : filtres (tâches) et modèle
   const bar = el("div", { class: "org-tools" });
   if (key === "tasks") {
     const st = el("select", { "aria-label": "Afficher" }, el("option", { value: "all", text: "Toutes" }), el("option", { value: "todo", text: "À faire" }), el("option", { value: "done", text: "Faites" })); st.value = orgState.filter.status;
-    const ct = el("select", { "aria-label": "Catégorie" }, el("option", { value: "", text: "Toutes les catégories" }), ...CATS_TASK.map(c => el("option", { value: c, text: c }))); ct.value = orgState.filter.cat;
+    const ct = el("select", { "aria-label": "Catégorie" }, el("option", { value: "", text: "Toutes les catégories" }), ...ORG.tasks.fields.find(f => f.k === "cat").o.map(c => el("option", { value: c, text: c }))); ct.value = orgState.filter.cat;
     st.addEventListener("change", () => { orgState.filter.status = st.value; renderOrg(key); }); ct.addEventListener("change", () => { orgState.filter.cat = ct.value; renderOrg(key); });
     bar.append(st, ct);
   }
@@ -300,6 +380,8 @@ async function renderOrg(key) {
   host.append(bar);
 
   if (key === "seating" && rows.length) host.append(await seatPlan(rows));
+
+  host.append(importBox(key, () => renderOrg(key)));
 
   // formulaire d'ajout
   const form = el("form", { class: "card org-add", novalidate: true });

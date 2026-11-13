@@ -54,7 +54,10 @@
     const ct = String(r.contact || ""); const wa = isPhone(ct) ? waLink(ct) : "";
     const actions = el("div", { class: "cv-actions" });
     if (isPhone(ct)) actions.append(el("a", { class: "btn small solid", href: "tel:" + digits(ct), text: "Appeler" }));
-    if (wa) actions.append(el("a", { class: "btn small", href: wa, target: "_blank", rel: "noopener", text: "WhatsApp" }));
+    if (isPhone(ct)) {
+      actions.append(el("a", { class: "btn small", href: "sms:" + digits(ct), text: "SMS" }));
+      actions.append(el("button", { class: "btn small", type: "button", text: "Copier le numéro", onclick: async e => { try { await navigator.clipboard.writeText(ct); e.target.textContent = "Copié ✓"; } catch { e.target.textContent = ct; } } }));
+    }
     if (isMail(ct)) actions.append(el("a", { class: "btn small solid", href: "mailto:" + ct.trim(), text: "Écrire" }));
     const own = el("div", { class: "cv-own" });
     if (m && r.type === "offre") own.append(
