@@ -82,19 +82,20 @@ main.stage{position:relative;z-index:1;width:100%;max-width:2000px;margin:0 auto
 /* Accueil */
 html:has(body.home),body.home{overflow:hidden}
 .hero{text-align:center}
-.hero.active{width:100%;max-width:1300px;margin-inline:auto;display:flex;flex-direction:column;height:calc(100dvh - var(--tabs-h) - env(safe-area-inset-top,0px));padding-block:min(18px,2.4vh) 28px}
+.hero.active{width:100%;max-width:1560px;margin-inline:auto;display:flex;flex-direction:column;height:calc(100dvh - var(--tabs-h) - env(safe-area-inset-top,0px));padding-block:min(18px,2.4vh) 28px}
 .hero-text{flex:1 0 auto;display:flex;flex-direction:column;justify-content:space-evenly;gap:.5rem}
 .hero-art{flex:1.2 1 30vh;min-height:0;display:flex;align-items:center;justify-content:center;margin-top:.4rem}
 .hero .cta{margin:0;padding-top:.3rem}
 .btn.cta-main{min-height:3.1rem;padding:0 2.2rem;font-size:1.02rem;letter-spacing:.05em;box-shadow:0 6px 18px rgba(79,80,32,.28)}
 @media(min-aspect-ratio:5/4) and (min-width:900px){
-  .hero.active{flex-direction:row;align-items:center;gap:1vw;padding-inline:3vw}
-  .hero-text{flex:1;max-height:100%;align-self:center;gap:1.4vh}
-  .hero-art{flex:1.3;height:100%;margin:0}
+  .hero.active{flex-direction:row;align-items:center;gap:5vw;padding-inline:3vw}
+  .hero-text{flex:1.2;max-height:100%;align-self:center;gap:1.6vh;padding-inline:1vw}
+  .hero-art{flex:1.1;height:100%;margin:0}
   .hero-art .watercolor{width:100%;height:100%;max-width:none;object-fit:contain}
   .names{font-size:clamp(2.8rem,min(7.4vw,10.5vh),7.2rem)}
   .kicker{font-size:clamp(.9rem,min(1.5vw,2.4vh),1.6rem)}
-  .lead{font-size:clamp(.88rem,min(1.35vw,2.4vh),1.5rem);line-height:1.6}
+  .lead{font-size:clamp(.88rem,min(1.3vw,2.4vh),1.5rem);line-height:1.8;max-width:none;letter-spacing:.14em}
+  .when{max-width:32em}
   .when .d{font-size:clamp(1.2rem,min(2.5vw,4.4vh),2.8rem)}
   .when .t{font-size:clamp(1.5rem,min(3vw,5vh),3.2rem)}
   .where{font-size:clamp(1.5rem,min(3vw,5vh),3.2rem)}
