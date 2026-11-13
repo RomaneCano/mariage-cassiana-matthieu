@@ -93,8 +93,8 @@ const ORG = {
     { k: "due", l: "Échéance", t: "date" }, { k: "who", l: "Qui", t: "select", o: WHO }, { k: "notes", l: "Notes", t: "text" }] },
   budget: { table: "org_budget", label: "Budget", order: "cat", defaults: { cat: CATS_BUDGET[0] }, fields: [
     { k: "cat", l: "Poste", t: "select", o: CATS_BUDGET, newable: true }, { k: "item", l: "Dépense", t: "text", req: true, wide: true },
-    { k: "estimated", l: "Prévu (€)", t: "number" }, { k: "actual", l: "Réel (€)", t: "number" }, { k: "paid", l: "Payé (€)", t: "number" },
-    { k: "vendor", l: "Prestataire", t: "text" }, { k: "notes", l: "Notes", t: "text" }] },
+    { k: "estimated", l: "Prévu (€)", t: "number" }, { k: "paid", l: "Payé (€)", t: "number" },
+    { k: "notes", l: "Notes", t: "text" }] },
   vendors: { table: "org_vendors", label: "Prestataires", order: "role", defaults: { status: "À contacter", role: "Autre" }, fields: [
     { k: "name", l: "Prestataire", t: "text", req: true, wide: true }, { k: "role", l: "Catégorie", t: "select", o: ROLES, newable: true },
     { k: "status", l: "Statut", t: "select", o: STATUS }, { k: "location", l: "Localisation", t: "text" },
@@ -276,8 +276,8 @@ function orgSummary(key, rows) {
     chip("faites", done + " / " + rows.length); chip("en retard", String(late), late ? "warn" : ""); chip("avant le mariage", Math.max(0, daysBetween(todayISO(), WEDDING_ISO)) + " j");
     if (rows.length) box.append(el("div", { class: "bar big" }, el("i", { style: "width:" + Math.round(done / rows.length * 100) + "%" })));
   } else if (key === "budget") {
-    const s = f => rows.reduce((a, r) => a + (Number(r[f]) || 0), 0), est = s("estimated"), act = s("actual"), paid = s("paid"), total = act || est;
-    chip("prévu", eur(est)); chip("réel", eur(act)); chip("payé", eur(paid)); chip("reste à payer", eur(Math.max(0, total - paid)), total - paid > 0 ? "warn" : "");
+    const s = f => rows.reduce((a, r) => a + (Number(r[f]) || 0), 0), est = s("estimated"), paid = s("paid"), total = est;
+    chip("prévu", eur(est)); chip("payé", eur(paid)); chip("reste à payer", eur(Math.max(0, total - paid)), total - paid > 0 ? "warn" : "");
   } else if (key === "vendors") {
     const c = st => rows.filter(r => st.includes(r.status)).length;
     chip("à contacter", String(c(["À contacter"]))); chip("en attente", String(c(["En attente de devis", "En attente de réponse", "Réponse finale à donner", "Réponse négative à donner"]))); chip("retenus", String(c(RETAINED))); chip("refusés", String(c(["Refusé (NON)"])));
@@ -436,11 +436,11 @@ async function renderOrg(key) {
     const badge = st => { const c = RETAINED.includes(st) ? "ok" : st === "Refusé (NON)" ? "no" : /attente|donner/i.test(st || "") ? "wait" : ""; return el("span", { class: "st-badge " + c, text: st || "—" }); };
     const sumFor = r => {
       if (key === "vendors") return [el("b", { text: r.name }), badge(r.status), el("span", { class: "num", text: r.price != null ? eur(r.price) : "" }), el("span", { class: "sm", text: r.phone || r.email || r.contact || r.location || "" })];
-      if (key === "budget") return [el("b", { text: r.item }), el("span", { class: "sm", text: r.vendor || "" }), el("span", { class: "num", text: "prévu " + eur(r.estimated || 0) }), el("span", { class: "num", text: "payé " + eur(r.paid || 0) })];
+      if (key === "budget") return [el("b", { text: r.item }), el("span", { class: "sm", text: "" }), el("span", { class: "num", text: "prévu " + eur(r.estimated || 0) }), el("span", { class: "num", text: "payé " + eur(r.paid || 0) })];
       const g = guestsOf(r).length; return [el("b", { text: r.name }), el("span", { class: "sm", text: "" }), el("span", { class: "num", text: g + " / " + (r.capacity || "?") }), el("span", { class: "sm", text: "" })];
     };
     shown.forEach((r, i) => {
-      if (key === "budget" && r.cat !== lastCat) { lastCat = r.cat; const sub = rows.filter(x => x.cat === r.cat).reduce((a, x) => a + (Number(x.actual) || Number(x.estimated) || 0), 0); list.append(el("h3", { class: "org-grp", text: (r.cat || "Sans poste") + " · " + eur(sub) })); }
+      if (key === "budget" && r.cat !== lastCat) { lastCat = r.cat; const sub = rows.filter(x => x.cat === r.cat).reduce((a, x) => a + (Number(x.estimated) || 0), 0); list.append(el("h3", { class: "org-grp", text: (r.cat || "Sans poste") + " · " + eur(sub) })); }
       if (key === "vendors" && r.role !== lastCat) { lastCat = r.role; list.append(el("h3", { class: "org-grp", text: (r.role || "Autre") + " · " + rows.filter(x => x.role === r.role).length })); }
       const card = el("details", { class: "card org-card" });
       if (orgOpen.has(r.id)) card.open = true;
@@ -473,7 +473,7 @@ async function renderOrg(key) {
   let lastCat = null;
   shown.forEach(r => {
     if ((key === "budget" || key === "tasks") && (key === "budget" ? r.cat : null) !== null && r.cat !== lastCat) {
-      lastCat = r.cat; const sub = rows.filter(x => x.cat === r.cat).reduce((a, x) => a + (Number(x.actual) || Number(x.estimated) || 0), 0);
+      lastCat = r.cat; const sub = rows.filter(x => x.cat === r.cat).reduce((a, x) => a + (Number(x.estimated) || 0), 0);
       tb.append(el("tr", { class: "grp" }, el("td", { colspan: String(M.fields.length + 1), text: r.cat + " · " + eur(sub) })));
     }
     const late = key === "tasks" && !r.done && r.due && r.due < todayISO();
@@ -710,13 +710,13 @@ function buildAdminShell() {
   const today = el("section", { "data-main-sec": "today" }, el("div", { id: "today-body" }));
   const org = el("section", { "data-main-sec": "org", hidden: true },
     el("div", { class: "admin-tabs", role: "group", "aria-label": "Organisation" },
-      ...[["tasks", "Tâches"], ["budget", "Budget"], ["vendors", "Prestataires"], ["games", "Jeux"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["notes", "Notes"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
+      ...[["tasks", "Tâches"], ["budget", "Budget"], ["games", "Jeux"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["notes", "Notes"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
     el("div", { id: "org-body" }));
   const photos = el("section", { "data-main-sec": "photos", hidden: true }, titled("h3", "cat", "Rameau d'olivier", "Photos du mariage", 28), el("div", { id: "photos-admin" }));
   const pray = el("section", { "data-main-sec": "pray", hidden: true }, titled("h3", "cat", "Calice", "Prière du jour", 28), el("div", { id: "pray-body" }));
   const ICO = { today: "Soleil", site: "Croix", org: "Agneau", photos: "Rameau d'olivier", pray: "Calice" };
   nav.querySelectorAll("[data-main]").forEach(b => b.prepend(icon(ICO[b.dataset.main], 24)));
-  const OICO = { tasks: "Bougie", budget: "Épi de blé", vendors: "Poisson", games: "Colombe", seating: "Agneau couché", timeline: "Croix", notes: "Rameau d'olivier" };
+  const OICO = { tasks: "Bougie", budget: "Épi de blé", games: "Colombe", seating: "Agneau couché", timeline: "Croix", notes: "Rameau d'olivier" };
   org.querySelectorAll("[data-org]").forEach(b => b.prepend(icon(OICO[b.dataset.org], 22)));
   const SICO = { al: "Épi de blé", so: "Colombe", fq: "Bougie", gi: "Poisson" };
   site.querySelectorAll("[data-tab]").forEach(b => { if (SICO[b.dataset.tab]) b.prepend(icon(SICO[b.dataset.tab], 22)); });
@@ -734,7 +734,6 @@ async function dedupeOnce() {
     for (const r of rows) { if ((extra && extra(r)) || seen.has(keyFn(r))) await orgStore.remove(table, r.id); else seen.add(keyFn(r)); }
   };
   await clean("org_budget", r => norm(r.cat) + "|" + norm(r.item) + "|" + (r.estimated || 0));
-  await clean("org_vendors", r => norm(r.name) + "|" + norm(r.role), r => r.name === "Le Clos du Colombier" && !r.phone && !r.email);
   await clean("org_games", r => norm(r.name));
   await store.setSetting("dedupe_v1", "1");
 }
@@ -743,12 +742,6 @@ function seedFromSheet() { return seeding || (seeding = seedInner().finally(() =
 async function seedInner() {
   try {
     if ((await store.getSetting("seed_sheet_v1")) === "1") { await dedupeOnce(); return; }
-    const have = await orgStore.list("org_vendors");
-    for (const r of have) if (/ à choisir$/.test(r.name || "") && !r.phone && !r.email) await orgStore.remove("org_vendors", r.id);
-    const key = v => norm(v.name) + "|" + norm(v.role);
-    const names = new Set(have.filter(r => !/ à choisir$/.test(r.name || "")).map(key));
-    const addV = TPL.vendors().filter(v => !names.has(key(v)));
-    if (addV.length) await orgStore.insert("org_vendors", addV);
     const games = await orgStore.list("org_games"), gn = new Set(games.map(g => norm(g.name)));
     const addG = TPL.games().filter(g => !gn.has(norm(g.name)));
     if (addG.length) await orgStore.insert("org_games", addG);
