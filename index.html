@@ -300,8 +300,16 @@ body.editing [data-ed]:focus{outline:2px solid var(--olive);background:#fffdf3}
 .ico .ln{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}.ico .ln.thin{stroke-width:1.6}
 .ico .dot{fill:currentColor}.ico .wool circle{fill:none;stroke:currentColor;stroke-width:2.4}.ico .woolfill circle{fill:var(--paper-2);stroke:none}
 .ico-row{display:flex;gap:10px;margin-bottom:6px}
-.ico-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-bottom:18px}
-.ico-tile{margin:0;background:var(--paper-2);border-radius:14px;padding:12px 6px;display:grid;justify-items:center;gap:6px;text-align:center;font-size:var(--fs-label)}
+.admin-orn{display:flex;justify-content:center;margin:0 0 6px;opacity:.85}.admin-orn .ico-row{margin:0}
+.admin-main button,.admin-tabs button{display:inline-flex;align-items:center;gap:7px}
+.admin-main button .ico,.admin-tabs button .ico{flex:none;color:currentColor}
+.admin-main button .ico .ln,.admin-tabs button .ico .ln{stroke-width:3.6}.admin-main button .ico .ln.thin,.admin-tabs button .ico .ln.thin{stroke-width:2.4}
+.admin-main button .ico .wool circle,.admin-tabs button .ico .wool circle{stroke-width:3.6}
+.admin-main button{padding-inline:12px;white-space:nowrap}
+.admin-tabs{flex-wrap:wrap}.admin-tabs button{white-space:nowrap;padding-inline:12px}
+.today-head .count .ico{color:var(--paper)}.today-head .count .ico .woolfill circle{fill:var(--olive)}
+h3.cat .ico{vertical-align:-6px;margin-right:2px}
+.empty-ico{display:flex;justify-content:center;margin-top:14px;opacity:.7}
 .seat-pool{background:var(--paper-2);border-radius:14px;padding:10px 14px;margin:0 0 14px;display:grid;gap:8px;min-height:64px}
 .seat-pool.drop,.seat-table.drop{outline:2px dashed var(--olive);outline-offset:3px}
 .pool-chips{display:flex;gap:8px;flex-wrap:wrap}
@@ -319,8 +327,39 @@ body.editing [data-ed]:focus{outline:2px solid var(--olive);background:#fffdf3}
 .org-grid label{font-size:var(--fs-label);font-weight:400;gap:3px}.org-grid label.wide{grid-column:span 2}
 .org-grid input,.org-grid select,.org-grid textarea{min-height:38px;padding:5px 9px;font-size:var(--fs-small);border-radius:8px}
 .org-wrap{max-width:100%}
-.org-cards{display:grid;gap:10px}.org-card{padding:12px 14px;display:grid;gap:8px}.org-card .org-grid{margin:0}
-.org-grp{margin:10px 0 0;font-size:1.02rem;color:var(--olive)}
+.org-cards{display:grid;gap:6px}.org-card{padding:0;display:block;font-size:.84rem}.org-card .org-grid{margin:0}
+details.org-card>summary.org-sum-row{min-height:0;font-size:.84rem;font-weight:400;list-style:none;cursor:pointer;display:grid;justify-content:normal;grid-template-columns:minmax(0,2.2fr) auto auto minmax(0,1.3fr);gap:4px 12px;align-items:center;padding:7px 12px 7px 28px;position:relative}
+details.org-card>summary.org-sum-row::after{content:none}
+.org-sum-row::-webkit-details-marker{display:none}
+.org-sum-row::before{content:"▸";position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--olive-soft);transition:transform .15s}
+details[open]>.org-sum-row::before{transform:translateY(-50%) rotate(90deg)}
+.org-sum-row b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.org-sum-row .sm{opacity:.75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.78rem}
+.org-sum-row .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.st-badge{font-size:.72rem;border-radius:999px;padding:1px 9px;background:#ddd7c2;color:var(--olive);white-space:nowrap}
+.st-badge.ok{background:#cfdcb4}.st-badge.no{background:#e9cfc6;color:#6e2c1f}.st-badge.wait{background:#efe2b9}
+.org-card-body{padding:4px 12px 10px;display:grid;gap:6px;border-top:1px solid var(--line)}
+.org-card .org-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:5px 8px}
+.org-card .org-grid label{font-size:.72rem}.org-card .org-grid input,.org-card .org-grid select,.org-card .org-grid textarea{min-height:30px;padding:3px 7px;font-size:.82rem;border-radius:7px}
+.org-card .org-grid textarea{min-height:44px}
+.org-addbox{margin:0 0 10px}.org-addbox>summary{min-height:0;padding:7px 12px;font-size:.88rem;background:var(--paper-2);border-radius:10px;display:block}.org-addbox>summary::after{content:none}.org-addbox[open]>summary{border-radius:10px 10px 0 0}.org-addbox .org-add{margin:0;border-radius:0 0 12px 12px}
+.org-grid{align-items:start}
+.org-add{padding:10px 12px}.org-add h3{display:none}
+.org-add .org-grid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:5px 8px}
+.org-add .org-grid label{font-size:.72rem}.org-add .org-grid input,.org-add .org-grid select,.org-add .org-grid textarea{min-height:30px;padding:3px 7px;font-size:.82rem;border-radius:7px}
+.org-add .btn.solid{min-height:34px;padding:3px 18px;width:auto;justify-self:start}
+.guest-ed{display:grid;gap:6px}
+.guest-ed .slots{display:flex;flex-wrap:wrap;gap:5px}
+.slot.filled{display:inline-flex;align-items:center;gap:6px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:2px 4px 2px 2px;font-size:.8rem;max-width:100%}
+.slot.filled i{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;color:#fff;font-style:normal;font-weight:700;font-size:.62rem;flex:none}
+.slot.filled>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px}
+.slot.filled button{border:0;background:none;color:var(--olive-soft);cursor:pointer;font-size:1rem;line-height:1;padding:0 4px;min-height:0;width:auto}
+.slot.empty{width:28px;height:28px;min-height:0;padding:0;border-radius:50%;border:1.5px dashed var(--olive-soft);background:none;color:var(--olive-soft);cursor:pointer;font-size:.9rem;line-height:1}
+.add-guest{display:flex;gap:6px}.add-guest input{flex:1;min-width:0}
+.add-guest .btn{min-height:30px;padding:2px 12px;font-size:.8rem}
+.org-fold{display:flex;gap:6px;justify-content:flex-end;margin:0 0 6px}
+@media(max-width:640px){.org-sum-row{grid-template-columns:minmax(0,1fr) auto}.org-sum-row .sm,.org-sum-row .num:nth-of-type(2){display:none}}
+.org-grp{margin:10px 0 0;font-size:.95rem;color:var(--olive)}
 .org-card-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
 .org-table td:nth-child(2){min-width:240px}.org-table td:nth-child(3){min-width:150px}
 .org-table input[type=text],.org-table select,.org-table input[type=date],.org-table input[type=time]{min-width:130px}

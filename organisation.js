@@ -105,8 +105,8 @@ const ORG = {
     { k: "chosen", l: "Retenu", t: "check" }, { k: "name", l: "Idée de jeu", t: "text", req: true, wide: true }, { k: "people", l: "Nb de personnes", t: "text" },
     { k: "material", l: "Matériel", t: "text" }, { k: "price", l: "Prix (€)", t: "number" }, { k: "notes", l: "Notes", t: "text" }] },
   seating: { table: "org_tables", label: "Plan de tables", order: "position", defaults: { capacity: 10 }, fields: [
-    { k: "name", l: "Table", t: "text", req: true }, { k: "capacity", l: "Places", t: "number" },
-    { k: "guests", l: "Invités (un par ligne)", t: "long", wide: true }, { k: "notes", l: "Notes", t: "text" }] },
+    { k: "name", l: "Nom de la table", t: "text", req: true, ph: "ex. Table 1, Famille Martin, Amis…" }, { k: "capacity", l: "Nombre de places", t: "number" },
+    { k: "guests", l: "Invités", t: "long", wide: true }, { k: "notes", l: "Notes", t: "text" }] },
   timeline: { table: "org_timeline", label: "Jour J", order: "time", defaults: {}, fields: [
     { k: "time", l: "Heure", t: "time", req: true }, { k: "title", l: "Étape", t: "text", req: true, wide: true },
     { k: "who", l: "Qui", t: "text" }, { k: "notes", l: "Notes", t: "text" }] }
@@ -205,6 +205,7 @@ const orgStore = {
 };
 const orgErr = e => "Non enregistré : " + explainErr(e) + (/table|relation|schema/i.test(String((e && e.message) || "")) || (e && e.code === "PGRST205") ? " Exécutez supabase-tout-en-un.sql dans Supabase." : "");
 
+const orgOpen = new Set();
 const orgState = { key: "tasks", filter: { status: "todo", cat: "" } };
 
 function sortRows(key, rows) {
@@ -217,7 +218,26 @@ function sortRows(key, rows) {
   return by((a, b) => String(a.created_at || "").localeCompare(String(b.created_at || "")));
 }
 
-function fieldInput(f, value) {
+function guestEditor(value, cap) {
+  let guests = String(value || "").split("\n").map(x => x.trim()).filter(Boolean);
+  const box = el("div", { class: "guest-ed" }), slots = el("div", { class: "slots" });
+  const input = el("input", { type: "text", maxlength: "60", placeholder: "Nom de l'invité, puis Entrée", "aria-label": "Ajouter un invité" });
+  const emit = () => box.dispatchEvent(new Event("change", { bubbles: true }));
+  const render = () => {
+    slots.replaceChildren();
+    guests.forEach((g, i) => slots.append(el("span", { class: "slot filled", title: g },
+      el("i", { text: initials(g), style: "background:" + colorOf(g) }), el("span", { text: g }),
+      el("button", { type: "button", "aria-label": "Retirer " + g, text: "×", onclick: () => { guests.splice(i, 1); render(); emit(); } }))));
+    for (let k = guests.length; k < (Number(cap) || 10); k++) slots.append(el("button", { type: "button", class: "slot empty", "aria-label": "Place libre", text: "+", onclick: () => input.focus() }));
+  };
+  const add = () => { const names = input.value.split(/[,;]/).map(x => x.trim()).filter(Boolean); if (!names.length) return; guests.push(...names); input.value = ""; render(); emit(); input.focus(); };
+  input.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); add(); } });
+  box.append(slots, el("div", { class: "add-guest" }, input, el("button", { type: "button", class: "btn small", text: "Ajouter", onclick: add })));
+  Object.defineProperty(box, "value", { get: () => guests.join("\n"), set: v => { guests = String(v || "").split("\n").map(x => x.trim()).filter(Boolean); render(); } });
+  render();
+  return box;
+}
+function fieldInput(f, value, row) {
   let inp;
   if (f.t === "select") {
     const opts = ["", ...f.o]; if (value && !opts.includes(value)) opts.push(value);
@@ -234,9 +254,11 @@ function fieldInput(f, value) {
     });
   }
   else if (f.t === "check") { inp = el("input", { type: "checkbox" }); inp.checked = !!value; }
+  else if (f.t === "long" && f.k === "guests") inp = guestEditor(value, row ? row.capacity : 10);
   else if (f.t === "long") { inp = el("textarea", { rows: "3" }); inp.value = value || ""; }
   else { inp = el("input", { type: f.t === "number" ? "number" : f.t === "date" ? "date" : f.t === "time" ? "time" : "text", step: f.t === "number" ? "any" : null }); inp.value = value == null ? "" : value; }
   inp.setAttribute("aria-label", f.l);
+  if (f.ph && inp.tagName === "INPUT") inp.placeholder = f.ph;
   return inp;
 }
 const readInput = (f, inp) => f.t === "check" ? inp.checked : f.t === "number" ? (inp.value === "" ? null : Number(inp.value)) : (inp.value.trim() === "" ? null : inp.value.trim());
@@ -322,7 +344,7 @@ async function seatPlan(rows) {
   const chips = el("div", { class: "pool-chips" }, ...left.map(n => avatar(n, null)));
   pool.append(chips, left.length ? "" : el("small", { text: names.length ? "Tout le monde est placé 🎉" : "Les invités qui confirment leur présence apparaîtront ici." }));
   zone(pool, null);
-  wrap.append(el("h3", { class: "cat", text: "Schéma des tables" }), hint, pool, plan);
+  wrap.append(titled("h3", "cat", "Agneau couché", "Schéma des tables", 30), hint, pool, plan);
   return wrap;
 }
 
@@ -373,22 +395,40 @@ async function renderOrg(key) {
     if (key === "seating") row.position = rows.length;
     try { await orgStore.insert(M.table, row); renderOrg(key); } catch (e) { showMsg(msg, orgErr(e), "err"); }
   });
-  host.append(form);
+  const addBox = el("details", { class: "org-addbox" }, el("summary", { text: "➕ Ajouter (" + M.label.toLowerCase() + ")" }), form);
+  host.append(addBox);
 
   // tableau modifiable
   let shown = rows;
   if (key === "tasks") shown = rows.filter(r => (orgState.filter.status === "all" || (orgState.filter.status === "done" ? r.done : !r.done)) && (!orgState.filter.cat || r.cat === orgState.filter.cat));
-  if (!shown.length) { host.append(el("p", { class: "empty", text: rows.length ? "Aucune ligne avec ce filtre." : "Rien pour l'instant. Utilisez « Charger le modèle type » ou ajoutez une première ligne." })); return; }
+  if (!shown.length) { host.append(el("div", { class: "empty-ico" }, icon("Agneau couché", 44)), el("p", { class: "empty", text: rows.length ? "Aucune ligne avec ce filtre." : "Rien pour l'instant. Utilisez « Charger le modèle type » ou ajoutez une première ligne." })); return; }
   if (key === "vendors" || key === "seating" || key === "budget") {
     const list = el("div", { class: "org-cards" });
+    const bar2 = el("div", { class: "org-fold" },
+      el("button", { class: "btn small", type: "button", text: "Tout déplier", onclick: () => list.querySelectorAll("details.org-card").forEach(d => { d.open = true; }) }),
+      el("button", { class: "btn small", type: "button", text: "Tout replier", onclick: () => list.querySelectorAll("details.org-card").forEach(d => { d.open = false; }) }));
+    host.append(bar2);
     let lastCat = null;
+    const badge = st => { const c = RETAINED.includes(st) ? "ok" : st === "Refusé (NON)" ? "no" : /attente|donner/i.test(st || "") ? "wait" : ""; return el("span", { class: "st-badge " + c, text: st || "—" }); };
+    const sumFor = r => {
+      if (key === "vendors") return [el("b", { text: r.name }), badge(r.status), el("span", { class: "num", text: r.price != null ? eur(r.price) : "" }), el("span", { class: "sm", text: r.phone || r.email || r.contact || r.location || "" })];
+      if (key === "budget") return [el("b", { text: r.item }), el("span", { class: "sm", text: r.vendor || "" }), el("span", { class: "num", text: "prévu " + eur(r.estimated || 0) }), el("span", { class: "num", text: "payé " + eur(r.paid || 0) })];
+      const g = guestsOf(r).length; return [el("b", { text: r.name }), el("span", { class: "sm", text: "" }), el("span", { class: "num", text: g + " / " + (r.capacity || "?") }), el("span", { class: "sm", text: "" })];
+    };
     shown.forEach((r, i) => {
       if (key === "budget" && r.cat !== lastCat) { lastCat = r.cat; const sub = rows.filter(x => x.cat === r.cat).reduce((a, x) => a + (Number(x.actual) || Number(x.estimated) || 0), 0); list.append(el("h3", { class: "org-grp", text: (r.cat || "Sans poste") + " · " + eur(sub) })); }
       if (key === "vendors" && r.role !== lastCat) { lastCat = r.role; list.append(el("h3", { class: "org-grp", text: (r.role || "Autre") + " · " + rows.filter(x => x.role === r.role).length })); }
+      const card = el("details", { class: "card org-card" });
+      if (orgOpen.has(r.id)) card.open = true;
+      card.addEventListener("toggle", () => { if (card.open) orgOpen.add(r.id); else orgOpen.delete(r.id); });
+      const head = el("summary", { class: "org-sum-row" }); const fill = () => head.replaceChildren(...sumFor(r)); fill();
       const g = el("div", { class: "org-grid" });
       M.fields.forEach(f => {
-        const inp = fieldInput(f, r[f.k]);
-        inp.addEventListener("change", async () => { const v = readInput(f, inp); try { await orgStore.update(M.table, r.id, { [f.k]: v }); r[f.k] = v; if (key === "seating" || key === "budget") renderOrg(key); else showToast("Enregistré"); } catch (e) { showToast(orgErr(e)); } });
+        const inp = fieldInput(f, r[f.k], r);
+        inp.addEventListener("change", async () => {
+          const v = readInput(f, inp);
+          try { await orgStore.update(M.table, r.id, { [f.k]: v }); r[f.k] = v; fill(); setTimeout(() => { if (!card.contains(document.activeElement)) renderOrg(key); }, 200); } catch (e) { showToast(orgErr(e)); }
+        });
         g.append(el("label", { class: f.wide ? "wide" : "" }, el("span", { text: f.l }), inp));
       });
       const acts = el("div", { class: "org-card-actions" });
@@ -396,8 +436,9 @@ async function renderOrg(key) {
         const swap = async d => { const o = shown[i + d]; if (!o) return; try { await orgStore.update(M.table, r.id, { position: o.position }); await orgStore.update(M.table, o.id, { position: r.position }); renderOrg(key); } catch (e) { showToast(orgErr(e)); } };
         acts.append(el("button", { class: "btn small", type: "button", text: "▲", "aria-label": "Monter la table", disabled: i === 0, onclick: () => swap(-1) }), el("button", { class: "btn small", type: "button", text: "▼", "aria-label": "Descendre la table", disabled: i === shown.length - 1, onclick: () => swap(1) }));
       }
-      acts.append(el("button", { class: "btn small danger", type: "button", text: "Supprimer", "aria-label": "Supprimer", onclick: async () => { try { await orgStore.remove(M.table, r.id); renderOrg(key); } catch (e) { showToast(orgErr(e)); } } }));
-      list.append(el("div", { class: "card org-card" }, g, acts));
+      acts.append(el("button", { class: "btn small danger", type: "button", text: "Supprimer", "aria-label": "Supprimer", onclick: async () => { try { await orgStore.remove(M.table, r.id); orgOpen.delete(r.id); renderOrg(key); } catch (e) { showToast(orgErr(e)); } } }));
+      card.append(head, el("div", { class: "org-card-body" }, g, acts));
+      list.append(card);
     });
     host.append(list);
     return;
@@ -440,7 +481,7 @@ async function renderNotes(host) {
   const ta = el("textarea", { class: "org-notes", rows: "16", placeholder: "Idées, numéros utiles, mots de passe de réservation à ne pas écrire ici, questions à poser au prêtre, listes en vrac…", "aria-label": "Notes" }); ta.value = v || "";
   const st = el("p", { class: "hint", text: "Enregistrement automatique quand vous quittez le champ." });
   ta.addEventListener("blur", async () => { try { await store.setSetting("org_notes", ta.value); st.textContent = "✓ Enregistré à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }); } catch (e) { st.textContent = "⚠ " + orgErr(e); } });
-  host.append(el("h3", { class: "cat", text: "Notes libres" }), ta, st);
+  host.append(titled("h3", "cat", "Rameau d'olivier", "Notes libres", 28), ta, st);
 }
 
 /* ---------------------------------------------------------------------------
@@ -585,6 +626,7 @@ const ICONS = {
   "Bougie": '<path d="M23 26h18v32H23z" class="ln"/><path d="M32 26v-5" class="ln thin"/><path d="M32 4c6 6 8 10 8 13a8 8 0 0 1-16 0c0-3 2-7 8-13z" class="ln"/>'
 };
 const icon = (name, size) => { const s = el("span", { class: "ico", role: "img", "aria-label": name, title: name }); s.innerHTML = '<svg viewBox="0 0 64 64" width="' + (size || 56) + '" height="' + (size || 56) + '" aria-hidden="true">' + ICONS[name] + "</svg>"; return s; };
+const titled = (tag, cls, name, text, size) => el(tag, { class: cls }, icon(name, size || 24), " ", text);
 const iconRow = (names, size) => el("div", { class: "ico-row", "aria-hidden": "true" }, ...names.map(n => icon(n, size)));
 
 const SACRED = [
@@ -595,14 +637,12 @@ async function renderPrayer() {
   const host = $("#pray-body"); host.replaceChildren();
   const verse = el("div", { class: "verse-card" }); host.append(verse);
   renderVerse(verse);
-  host.append(el("h3", { class: "cat", text: "Symboles" }), el("p", { class: "hint", text: "Des dessins pour accompagner vos prières. Agneau de Dieu, colombe, croix, calice, poisson, épi de blé, rameau d'olivier, bougie." }),
-    el("div", { class: "ico-grid" }, ...Object.keys(ICONS).map(n => el("figure", { class: "ico-tile" }, icon(n, 72), el("figcaption", { text: n })))));
-  host.append(el("h3", { class: "cat", text: "Images" }), el("p", { class: "hint", text: "Cet espace est privé : rien de ce qui se trouve ici n'apparaît sur le site public." }));
+  host.append(titled("h3", "cat", "Croix", "Images", 24), el("p", { class: "hint", text: "Cet espace est privé : rien de ce qui se trouve ici n'apparaît sur le site public." }));
   const grid = el("div", { class: "pray-grid" });
   SACRED.forEach(s => { const img = el("img", { src: COMMONS(s.f), alt: s.c.split(".")[0], loading: "lazy", referrerpolicy: "no-referrer" }); const fig = el("figure", { class: "pray-item" }, img, el("figcaption", { text: s.c })); img.addEventListener("error", () => fig.remove()); grid.append(fig); });
   host.append(grid);
   // images privées déposées par les mariés
-  const mine = el("div", { class: "pray-mine" }); host.append(el("h3", { class: "cat", text: "Vos images" }));
+  const mine = el("div", { class: "pray-mine" }); host.append(titled("h3", "cat", "Colombe", "Vos images", 26));
   const drop = el("label", { class: "drop", for: "pray-input" }, el("b", { text: "Ajouter une image" }), el("span", { text: "Une icône, une image de Jésus, de la Vierge, une prière… Privé, visible uniquement ici." }));
   const input = el("input", { id: "pray-input", type: "file", accept: "image/*", multiple: true, hidden: true });
   const status = el("p", { class: "hint", role: "status" });
@@ -676,15 +716,37 @@ function buildAdminShell() {
     el("div", { class: "admin-tabs", role: "group", "aria-label": "Organisation" },
       ...[["tasks", "Tâches"], ["budget", "Budget"], ["vendors", "Prestataires"], ["games", "Jeux"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["notes", "Notes"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
     el("div", { id: "org-body" }));
-  const photos = el("section", { "data-main-sec": "photos", hidden: true }, el("h3", { class: "cat", text: "Photos du mariage" }), el("div", { id: "photos-admin" }));
-  const pray = el("section", { "data-main-sec": "pray", hidden: true }, el("h3", { class: "cat", text: "Prière du jour" }), el("div", { id: "pray-body" }));
-  panel.replaceChildren(top, today, site, org, photos, pray);
+  const photos = el("section", { "data-main-sec": "photos", hidden: true }, titled("h3", "cat", "Rameau d'olivier", "Photos du mariage", 28), el("div", { id: "photos-admin" }));
+  const pray = el("section", { "data-main-sec": "pray", hidden: true }, titled("h3", "cat", "Calice", "Prière du jour", 28), el("div", { id: "pray-body" }));
+  const ICO = { today: "Colombe", site: "Croix", org: "Agneau", photos: "Rameau d'olivier", pray: "Calice" };
+  nav.querySelectorAll("[data-main]").forEach(b => b.prepend(icon(ICO[b.dataset.main], 24)));
+  const OICO = { tasks: "Bougie", budget: "Épi de blé", vendors: "Poisson", games: "Colombe", seating: "Agneau couché", timeline: "Croix", notes: "Rameau d'olivier" };
+  org.querySelectorAll("[data-org]").forEach(b => b.prepend(icon(OICO[b.dataset.org], 22)));
+  const SICO = { al: "Épi de blé", so: "Colombe", fq: "Bougie", gi: "Poisson" };
+  site.querySelectorAll("[data-tab]").forEach(b => { if (SICO[b.dataset.tab]) b.prepend(icon(SICO[b.dataset.tab], 22)); });
+  panel.replaceChildren(el("div", { class: "admin-orn" }, iconRow(["Agneau", "Colombe", "Croix", "Calice", "Poisson"], 30)), top, today, site, org, photos, pray);
 }
 
 /* Reprise automatique (une seule fois) du tableur Prestataires des mariés : prestataires, jeux et budget prévisionnel. */
-async function seedFromSheet() {
+
+/* Nettoyage unique : supprime les doublons créés par une double exécution et l'ancienne ligne générique du Clos du Colombier. */
+async function dedupeOnce() {
+  if ((await store.getSetting("dedupe_v1")) === "1") return;
+  const clean = async (table, keyFn, extra) => {
+    const rows = (await orgStore.list(table)).sort((a, b) => String(a.created_at || "").localeCompare(String(b.created_at || "")));
+    const seen = new Set();
+    for (const r of rows) { if ((extra && extra(r)) || seen.has(keyFn(r))) await orgStore.remove(table, r.id); else seen.add(keyFn(r)); }
+  };
+  await clean("org_budget", r => norm(r.cat) + "|" + norm(r.item) + "|" + (r.estimated || 0));
+  await clean("org_vendors", r => norm(r.name) + "|" + norm(r.role), r => r.name === "Le Clos du Colombier" && !r.phone && !r.email);
+  await clean("org_games", r => norm(r.name));
+  await store.setSetting("dedupe_v1", "1");
+}
+let seeding = null;
+function seedFromSheet() { return seeding || (seeding = seedInner().finally(() => { seeding = null; })); }
+async function seedInner() {
   try {
-    if ((await store.getSetting("seed_sheet_v1")) === "1") return;
+    if ((await store.getSetting("seed_sheet_v1")) === "1") { await dedupeOnce(); return; }
     const have = await orgStore.list("org_vendors");
     for (const r of have) if (/ à choisir$/.test(r.name || "") && !r.phone && !r.email) await orgStore.remove("org_vendors", r.id);
     const key = v => norm(v.name) + "|" + norm(v.role);
@@ -698,6 +760,7 @@ async function seedFromSheet() {
     const addB = TPL.budget().filter(b => !bn.has(norm(b.item)));
     if (addB.length) await orgStore.insert("org_budget", addB);
     await store.setSetting("seed_sheet_v1", "1");
+    await dedupeOnce();
     showToast("Vos prestataires, jeux et budget prévisionnel ont été repris de votre tableur.");
     if (typeof orgState !== "undefined" && !$("#org-body").closest("[hidden]")) renderOrg(orgState.key);
   } catch (e) { console.warn("Reprise du tableur :", e); }
