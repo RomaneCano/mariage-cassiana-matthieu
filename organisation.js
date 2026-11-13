@@ -347,15 +347,6 @@ async function renderOrg(key) {
   document.querySelectorAll("[data-org]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.org === key)));
   const host = $("#org-body"); host.replaceChildren();
   if (key === "notes") return renderNotes(host);
-  if (key === "faq") {
-    try { state.faqExtra = await store.listFaqExtra(); } catch {}
-    await loadFaqOrder();
-    const tb = el("tbody");
-    host.append(el("h3", { class: "cat", text: "Ordre des questions du site" }), el("p", { class: "hint", text: "Utilisez les flèches ▲ ▼ : la page publique « Questions » suit cet ordre. Les textes se modifient avec « Modifier les textes » dans Le site." }),
-      el("div", { class: "tbl", style: "margin-top:10px" }, el("table", {}, tb)));
-    renderFaqOrder(tb);
-    return;
-  }
   const M = ORG[key]; let rows = [];
   try { rows = await orgStore.list(M.table); } catch (e) { host.append(el("p", { class: "msg err", text: "Impossible de charger : " + explainErr(e) + " Exécutez supabase-tout-en-un.sql dans Supabase." })); return; }
   rows = sortRows(key, rows);
@@ -677,7 +668,7 @@ function buildAdminShell() {
   const today = el("section", { "data-main-sec": "today" }, el("div", { id: "today-body" }));
   const org = el("section", { "data-main-sec": "org", hidden: true },
     el("div", { class: "admin-tabs", role: "group", "aria-label": "Organisation" },
-      ...[["tasks", "Tâches"], ["budget", "Budget"], ["vendors", "Prestataires"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["faq", "Questions"], ["notes", "Notes"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
+      ...[["tasks", "Tâches"], ["budget", "Budget"], ["vendors", "Prestataires"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["notes", "Notes"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
     el("div", { id: "org-body" }));
   const photos = el("section", { "data-main-sec": "photos", hidden: true }, el("h3", { class: "cat", text: "Photos du mariage" }), el("div", { id: "photos-admin" }));
   const pray = el("section", { "data-main-sec": "pray", hidden: true }, el("h3", { class: "cat", text: "Prière du jour" }), el("div", { id: "pray-body" }));
