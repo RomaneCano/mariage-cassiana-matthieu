@@ -39,7 +39,7 @@ a{color:var(--olive)}
 
 /* Fleurs d'angle : fixes aux quatre coins de l'écran, celles du haut débordent sur le bandeau d'onglets */
 .corner{position:fixed;pointer-events:none;user-select:none;height:auto}
-.c-tl,.c-tr{top:0;width:clamp(70px,min(18vw,22vh),190px);z-index:40}
+.c-tl,.c-tr{top:0;width:var(--flower-w);z-index:40}
 .c-tl{left:0}
 .c-tr{right:0;transform:scaleX(-1)}
 .c-bl,.c-br{bottom:0;width:clamp(64px,min(16vw,19vh),170px);z-index:0}
@@ -47,25 +47,25 @@ a{color:var(--olive)}
 .c-bl{left:0;transform:scaleX(-1)}
 
 /* Onglets : bandeau fixe, tous visibles, ne bouge jamais */
-:root{--tabs-h:56px}
-@media(max-width:640px){:root{--tabs-h:100px}}
+@media(min-width:1200px){.tabs ul{padding-inline:calc(var(--flower-w) + 12px)}}
+:root{--tabs-h:56px;--flower-w:clamp(70px,min(18vw,22vh),190px)}
+@media(max-width:1199px){:root{--tabs-h:100px}}
 body{padding-top:calc(var(--tabs-h) + env(safe-area-inset-top,0px))}
 .tabs{position:fixed;top:0;left:0;right:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--line);
   padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-left,0px)) 0 max(16px,env(safe-area-inset-right,0px))}
-.tabs ul{list-style:none;margin:0 auto;padding:6px clamp(60px,min(15vw,18vh),160px);display:flex;gap:4px;max-width:960px;justify-content:center;height:var(--tabs-h)}
+.tabs ul{list-style:none;margin:0 auto;padding:6px calc(var(--flower-w) * .55);display:flex;gap:4px;max-width:960px;justify-content:center;height:var(--tabs-h)}
 .tabs li{display:flex}
 .tabs a{display:flex;align-items:center;justify-content:center;white-space:nowrap;text-decoration:none;padding:0 14px;border-radius:999px;font-size:.9rem;letter-spacing:.04em;min-height:44px;color:var(--olive)}
 .tabs a:hover,.tabs a[aria-current="true"]{background:var(--paper-2)}
-.tabs .tab-conn a{font-size:.72rem;opacity:.75;padding:0 10px}
-@media(max-width:640px){
-  .tabs ul{display:grid;grid-template-columns:repeat(3,1fr) auto;grid-auto-rows:44px;gap:0 2px;padding:6px 40px;align-content:start}
+/* Espace mariés : petit onglet tout à droite de la barre */
+.tabs .tab-conn{position:absolute;right:calc(var(--flower-w) + 12px);top:calc(env(safe-area-inset-top,0px) + 6px)}
+.tabs .tab-conn a{font-size:.74rem;opacity:.8;padding:0 10px}
+@media(max-width:1199px){
+  .tabs ul{display:grid;grid-template-columns:repeat(3,1fr) 64px;grid-auto-rows:44px;gap:0 2px;align-content:start}
   .tabs li{display:block}
   .tabs a{width:100%;padding:0 4px;font-size:.86rem;letter-spacing:.02em}
-  .tabs li:nth-child(4){grid-row:2;grid-column:1}
-  .tabs li:nth-child(5){grid-row:2;grid-column:2}
-  .tabs li:nth-child(6){grid-row:2;grid-column:3}
-  .tabs .tab-conn{grid-row:2;grid-column:4}
-  .tabs .tab-conn a{font-size:.7rem;padding:0 6px}
+  .tabs .tab-conn{position:static;grid-row:1 / span 2;grid-column:4}
+  .tabs .tab-conn a{height:100%;white-space:normal;text-align:center;line-height:1.15;font-size:.72rem;padding:0 4px}
 }
 
 main.stage{position:relative;z-index:1;width:100%;max-width:1100px;margin:0 auto;min-height:calc(100dvh - var(--tabs-h) - env(safe-area-inset-top,0px))}
@@ -79,23 +79,25 @@ main.stage{position:relative;z-index:1;width:100%;max-width:1100px;margin:0 auto
 html:has(body.home),body.home{overflow:hidden}
 .hero{text-align:center}
 .hero.active{display:flex;flex-direction:column;height:calc(100dvh - var(--tabs-h) - env(safe-area-inset-top,0px));padding-block:min(18px,2.4vh) 28px}
-.hero-text{flex:none}
-.hero-art{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;margin-top:.4rem}
+.hero-text{flex:1 0 auto;display:flex;flex-direction:column;justify-content:space-evenly;gap:.5rem}
+.hero-art{flex:0 1 26vh;min-height:0;display:flex;align-items:center;justify-content:center;margin-top:.4rem}
 .hero .cta{margin:.5rem 0 0}
 @media(min-aspect-ratio:5/4) and (min-width:900px){
   .hero.active{flex-direction:row;align-items:center;gap:2vw;padding-inline:3vw}
-  .hero-text{flex:1.3}
+  .hero-text{flex:1.3;max-height:min(100%,780px);align-self:center}
   .hero-art{flex:1;height:100%;margin:0}
+  .hero-art .watercolor{width:100%;height:100%;max-width:none;object-fit:contain}
 }
 .kicker{font-size:clamp(.95rem,2.6vw,1.2rem);letter-spacing:.16em;text-transform:uppercase;margin:0 0 .4rem;text-wrap:balance}
-.names{font-family:var(--script);font-weight:400;color:var(--olive-soft);margin:.1rem 0;line-height:1.05;font-size:clamp(2.5rem,min(13.5vw,8.6vh),5.6rem)}
+.names{font-family:var(--script);font-weight:400;color:var(--olive-soft);margin:.1rem 0;line-height:1.05;font-size:clamp(2.4rem,min(12.5vw,8vh),5.2rem)}
 .names .amp{display:block;font-size:.55em;color:var(--olive);line-height:1}
-.lead{text-transform:uppercase;letter-spacing:.1em;font-size:clamp(.95rem,2.8vw,1.25rem);max-width:30em;margin:.7rem auto;text-wrap:balance}
+.lead{text-transform:uppercase;letter-spacing:.1em;font-size:clamp(.88rem,2.6vw,1.15rem);max-width:30em;margin:.7rem auto;text-wrap:balance}
 .when{display:grid;gap:0;justify-items:center;max-width:24em;margin:.8rem auto 0;padding:.35rem 0;border-block:1px solid var(--line)}
 .when .d{text-wrap:balance;font-size:clamp(1.15rem,min(5.4vw,3.7vh),2.1rem);font-weight:700;letter-spacing:.06em;text-transform:uppercase;line-height:1.25}
 .when .t{font-family:var(--script);font-size:clamp(1.5rem,min(6vw,4.2vh),2.5rem);color:var(--olive-soft);line-height:1.15}
 .where{font-family:var(--script);font-size:clamp(1.5rem,min(6.5vw,4.6vh),2.6rem);color:var(--olive-soft);margin:.8rem 0 0;line-height:1.15}
 .where small{display:block;font-family:var(--serif);font-size:clamp(.9rem,2.4vw,1.1rem);letter-spacing:.08em;color:var(--olive);margin-top:.2rem}
+.hero-text>*{margin-top:0;margin-bottom:0}
 .watercolor{height:auto;display:block;margin-inline:auto;-webkit-mask-image:radial-gradient(ellipse 66% 66% at 50% 50%,#000 42%,transparent 100%);mask-image:radial-gradient(ellipse 66% 66% at 50% 50%,#000 42%,transparent 100%)}
 .hero-art .watercolor{width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain}
 
@@ -223,8 +225,15 @@ footer .adm{display:inline-block;margin-top:2rem;font-size:.8rem;opacity:.65}
 .tbl table{border-collapse:collapse;width:100%;min-width:520px;font-size:.92rem}
 .tbl th,.tbl td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
 .tbl th{background:var(--paper-2);font-size:.8rem;letter-spacing:.06em;text-transform:uppercase}
-.admin-tabs{display:flex;gap:8px;margin:12px 0 22px;flex-wrap:wrap}
-.admin-tabs button[aria-pressed="true"]{background:var(--olive);color:var(--paper)}
+.admin-head{display:flex;justify-content:space-between;align-items:center;gap:10px 16px;flex-wrap:wrap;margin:0 0 16px}
+.admin-actions{display:flex;gap:8px;flex-wrap:wrap}
+.admin-tabs{display:inline-flex;border:1.5px solid var(--olive);border-radius:999px;overflow:hidden}
+.admin-tabs .btn{border:0;border-radius:0;min-height:38px;padding:6px 16px;font-size:.85rem}
+.admin-tabs .btn[aria-pressed="true"]{background:var(--olive);color:var(--paper)}
+#connexion h2{margin-bottom:.2rem}
+@media(max-width:640px){.admin-tabs{display:grid;grid-template-columns:repeat(4,1fr);width:100%}.admin-tabs .btn{padding:6px 2px;font-size:.78rem}}
+#connexion .tbl table{font-size:.85rem}
+body.on-conn #edit-fab{display:none}
 .tag{display:inline-block;padding:1px 10px;border-radius:999px;background:var(--paper-2);border:1px solid var(--line);font-size:.8rem;margin:2px 4px 2px 0}
 .demo-note{background:#f6ead0;border-radius:10px;padding:12px 16px;font-size:.88rem;margin:0 0 18px}
 </style>
@@ -245,7 +254,7 @@ footer .adm{display:inline-block;margin-top:2rem;font-size:.8rem;opacity:.65}
       <li><a href="#tenue">Dress code</a></li>
       <li><a href="#chants">Chants</a></li>
       <li><a href="#faq">Questions</a></li>
-      <li class="tab-conn"><a href="#connexion">Connexion</a></li>
+      <li class="tab-conn"><a href="#connexion">Espace mariés</a></li>
     </ul>
   </nav>
 
@@ -382,18 +391,19 @@ footer .adm{display:inline-block;margin-top:2rem;font-size:.8rem;opacity:.65}
         </form>
       </div>
 <div id="admin-panel" hidden>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-          <button class="btn small solid" id="goto-edit" type="button">Modifier les textes du site</button>
-          <button class="btn small" id="logout" type="button">Se déconnecter</button>
-        </div>
+      <div class="admin-head">
         <div class="admin-tabs" role="group" aria-label="Rubriques">
           <button class="btn small" type="button" data-tab="al" aria-pressed="true">Réponses</button>
-          <button class="btn small" type="button" data-tab="gi" aria-pressed="false">Cagnotte</button>
           <button class="btn small" type="button" data-tab="so" aria-pressed="false">Chants</button>
           <button class="btn small" type="button" data-tab="fq" aria-pressed="false">Questions</button>
+          <button class="btn small" type="button" data-tab="gi" aria-pressed="false">Cagnotte</button>
         </div>
-
-        <div id="tab-al">
+        <div class="admin-actions">
+          <button class="btn small solid" id="goto-edit" type="button">&#9998; Modifier les textes du site</button>
+          <button class="btn small" id="logout" type="button">Se déconnecter</button>
+        </div>
+      </div>
+      <div id="tab-al">
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
             <button class="btn small solid" id="copy-al" type="button">Copier pour le tableur</button>
             <span class="hint" id="al-count"></span>
@@ -767,6 +777,7 @@ function showPanel(id){
   PANELS.forEach(p => $("#"+p).classList.toggle("active", p === id));
   document.querySelectorAll(".tabs a").forEach(a => a.setAttribute("aria-current", String(a.getAttribute("href") === "#" + id)));
   document.body.classList.toggle("home", id === "accueil");
+  document.body.classList.toggle("on-conn", id === "connexion");
   window.scrollTo(0, 0);
 }
 function route(){
