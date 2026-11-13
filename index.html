@@ -542,12 +542,13 @@ body.on-conn #edit-fab{display:none}
             </div>
             <label for="s-author">Auteur ou interprète (facultatif)<input id="s-author" maxlength="100"></label>
             <label for="s-audio">Lien audio (facultatif)<input id="s-audio" type="url" placeholder="Lien YouTube, ou lien direct vers un fichier .mp3"></label>
-            <p class="hint">Un lien YouTube ou un lien direct vers un fichier .mp3 affiche un petit bouton « Écouter » qui joue le son, sans lecteur visible. Sans lien, le chant s'affiche sans bouton.</p>
+            <p class="hint">Les chants s'affichent sur le site dans l'ordre de la messe. Un nouveau chant se place automatiquement selon son moment (entrée, psaume, communion, sortie...). Utilisez les flèches ▲ ▼ du tableau pour ajuster l'ordre.</p>
+        <p class="hint">Un lien YouTube ou un lien direct vers un fichier .mp3 affiche un petit bouton « Écouter » qui joue le son, sans lecteur visible. Sans lien, le chant s'affiche sans bouton.</p>
             <button class="btn solid" type="submit">Ajouter le chant</button>
             <p class="msg" id="s-msg" role="status" hidden></p>
           </form>
           <div class="tbl"><table>
-            <thead><tr><th>Moment</th><th>Titre</th><th>Lien audio</th><th></th></tr></thead>
+            <thead><tr><th>Ordre</th><th>Moment</th><th>Titre</th><th>Lien audio</th><th></th></tr></thead>
             <tbody id="so-rows"></tbody>
           </table></div>
           <p class="empty" id="so-empty" hidden>Aucun chant pour l'instant.</p>
@@ -780,6 +781,16 @@ const store = {
   async addSong(song){
     if (remote) { const { error } = await remote.from("songs").insert(song); if (error) throw error; return; }
     const l = (await this.listSongs()).filter(x => !String(x.id).startsWith("d")); l.push({ id: uid(), created_at: new Date().toISOString(), ...song }); local.write("songs", l);
+  },
+  async setSongOrder(ids){
+    if (remote) {
+      const res = await Promise.all(ids.map((id, i) => remote.from("songs").update({ position: i }).eq("id", id).select()));
+      const bad = res.find(r => r.error); if (bad) throw bad.error;
+      if (res.some(r => !r.data || !r.data.length)) throw { code: "42501", message: "row-level security: ordre non enregistré" };
+      return;
+    }
+    const cur = await this.listSongs(), byId = Object.fromEntries(cur.map(x => [x.id, x]));
+    local.write("songs", ids.map((id, i) => ({ ...byId[id], id: String(id).startsWith("d") ? uid() : id, position: i })));
   },
   async deleteSong(id){
     if (remote) { const { error } = await remote.from("songs").delete().eq("id", id); if (error) throw error; return; }
@@ -1030,12 +1041,30 @@ async function renderResponses(){
   };
 }
 
+/* Ordre habituel d'une messe de mariage : sert à placer un nouveau chant au bon endroit */
+const MASS_ORDER = [
+  [/entr[ée]e|procession|accueil/i, 1], [/kyrie|pardon|p[ée]nitentiel/i, 2], [/gloria/i, 3], [/psaume/i, 4], [/all[ée]luia|acclamation de l'?[ée]vangile/i, 5],
+  [/consentement|alliance|b[ée]n[ée]diction|mariage|signature|registre/i, 6], [/pri[èe]re universelle|intention/i, 7], [/offertoire|dons/i, 8],
+  [/sanctus|^saint\b/i, 9], [/anamn[èe]se|acclamation eucharistique/i, 10], [/notre p[èe]re/i, 11], [/paix/i, 12], [/agnus|agneau/i, 13],
+  [/communion/i, 14], [/action de gr[âa]ce|m[ée]ditation|th[ée]ophanie|marie|vierge/i, 15], [/sortie|envoi|final/i, 16]
+];
+const massRank = m => { const f = MASS_ORDER.find(([re]) => re.test(m || "")); return f ? f[1] : null; };
+
 async function renderSongAdmin(){
   const rows = $("#so-rows"); rows.replaceChildren();
   let list = [];
   try { list = await store.listSongs(); } catch { return; }
   $("#so-empty").hidden = list.length > 0;
-  list.forEach(x => rows.append(el("tr",{},
+  const move = async (i, d) => {
+    const j = i + d; if (j < 0 || j >= list.length) return;
+    const ids = list.map(x => x.id); [ids[i], ids[j]] = [ids[j], ids[i]];
+    try { await store.setSongOrder(ids); renderSongAdmin(); renderSongs(); showToast("Ordre enregistré"); }
+    catch (e) { showToast("Ordre non enregistré : " + explainErr(e)); }
+  };
+  list.forEach((x, i) => rows.append(el("tr",{},
+    el("td",{style:"white-space:nowrap"},
+      el("button",{class:"btn small",type:"button",text:"▲","aria-label":"Monter " + x.title,disabled:i === 0,onclick:() => move(i, -1)}), " ",
+      el("button",{class:"btn small",type:"button",text:"▼","aria-label":"Descendre " + x.title,disabled:i === list.length - 1,onclick:() => move(i, 1)})),
     el("td",{text:x.moment}), el("td",{}, el("b",{text:x.title}), x.author ? el("div",{class:"hint",text:x.author}) : ""),
     el("td",{style:"word-break:break-all",text:x.audio_url || "–"}),
     el("td",{}, el("button",{class:"btn small danger",type:"button",text:"Supprimer","aria-label":"Supprimer " + x.title,onclick: async () => { await store.deleteSong(x.id); renderSongAdmin(); renderSongs(); }})))));
@@ -1056,9 +1085,15 @@ function bindAdmin(){
     const msg = $("#s-msg"), moment = $("#s-moment").value.trim(), title = $("#s-title").value.trim();
     if (!moment || !title) return showMsg(msg, "Indiquez le moment de la messe et le titre.", "err");
     try {
-      const n = (await store.listSongs()).length;
-      await store.addSong({ moment, title, author: $("#s-author").value.trim(), audio_url: $("#s-audio").value.trim(), position: n });
-      ev.target.reset(); showMsg(msg, "Chant ajouté.", "ok"); renderSongAdmin(); renderSongs();
+      const cur = await store.listSongs(), r = massRank(moment);
+      let at = cur.length;
+      if (r != null) { const k = cur.findIndex(x => { const rx = massRank(x.moment); return rx != null && rx > r; }); if (k >= 0) at = k; }
+      await store.addSong({ moment, title, author: $("#s-author").value.trim(), audio_url: $("#s-audio").value.trim(), position: cur.length });
+      if (at < cur.length) {
+        const all = await store.listSongs(), added = all.find(x => !cur.some(c => c.id === x.id));
+        if (added) { const ids = cur.map(x => x.id); ids.splice(at, 0, added.id); await store.setSongOrder(ids); }
+      }
+      ev.target.reset(); showMsg(msg, "Chant ajouté à sa place dans la messe. Vous pouvez changer l'ordre avec les flèches.", "ok"); renderSongAdmin(); renderSongs();
     } catch { showMsg(msg, "L'ajout a échoué. Vérifiez que vous êtes bien connecté(e).", "err"); }
   });
   $("#pot-form").addEventListener("submit", async ev => {

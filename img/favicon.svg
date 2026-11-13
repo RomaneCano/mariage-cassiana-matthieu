@@ -1,12 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs><clipPath id="c"><circle cx="32" cy="32" r="30"/></clipPath></defs>
-  <circle cx="32" cy="32" r="31" fill="#f5f2eb" stroke="#c9c8a6" stroke-width="1.5"/>
-  <g clip-path="url(#c)">
-    <path d="M-2 46 L14 30 Q17 27 20 30 L26 36 L30 31 L34 36 L40 30 Q43 27 46 30 L66 48 L66 70 L-2 70 Z" fill="#76773f" opacity=".55"/>
-    <path d="M6 50 L26 19 Q30 12 35 18 L41 27 L46 23 Q49 20 52 24 L62 50 Z" fill="#4f5020"/>
-    <path d="M23.500 24 L26 19 Q30 12 35 18 L38 22.500 L34.500 21.500 L32 26 L29 22 L26.500 26 Z" fill="#fdfcf7"/>
-    <path d="M45 26 L46 23 Q49 20 52 24 L54 28 L51 26.500 L49 29 L47.500 26.500 Z" fill="#fdfcf7"/>
-    <path d="M-2 52 Q16 47 32 51 T66 49 L66 70 L-2 70 Z" fill="#a9b07a"/>
+  <circle cx="32" cy="32" r="31" fill="#f5f2eb"/>
+  <circle cx="32" cy="32" r="29.500" fill="none" stroke="#76773f" stroke-width="1.400"/>
+  <g fill="none" stroke="#4f5020" stroke-width="2.300" stroke-linecap="round" stroke-linejoin="round">
+    <!-- massif du Mont Blanc -->
+    <path d="M9 46 L19 33.500 L23.500 37.500 L30.500 22.500 Q33.500 17.500 37 22.500 L44.500 34 L49 30.500 L56 44"/>
+    <!-- calotte de neige -->
+    <path d="M26.500 30 L29.500 27 L31.500 30.500 L34 26.500 L36.500 30 L40 28"/>
+    <!-- arêtes -->
+    <path d="M31 31 L28.500 40.500 M36.500 31.500 L39.500 41 M23.500 37.500 L25 43" stroke-width="1.700"/>
+    <!-- colline au premier plan -->
+    <path d="M10 49 Q21 44.500 31 48.500 T55 47" stroke="#76773f" stroke-width="2"/>
   </g>
-  <circle cx="32" cy="32" r="30" fill="none" stroke="#4f5020" stroke-width="1.2" opacity=".5"/>
+  <!-- soleil -->
+  <circle cx="47.500" cy="17" r="2.800" fill="none" stroke="#76773f" stroke-width="1.800"/>
 </svg>
