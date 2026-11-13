@@ -104,8 +104,8 @@ const ORG = {
   games: { table: "org_games", label: "Jeux", order: "created_at", defaults: { chosen: false }, fields: [
     { k: "chosen", l: "Retenu", t: "check" }, { k: "name", l: "Idée de jeu", t: "text", req: true, wide: true }, { k: "people", l: "Nb de personnes", t: "text" },
     { k: "material", l: "Matériel", t: "text" }, { k: "price", l: "Prix (€)", t: "number" }, { k: "notes", l: "Notes", t: "text" }] },
-  seating: { table: "org_tables", label: "Plan de tables", order: "position", defaults: { capacity: 10 }, fields: [
-    { k: "name", l: "Nom de la table", t: "text", req: true, ph: "ex. Table 1, Famille Martin, Amis…" }, { k: "capacity", l: "Nombre de places", t: "number" },
+  seating: { table: "org_tables", label: "Plan de tables", order: "position", defaults: { capacity: 10, shape: "Ronde" }, fields: [
+    { k: "name", l: "Nom de la table", t: "text", req: true, ph: "ex. Table 1, Famille Martin, Amis…" }, { k: "shape", l: "Forme", t: "select", o: ["Ronde", "Rectangulaire"] }, { k: "capacity", l: "Nombre de places", t: "number" },
     { k: "guests", l: "Invités", t: "long", wide: true }, { k: "notes", l: "Notes", t: "text" }] },
   timeline: { table: "org_timeline", label: "Jour J", order: "time", defaults: {}, fields: [
     { k: "time", l: "Heure", t: "time", req: true }, { k: "title", l: "Étape", t: "text", req: true, wide: true },
@@ -353,13 +353,17 @@ async function seatPlan(rows) {
   };
   const placed = new Set();
   rows.forEach(r => {
-    const g = rawSeats(r), cap = Number(r.capacity) || 0, n = Math.max(cap, g.length), R = 96, size = 280, count = g.filter(Boolean).length;
+    const g = rawSeats(r), cap = Number(r.capacity) || 0, n = Math.max(cap, g.length), R = 96, rect = r.shape === "Rectangulaire", W = rect ? 336 : 280, H = rect ? 232 : 280, count = g.filter(Boolean).length;
     g.filter(Boolean).forEach(x => placed.add(norm(x)));
-    const t = el("div", { class: "seat-table" + (count > cap && cap ? " full" : ""), style: "width:" + size + "px;height:" + size + "px" },
+    const t = el("div", { class: "seat-table" + (rect ? " rect" : "") + (count > cap && cap ? " full" : ""), style: "width:" + W + "px;height:" + H + "px" },
       el("div", { class: "t-disc" }, el("b", { text: r.name }), el("span", { text: count + " / " + (cap || "?") })));
     for (let i = 0; i < n; i++) {
-      const ang = -Math.PI / 2 + i * 2 * Math.PI / n, x = size / 2 + R * Math.cos(ang), y = size / 2 + R * Math.sin(ang);
-      const seat = el("div", { class: "seat", style: "left:" + x + "px;top:" + y + "px" });
+      let x, y, topRow = false;
+      if (rect) {
+        const top = Math.ceil(n / 2), bot = n - top, onTop = i < top, k = onTop ? i : i - top, cnt = onTop ? top : bot, sp = Math.min(60, (W - 70) / Math.max(1, cnt));
+        x = W / 2 + (onTop ? (k - (cnt - 1) / 2) : ((cnt - 1) / 2 - k)) * sp; y = H / 2 + (onTop ? -62 : 62); topRow = onTop;
+      } else { const ang = -Math.PI / 2 + i * 2 * Math.PI / n; x = W / 2 + R * Math.cos(ang); y = H / 2 + R * Math.sin(ang); }
+      const seat = el("div", { class: "seat" + (topRow ? " top" : ""), style: "left:" + x + "px;top:" + y + "px" });
       if (g[i]) seat.append(avatar(g[i], r.id, cap && i >= cap, i)); else seat.append(el("i", { class: "empty-seat", "aria-hidden": "true" }));
       zone(seat, r.id, i); t.append(seat);
     }
@@ -437,7 +441,7 @@ async function renderOrg(key) {
     const sumFor = r => {
       if (key === "vendors") return [el("b", { text: r.name }), badge(r.status), el("span", { class: "num", text: r.price != null ? eur(r.price) : "" }), el("span", { class: "sm", text: r.phone || r.email || r.contact || r.location || "" })];
       if (key === "budget") return [el("b", { text: r.item }), el("span", { class: "sm", text: r.family ? "famille " + eur(r.family) : "" }), el("span", { class: "num", text: "prévu " + eur(r.estimated || 0) }), el("span", { class: "num", text: "payé " + eur(r.paid || 0) })];
-      const g = guestsOf(r).length; return [el("b", { text: r.name }), el("span", { class: "sm", text: "" }), el("span", { class: "num", text: g + " / " + (r.capacity || "?") }), el("span", { class: "sm", text: "" })];
+      const g = guestsOf(r).length; return [el("b", { text: r.name }), el("span", { class: "sm", text: r.shape || "Ronde" }), el("span", { class: "num", text: g + " / " + (r.capacity || "?") }), el("span", { class: "sm", text: "" })];
     };
     shown.forEach((r, i) => {
       if (key === "budget" && r.cat !== lastCat) { lastCat = r.cat; const inCat = rows.filter(x => x.cat === r.cat), sub = inCat.reduce((a, x) => a + (Number(x.estimated) || 0), 0), fam = inCat.reduce((a, x) => a + (Number(x.family) || 0), 0); list.append(el("h3", { class: "org-grp", text: (r.cat || "Sans poste") + " · " + eur(sub) + (fam ? " · dont famille " + eur(fam) : "") })); }
@@ -738,17 +742,23 @@ async function dedupeOnce() {
   await clean("org_games", r => norm(r.name));
   await store.setSetting("dedupe_v1", "1");
 }
+/* Vide le budget une seule fois : les mariés le saisissent eux-mêmes. */
+async function clearBudgetOnce() {
+  if ((await store.getSetting("budget_cleared_v1")) === "1") return;
+  const rows = await orgStore.list("org_budget");
+  for (const r of rows) await orgStore.remove("org_budget", r.id);
+  await store.setSetting("budget_cleared_v1", "1");
+  if (rows.length && typeof orgState !== "undefined" && orgState.key === "budget" && !$("#org-body").closest("[hidden]")) renderOrg("budget");
+}
 let seeding = null;
 function seedFromSheet() { return seeding || (seeding = seedInner().finally(() => { seeding = null; })); }
 async function seedInner() {
   try {
+    await clearBudgetOnce();
     if ((await store.getSetting("seed_sheet_v1")) === "1") { await dedupeOnce(); return; }
     const games = await orgStore.list("org_games"), gn = new Set(games.map(g => norm(g.name)));
     const addG = TPL.games().filter(g => !gn.has(norm(g.name)));
     if (addG.length) await orgStore.insert("org_games", addG);
-    const bud = await orgStore.list("org_budget"), bn = new Set(bud.map(b => norm(b.item)));
-    const addB = TPL.budget().filter(b => !bn.has(norm(b.item)));
-    if (addB.length) await orgStore.insert("org_budget", addB);
     await store.setSetting("seed_sheet_v1", "1");
     await dedupeOnce();
     showToast("Vos prestataires, jeux et budget prévisionnel ont été repris de votre tableur.");

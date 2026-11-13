@@ -87,3 +87,8 @@ create policy org_games_admin on public.org_games for all to authenticated using
 -- 13. BUDGET : part prise en charge par la famille
 -- ============================================================
 alter table public.org_budget add column if not exists family numeric;
+
+-- ============================================================
+-- 14. PLAN DE TABLES : forme des tables
+-- ============================================================
+alter table public.org_tables add column if not exists shape text;
