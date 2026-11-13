@@ -601,12 +601,13 @@ body.on-conn #edit-fab{display:none}
 .dr .txt{margin:0;font-size:var(--fs-small);line-height:1.65;max-width:25em;color:var(--olive)}
 .dr-couleurs .txt{max-width:34em}
 .cv-col .cv-sub{font-size:.68rem}
-.dress{--imgh:clamp(170px,31vh,340px);grid-template-columns:minmax(0,.85fr) minmax(0,2.3fr) minmax(0,.85fr);max-width:1060px;column-gap:clamp(14px,3vw,44px);row-gap:0;grid-template-rows:var(--imgh) 2.7rem auto auto;align-items:start}
+.dress{--imgh:clamp(165px,30vh,330px);grid-template-columns:minmax(0,1fr) minmax(0,2.2fr) minmax(0,1fr);max-width:1060px;column-gap:clamp(14px,3vw,44px);row-gap:0;grid-template-rows:var(--imgh) 2.7rem auto auto;align-items:start}
 .dr{grid-row:span 4;grid-template-rows:subgrid;gap:0;justify-items:center;align-content:start}
 .dr > :first-child{grid-row:1;align-self:center}
 .dr h3{grid-row:3;align-self:start;margin:0 0 6px}
-.dr .txt{grid-row:4;align-self:start}
-.dr > img.watercolor{margin:0;height:calc(var(--imgh) * .86);width:auto;max-width:100%}
+.dr .txt{grid-row:4;align-self:start;max-width:21em}
+.dr-couleurs .txt{max-width:31em}
+.dr > img.watercolor{margin:0;height:calc(var(--imgh) * .94);width:auto;max-width:100%}
 .tenues{margin:0;position:relative;width:auto;height:100%;aspect-ratio:1100/745;max-width:100%}
 .tenues img.watercolor{width:100%;height:100%;object-fit:contain;display:block;mix-blend-mode:multiply;-webkit-mask-image:linear-gradient(to right,transparent 0,#000 16%,#000 84%,transparent 100%),linear-gradient(to bottom,transparent 0,#000 14%,#000 86%,transparent 100%);-webkit-mask-composite:source-in;mask-image:linear-gradient(to right,transparent 0,#000 16%,#000 84%,transparent 100%),linear-gradient(to bottom,transparent 0,#000 14%,#000 86%,transparent 100%);mask-composite:intersect}
 .tenues .cross{position:absolute;inset:3% 6% 3% 6%;pointer-events:none}
@@ -614,7 +615,7 @@ body.on-conn #edit-fab{display:none}
 .tenues .cross line{stroke:var(--alert);stroke-width:1.6;stroke-linecap:round;opacity:.78;vector-effect:non-scaling-stroke}
 .tenues figcaption{position:absolute;top:100%;margin-top:.5rem;transform:translateX(-50%);font-family:var(--script);font-size:1.5rem;line-height:1;color:var(--olive);white-space:nowrap}
 .dicton{margin:0;display:grid;justify-items:center;align-content:center;gap:2px;padding:0 4px;text-align:center}
-.dicton .leaf{width:auto;height:calc(var(--imgh) * .38);margin:0;filter:drop-shadow(0 3px 5px rgba(150,80,40,.18))}
+.dicton .leaf{width:auto;height:calc(var(--imgh) * .5);margin:0;filter:drop-shadow(0 3px 5px rgba(150,80,40,.18))}
 .dr .txt b.no{color:var(--alert);font-weight:700}
 .dicton .d{font-family:var(--script);font-size:.98rem;line-height:1.4;color:var(--olive-soft);display:grid;justify-items:center}
 .dicton .d span{display:block;white-space:nowrap}
