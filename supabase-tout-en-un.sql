@@ -364,3 +364,9 @@ grant execute on function public.rsvp_guest(text, text, text, text) to anon, aut
 -- 16. BUDGET : lien d'achat
 -- ============================================================
 alter table public.org_budget add column if not exists link text;
+
+-- ============================================================
+-- 17. INVITÉS : e-mail et suivi de l'envoi du lien d'invitation
+-- ============================================================
+alter table public.org_guests add column if not exists email text;
+alter table public.org_guests add column if not exists invite_sent_at timestamptz;
