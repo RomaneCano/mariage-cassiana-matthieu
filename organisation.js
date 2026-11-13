@@ -294,7 +294,7 @@ function orgSummary(key, rows) {
     const c = f => rows.filter(f).length;
     chip("invités", String(rows.length)); chip("présents", String(c(r => r.presence === "OUI")), ""); chip("absents", String(c(r => r.presence === "NON")));
     chip("en attente", String(c(r => !r.presence || r.presence === "ATT"))); chip("allergies", String(c(r => r.allergie && r.allergie.trim())));
-    chip("enfants", String(c(r => r.age && r.age.trim()))); chip("courrier", String(c(r => r.envoi === "Courrier"))); chip("lien", String(c(r => r.envoi === "Lien"))); chip("remise en main", String(c(r => r.envoi === "Remise en main")));
+    chip("enfants (0 à 12 ans)", String(c(r => { const n = parseInt(String(r.age || "").replace(/[^\d]/g, ""), 10); return !isNaN(n) && n <= 12; }))); chip("courrier", String(c(r => r.envoi === "Courrier"))); chip("lien", String(c(r => r.envoi === "Lien"))); chip("remise en main", String(c(r => r.envoi === "Remise en main")));
   } else if (key === "games") {
     chip("idées", String(rows.length)); chip("retenues", String(rows.filter(r => r.chosen).length)); chip("coût des retenues", eur(rows.filter(r => r.chosen).reduce((a, r) => a + (Number(r.price) || 0), 0)));
   } else if (key === "seating") {
