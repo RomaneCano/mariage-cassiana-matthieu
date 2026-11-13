@@ -149,7 +149,7 @@ h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
 .step .place{margin:0;font-size:.92rem;line-height:1.45}
 .step .place em{display:block;font-family:var(--script);font-style:normal;font-size:1.2rem;color:var(--olive-soft)}
 .zig{display:block;width:auto;height:min(15vh,140px);margin:0 auto;transform:scaleY(-1)}
-.zig.flip{transform:scale(-1,-1)}
+.zig.plain{transform:none}
 .transit{text-align:center;font-style:italic;font-size:.88rem;margin:0}
 .timeline{position:relative}
 .loops{display:none;position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none}
@@ -384,7 +384,7 @@ body.on-conn #edit-fab{display:none}
             <p class="place">Le Clos du Colombier<em>Fontenay-Trésigny</em></p>
           </div>
         </article>
-        <img class="zig flip" src="img/fleche-v.png" alt="" aria-hidden="true">
+        <img class="zig plain" src="img/fleche-a-v.png" alt="" aria-hidden="true">
         <article class="step s3">
           <img class="watercolor" src="img/salle.png" alt="Aquarelle de la salle de réception" width="468" height="390">
           <div class="txt">
@@ -877,10 +877,12 @@ function drawLoops(){
   if (getComputedStyle(box).display === "none") return;
   const o = tl.getBoundingClientRect(), im = [...tl.querySelectorAll(".watercolor")].map(visRect);
   for (let i = 0; i < 2; i++) {
-    const A = im[i], B = im[i + 1], x1 = A.r + 12 - o.left, x2 = B.l - 12 - o.left, gap = x2 - x1;
+    const A = im[i], B2 = im[i + 1], x1 = A.r + 12 - o.left, x2 = B2.l - 12 - o.left, gap = x2 - x1;
     if (gap < 50) continue;
-    const w = Math.min(gap * 1.05, 360), h = w * 67 / 166, cx = (x1 + x2) / 2, cy = (A.cy + B.cy) / 2 - o.top;
-    box.append(el("img", { class: "arrow", src: "img/fleche-h.png", alt: "", style: `left:${cx - w / 2}px;top:${cy - h / 2}px;width:${w}px` }));
+    const B = i === 1;   // 2e flèche : l'autre modèle
+    const w = B ? Math.min(gap * .82, 290) : Math.min(gap * .85, 330), h = B ? w * 428 / 492 : w * 268 / 664;
+    const cx = (x1 + x2) / 2, cy = (A.cy + B2.cy) / 2 - o.top;
+    box.append(el("img", { class: "arrow", src: B ? "img/fleche-b-h.png" : "img/fleche-h.png", alt: "", style: `left:${cx - w / 2}px;top:${cy - h / 2}px;width:${w}px` }));
   }
 }
 
