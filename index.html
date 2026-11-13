@@ -512,7 +512,7 @@ body.on-conn #edit-fab{display:none}
             <button class="btn small solid" id="copy-al" type="button">Copier pour le tableur</button>
             <span class="hint" id="al-count"></span>
           </div>
-          <p class="hint" style="margin-bottom:14px">Le bouton copie une ligne par personne (NOM, Prénom, Présence, Allergie), à coller dans la liste d'invités.</p>
+          <p class="hint" style="margin-bottom:14px">Le bouton copie une ligne par personne dans l'ordre de votre tableur : Nom, Prénom, Tél (laissé vide), Présence, Allergie. Collez en cliquant sur la cellule Nom de la première ligne libre.</p>
           <div class="tbl"><table>
             <thead><tr><th>Nom</th><th>Prénom</th><th>Présence</th><th>Allergies</th><th>Reçu le</th><th></th></tr></thead>
             <tbody id="al-rows"></tbody>
@@ -1033,7 +1033,8 @@ async function renderResponses(){
     el("td",{text:fmtDate(a.created_at)}),
     el("td",{}, el("button",{class:"btn small danger",type:"button",text:"Supprimer","aria-label":`Supprimer la réponse de ${a.prenom} ${a.nom}`,onclick: async () => { await store.deleteResponse(a.id); renderResponses(); }})))));
   $("#copy-al").onclick = async () => {
-    const tsv = list.map(a => [(a.nom||"").toUpperCase(), a.prenom, a.presence === "non" ? "NON" : "OUI", a.allergies].join("\t")).join("\n");
+    // Colonnes dans l'ordre du tableur : Nom | Prénom | Tél (vide) | Présence | Allergie
+    const tsv = list.map(a => [(a.nom||"").toUpperCase(), a.prenom, "", a.presence === "non" ? "NON" : "OUI", a.allergies].join("\t")).join("\n");
     try { await navigator.clipboard.writeText(tsv); showToast("Copié. Collez dans le tableur."); }
     catch { const t = el("textarea",{readonly:true,style:"min-height:140px;margin-top:12px"}); t.value = tsv; $("#tab-al").prepend(t); t.select(); showToast("Sélectionné. Faites Ctrl+C."); }
   };
