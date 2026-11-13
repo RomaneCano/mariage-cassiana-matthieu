@@ -223,18 +223,30 @@ h3{font-size:var(--fs-card);margin:0 0 .3rem;font-weight:700}
 .lg .hint{margin:.5rem 0 0}
 
 /* Dress code */
-.dress{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.dress .tile{border:1px solid var(--line);border-radius:16px;padding:16px 14px;display:grid;gap:8px;justify-items:center;text-align:center;align-content:start;min-width:0}
-.dress .tile.wide{grid-column:1/-1;background:var(--paper-2);border-color:transparent;padding:18px 14px}
-.dress .tile h3{margin:0}
+.dress{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.dress .tile{position:relative;border:1px solid var(--line);border-radius:22px;padding:22px 18px 20px;display:grid;gap:10px;justify-items:center;text-align:center;align-content:start;min-width:0;background:linear-gradient(180deg,rgba(255,255,255,.35),transparent 70%)}
+.dress .tile::before{content:"";position:absolute;inset:6px;border:1px solid rgba(118,119,63,.22);border-radius:17px;pointer-events:none}
+.dress .tile.wide{grid-column:1/-1;background:var(--paper-2);border-color:transparent;padding:24px 18px 22px}
+.dress .tile.wide::before{border-color:rgba(118,119,63,.3)}
+.dress .tile h3{margin:0;font-family:var(--script);font-weight:400;font-size:1.65rem;line-height:1.1;color:var(--olive-soft)}
 .dress .tile.wide h3{color:var(--alert)}
-.dress .tile p{margin:0;font-size:var(--fs-small);line-height:1.5}
-.dress .ico{width:40px;height:40px;fill:none;stroke:var(--olive-soft);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
-.palette{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;max-width:420px;margin:.4rem 0 0;padding:0;list-style:none}
-.palette li{display:grid;justify-items:center;gap:6px;font-size:.78rem;line-height:1.2}
+.dress .tile p{margin:0;font-size:var(--fs-small);line-height:1.65;max-width:26em}
+.dress .tile h3::after{content:"";display:block;width:34px;height:1px;background:var(--olive-soft);opacity:.5;margin:8px auto 0}
+.ico-wrap{display:grid;place-items:center;width:86px;height:86px;border-radius:50%;background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.7),rgba(118,119,63,.08));border:1px solid rgba(118,119,63,.25)}
+.dress .ico{width:62px;height:62px;fill:none;stroke:var(--olive);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.dress .ico .fine{stroke-width:.9;opacity:.75}
+.palette{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;width:100%;max-width:560px;margin:.6rem 0 0;padding:0;list-style:none}
+.palette li{display:grid;justify-items:center;gap:6px;font-family:var(--script);font-size:1.15rem;line-height:1.1;color:var(--olive)}
+.flo{display:block;width:clamp(64px,13vw,104px);aspect-ratio:1;filter:drop-shadow(0 2px 3px rgba(79,80,32,.22))}
 .swatch{width:clamp(44px,12vw,58px);aspect-ratio:1;border-radius:50%;border:1px solid var(--line);position:relative;box-shadow:0 1px 3px rgba(79,80,32,.15)}
-.swatch.no::after{content:"";position:absolute;inset:0;border-radius:50%;background:linear-gradient(to top right,transparent calc(50% - .7px),rgba(138,59,43,.85) calc(50% - .7px),rgba(138,59,43,.85) calc(50% + .7px),transparent calc(50% + .7px))}
-@media(min-width:760px){.dress{grid-template-columns:1.4fr 1fr 1fr}.dress .tile.wide{grid-column:auto}}
+.dress .tile:not(.wide){grid-template-columns:auto minmax(0,1fr);column-gap:16px;row-gap:2px;justify-items:start;text-align:left;align-items:center;padding:16px 18px}
+.dress .tile:not(.wide) .ico-wrap{grid-row:1/3;width:76px;height:76px}.dress .tile:not(.wide) .ico{width:54px;height:54px}
+.dress .tile:not(.wide) h3{align-self:end;font-size:1.5rem}.dress .tile:not(.wide) h3::after{margin:6px 0 0}
+.dress .tile:not(.wide) p{align-self:start;max-width:none}
+.dress .tile.wide{padding:16px 18px 14px;gap:6px}.dress .tile.wide .palette{margin-top:.2rem}
+.flo{width:clamp(52px,7.5vw,76px)}
+#panel-tenue .sub{margin-bottom:.9rem}.dress{gap:12px}
+@media(max-width:560px){.dress{grid-template-columns:1fr}}
 
 /* Mode édition des textes (mariés) */
 #edit-fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:60;box-shadow:0 4px 14px rgba(79,80,32,.3);background:var(--olive);color:var(--paper)}
@@ -653,12 +665,18 @@ body.on-conn #edit-fab{display:none}
           <ul class="palette" id="palette-no"></ul>
         </div>
         <div class="tile">
-          <svg class="ico" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 3v7M17 6h6M9 36V21l11-9 11 9v15zM15 36v-8a5 5 0 0 1 10 0v8"/></svg>
+          <span class="ico-wrap"><svg class="ico" viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M32 2v7M29 5h6"/><path d="M25 20 32 9l7 11"/><path d="M25 20v21h14V20"/><path d="M29.5 32v-6a2.5 2.5 0 0 1 5 0v6z"/><circle cx="32" cy="37" r="2"/>
+            <path d="M25 41 12 44v14M39 41l13 3v14"/><path d="M15.5 56v-6a2.5 2.5 0 0 1 5 0v6M43.5 56v-6a2.5 2.5 0 0 1 5 0v6"/>
+            <path d="M27 58V49a5 5 0 0 1 10 0v9"/><path d="M32 44v14" class="fine"/><path d="M6 58h52M9 61h46" class="fine"/></svg></span>
           <h3>À l'église</h3>
           <p>Épaules et décolleté couverts. Sinon, emportez un châle, une étole ou une veste.</p>
         </div>
         <div class="tile">
-          <svg class="ico" viewBox="0 0 40 40" aria-hidden="true"><path d="M17 9a3 3 0 0 1 6 0v15.5a6.5 6.5 0 1 1-6 0zM20 15v14"/></svg>
+          <span class="ico-wrap"><svg class="ico" viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M32 5l6 11 10-4-3 14 13-2-8 10 6 8-14-1 2 13-10-6-2 11-2-11-10 6 2-13-14 1 6-8-8-10 13 2-3-14 10 4z"/>
+            <path d="M32 59V28M32 46l-10-8M32 46l10-8M32 34l-8-9M32 34l8-9" class="fine"/>
+            <path d="M8 10c4-3 9-3 12 0M5 17c3-2 6-2 8 0" class="fine"/><path d="M52 52c3 2 7 2 10 0M56 58c2 1 4 1 6 0" class="fine"/></svg></span>
           <h3>En octobre</h3>
           <p>Il peut faire frais, surtout le soir et en extérieur. Prévoyez de quoi vous couvrir.</p>
         </div>
@@ -1001,6 +1019,36 @@ const CONTENT = {
   ]
 };
 
+/* ============ FLEURS (illustrations du dress code) ============ */
+const hexRGB = h => [1,3,5].map(i => parseInt(h.slice(i, i + 2), 16));
+const mixHex = (h, t, k) => { const a = hexRGB(h), b = hexRGB(t); return "#" + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, "0")).join(""); };
+const lumOf = h => { const [r, g, b] = hexRGB(h); return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; };
+function flowerSVG(c, idx){
+  const dark = lumOf(c) < .25, light = lumOf(c) > .9;
+  const tone = (k) => dark ? mixHex(c, "#ffffff", k * .55) : light ? mixHex(c, "#d9d1bb", .22 - k * .2) : mixHex(c, "#ffffff", k * .6);
+  const edge = dark ? mixHex(c, "#ffffff", .38) : mixHex(c, "#000000", .32);
+  const id = "fl" + idx, parts = [];
+  parts.push(`<defs><radialGradient id="${id}" cx=".5" cy=".62" r=".75"><stop offset="0" stop-color="${tone(.55)}"/><stop offset="1" stop-color="${tone(0)}"/></radialGradient></defs>`);
+  const ring = (n, rx, ry, dist, off, k, w) => { for (let i = 0; i < n; i++) parts.push(`<ellipse cx="50" cy="${50 - dist}" rx="${rx}" ry="${ry}" transform="rotate(${(off + i * 360 / n).toFixed(1)} 50 50)" fill="${k === 0 ? `url(#${id})` : tone(k)}" stroke="${edge}" stroke-width="${w || .9}" stroke-opacity=".75"/>`); };
+  const type = idx % 4;
+  if (type === 0) { // pivoine
+    ring(8, 15, 24, 25, 0, 0); ring(7, 13, 21, 17, 22, .25); ring(6, 11, 17, 11, 10, .45); ring(5, 8, 12, 6, 30, .65);
+    for (let i = 0; i < 6; i++) parts.push(`<path d="M50 50q${(Math.cos(i) * 5).toFixed(1)} ${(Math.sin(i) * 5).toFixed(1)} ${(Math.cos(i * 2) * 3).toFixed(1)} ${(Math.sin(i * 2) * 3).toFixed(1)}" fill="none" stroke="${edge}" stroke-width=".7" stroke-opacity=".6"/>`);
+  } else if (type === 1) { // anémone
+    ring(6, 17, 25, 24, 0, 0, 1); ring(6, 11, 15, 14, 30, .22);
+    parts.push(`<circle cx="50" cy="50" r="11" fill="${dark ? "#2a2a2a" : mixHex(c, "#000000", .55)}" stroke="${edge}" stroke-width=".8"/>`);
+    for (let i = 0; i < 18; i++) { const a = i * Math.PI / 9; parts.push(`<line x1="50" y1="50" x2="${(50 + Math.cos(a) * 17).toFixed(1)}" y2="${(50 + Math.sin(a) * 17).toFixed(1)}" stroke="${edge}" stroke-width=".6" stroke-opacity=".7"/><circle cx="${(50 + Math.cos(a) * 17).toFixed(1)}" cy="${(50 + Math.sin(a) * 17).toFixed(1)}" r="1.5" fill="${dark ? "#8a8a8a" : tone(.7)}"/>`); }
+  } else if (type === 2) { // dahlia
+    ring(18, 5.2, 21, 28, 0, 0, .7); ring(14, 5, 17, 21, 12, .2, .7); ring(11, 4.8, 13, 14, 5, .38, .7); ring(8, 4.4, 9.5, 8, 20, .55, .7);
+    parts.push(`<circle cx="50" cy="50" r="3.2" fill="${tone(.8)}" stroke="${edge}" stroke-width=".6"/>`);
+  } else { // rose
+    ring(5, 17, 22, 22, 0, 0, 1); ring(5, 15, 19, 15, 36, .22, 1); ring(5, 12, 15, 10, 18, .4, 1); ring(4, 9, 11, 6, 40, .58, 1);
+    parts.push(`<path d="M50 50c-5-1-6-6-2-8s9 0 8 6-8 9-14 5-6-13 0-17 16-3 19 5" fill="none" stroke="${edge}" stroke-width="1" stroke-opacity=".8" stroke-linecap="round"/>`);
+  }
+  parts.push(`<line x1="14" y1="86" x2="86" y2="14" stroke="#8a3b2b" stroke-width="3.2" stroke-linecap="round"/><line x1="14" y1="86" x2="86" y2="14" stroke="#fffaf0" stroke-width=".8" stroke-opacity=".6" stroke-linecap="round"/>`);
+  return `<svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden="true">${parts.join("")}</svg>`;
+}
+
 /* ============ OUTILS ============ */
 const $ = (s, r=document) => r.querySelector(s);
 const el = (tag, attrs={}, ...kids) => {
@@ -1142,7 +1190,7 @@ function renderStatic(){
   const pl = $("#parking-list");
   CONTENT.parkings.forEach(p => pl.append(el("a",{class:"btn small", href:mapsUrl(p.name + ", " + p.where), target:"_blank", rel:"noopener", title:p.where, text:p.name})));
 
-  CONTENT.avoid.forEach(([n,c]) => $("#palette-no").append(el("li",{}, el("span",{class:"swatch no", style:`background:${c}`, role:"img","aria-label":"À éviter : "+n}), n)));
+  CONTENT.avoid.forEach(([n,c], i) => { const f = el("span",{class:"flo", role:"img","aria-label":"À éviter : "+n}); f.innerHTML = flowerSVG(c, i); $("#palette-no").append(el("li",{}, f, n)); });
 
   const lg = $("#lodging"), col = el("div",{class:"lg-col"});
   CONTENT.lodging.forEach(cat => (cat.cls === "lg-gites" || cat.cls === "lg-camps" ? col : lg).append(el("div",{class:"card lg " + cat.cls},
