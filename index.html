@@ -72,7 +72,7 @@ body{padding-top:calc(var(--tabs-h) + env(safe-area-inset-top,0px))}
   .tabs .tab-conn a{height:100%;white-space:normal;text-align:center;line-height:1.1;font-size:.66rem;padding:0 2px}
 }
 
-main.stage{position:relative;z-index:1;width:100%;max-width:1100px;margin:0 auto;min-height:calc(100dvh - var(--tabs-h) - env(safe-area-inset-top,0px))}
+main.stage{position:relative;z-index:1;width:100%;max-width:2000px;margin:0 auto;min-height:calc(100dvh - var(--tabs-h) - env(safe-area-inset-top,0px))}
 .stage{display:flex;flex-direction:column;justify-content:flex-start}
 .panel{display:none;padding-block:min(32px,4vh) 32px}
 .panel.active{display:block}
@@ -82,7 +82,7 @@ main.stage{position:relative;z-index:1;width:100%;max-width:1100px;margin:0 auto
 /* Accueil */
 html:has(body.home),body.home{overflow:hidden}
 .hero{text-align:center}
-.hero.active{display:flex;flex-direction:column;height:calc(100dvh - var(--tabs-h) - env(safe-area-inset-top,0px));padding-block:min(18px,2.4vh) 28px}
+.hero.active{width:100%;max-width:1300px;margin-inline:auto;display:flex;flex-direction:column;height:calc(100dvh - var(--tabs-h) - env(safe-area-inset-top,0px));padding-block:min(18px,2.4vh) 28px}
 .hero-text{flex:1 0 auto;display:flex;flex-direction:column;justify-content:space-evenly;gap:.5rem}
 .hero-art{flex:1.2 1 30vh;min-height:0;display:flex;align-items:center;justify-content:center;margin-top:.4rem}
 .hero .cta{margin:0;padding-top:.3rem}
@@ -157,14 +157,16 @@ h3{font-size:1.05rem;margin:0 0 .3rem;font-weight:700}
   .panel#panel-programme{max-width:min(97vw,2000px);padding:1.5vh 2vw 12px}
   #panel-programme h2{font-size:clamp(1.8rem,min(5vw,5.2vh),2.6rem)}
   #panel-programme .rule{margin-bottom:1vh}
-  .timeline{--off:9vh;grid-template-columns:repeat(3,1fr);gap:3vw;align-items:start}
+  .timeline{grid-template-columns:repeat(3,1fr);gap:clamp(90px,9vw,170px);align-items:start}
   .step,.step.rev{grid-template-columns:1fr;gap:8px;text-align:center;justify-items:center}
   .step.rev .watercolor{order:0}
   .step.rev .txt{text-align:center}
-  .step .watercolor{width:66%;max-width:66%;height:min(46vh,calc(91vh - 306px));max-height:none;object-fit:contain}
+  .step .watercolor{width:100%;max-width:100%;height:min(46vh,calc(91vh - 306px));max-height:none;object-fit:contain}
   .zig,.transit{display:none}
   .loops{display:block}
-  .step .road{display:block;margin:0 0 .2rem;font-style:italic;font-size:.95rem}
+  .step .road{display:none}
+  .step .txt{align-self:start}
+  .arrow-note{position:absolute;transform:translateX(-50%);font-style:italic;font-size:.9rem;line-height:1.3;text-align:center}
   .step .hour{font-size:1.4rem}
   .step .what{font-size:clamp(1.8rem,3vw,2.6rem)}
   .step .place{font-size:1.05rem}
@@ -871,6 +873,7 @@ function drawLoops(){
     if (gap < 50) continue;
     const w = Math.min(gap, 260), h = w * 67 / 166, cx = (x1 + x2) / 2, cy = (A.cy + B.cy) / 2 - o.top;
     box.append(el("img", { class: "arrow", src: "img/fleche-h.png", alt: "", style: `left:${cx - w / 2}px;top:${cy - h / 2}px;width:${w}px` }));
+    if (i === 0) box.append(el("span", { class: "arrow-note", style: `left:${cx}px;top:${cy + h / 2 + 6}px;width:${w}px`, text: `Environ ${CONTENT.driveTime} de route` }));
   }
 }
 
