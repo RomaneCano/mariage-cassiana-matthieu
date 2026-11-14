@@ -345,7 +345,8 @@ const rawSeats = r => { const a = String(r.guests || "").split("\n").map(x => x.
 async function seatPlan(rows) {
   const M = ORG.seating; let sel = null;
   const wrap = el("section", { class: "seat-plan-wrap" });
-  const hint = el("p", { class: "hint", text: "Glissez un invité sur une place (libre ou occupée : ils échangent) ou sur une autre table. Sur téléphone : touchez l'invité, puis la place. Déposez-le dans « À placer » pour le retirer." });
+  const HINT = "Glissez un invité sur une place (libre ou occupée : ils échangent) ou sur une autre table. Touchez un « + » pour ajouter un invité sans glisser. Sur téléphone : touchez l'invité, puis la place. Déposez-le dans « À placer » pour le retirer.";
+  const hint = el("p", { class: "hint", text: HINT });
   const plan = el("div", { class: "seat-plan" });
   const pool = el("div", { class: "seat-pool", "data-pool": "1" }, el("b", { text: "À placer" }));
   const save = async (r, list) => { const a = list.slice(); while (a.length && !a[a.length - 1]) a.pop(); const v = a.join("\n"); await orgStore.update(M.table, r.id, { guests: v }); r.guests = v; };
@@ -393,25 +394,46 @@ async function seatPlan(rows) {
     node.addEventListener("drop", e => { e.preventDefault(); e.stopPropagation(); node.classList.remove("drop"); try { const d = JSON.parse(e.dataTransfer.getData("text/plain")); place(d.from, d.idx, d.name, toId, toIdx); } catch {} });
     node.addEventListener("click", e => { e.stopPropagation(); if (sel) { const s0 = sel; sel = null; place(s0.from, s0.idx, s0.name, toId, toIdx); } });
   };
+  let left = [];
+  const closePicker = () => { const o = $("#seat-picker"); if (o) o.remove(); document.removeEventListener("keydown", pickerKey); };
+  const pickerKey = e => { if (e.key === "Escape") closePicker(); };
+  function openPicker(tableId, idx) {
+    closePicker(); const r = byId(tableId); if (!r) return;
+    const pick = name => { closePicker(); place(null, null, name, tableId, idx); };
+    const grid = el("div", { class: "pick-grid" }), q = el("input", { type: "search", placeholder: "Rechercher un invité…", "aria-label": "Rechercher un invité" });
+    const free = el("input", { type: "text", maxlength: "60", placeholder: "ou saisissez un autre nom", "aria-label": "Autre nom" });
+    const draw = () => { const t = norm(q.value); grid.replaceChildren(...left.filter(n => !t || norm(n).includes(t)).map(n => el("button", { type: "button", class: "pick-chip", onclick: () => pick(n) }, el("i", { text: initials(n), style: "background:" + colorOf(n) }), el("span", { text: n })))); if (!grid.children.length) grid.append(el("p", { class: "hint", text: left.length ? "Aucun invité ne correspond." : "Tous les invités sont déjà placés." })); };
+    q.addEventListener("input", draw); draw();
+    const addFree = () => { const v = free.value.trim(); if (v) pick(v); };
+    free.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addFree(); } });
+    const ov = el("div", { id: "seat-picker", class: "picker-ov", role: "dialog", "aria-modal": "true", "aria-label": "Ajouter un invité à " + r.name, onclick: e => { if (e.target === ov) closePicker(); } },
+      el("div", { class: "picker" },
+        el("div", { class: "pick-head" }, el("h3", { text: "Ajouter à « " + r.name + " »" + (idx != null ? " · place " + (idx + 1) : "") }), el("button", { type: "button", class: "pick-x", "aria-label": "Fermer", text: "×", onclick: closePicker })),
+        q, grid, el("div", { class: "pick-free" }, free, el("button", { type: "button", class: "btn small", text: "Ajouter", onclick: addFree }))));
+    document.body.append(ov); document.addEventListener("keydown", pickerKey); setTimeout(() => q.focus(), 30);
+  }
+  const addBadge = (r) => el("button", { type: "button", class: "t-add", "aria-label": "Ajouter un invité à " + r.name, title: "Ajouter un invité", text: "+", onclick: e => { e.stopPropagation(); openPicker(r.id, null); } });
+  const emptySeat = (r, i) => el("button", { type: "button", class: "empty-seat", "aria-label": "Place libre " + (i + 1) + " : ajouter un invité", text: "+", onclick: e => { e.stopPropagation(); if (sel) { const s0 = sel; sel = null; place(s0.from, s0.idx, s0.name, r.id, i); } else openPicker(r.id, i); } });
+  const tabs = [];
   const placed = new Set();
   rows.forEach(r => {
     if (/honneur/i.test(r.name || "")) {   // table d'honneur : les mariés au centre, côte à côte, invités de part et d'autre
       const g = rawSeats(r), count = g.filter(Boolean).length, cap = Math.max(Number(r.capacity) || 0, 2), slots = Math.max(cap - 2, g.length), m = slots + 2, sp = 60, W = Math.max(320, m * sp + 40), H = 180;
       g.filter(Boolean).forEach(x => placed.add(norm(x)));
       const Lc = Math.ceil(slots / 2), x0 = W / 2 - (m - 1) * sp / 2, X = pos => x0 + pos * sp, posOfSlot = k => (k % 2 === 0 ? Lc - 1 - k / 2 : Lc + 2 + (k - 1) / 2);
-      const t = el("div", { class: "seat-table honneur" + (count + 2 > cap ? " full" : ""), style: "width:" + W + "px;height:" + H + "px" }, el("div", { class: "t-disc" }, el("b", { text: r.name }), el("span", { text: (count + 2) + " / " + cap })));
+      const t = el("div", { class: "seat-table honneur" + (count + 2 > cap ? " full" : ""), style: "width:" + W + "px;height:" + H + "px" }, el("div", { class: "t-disc" }, el("b", { text: r.name }), el("span", { text: (count + 2) + " / " + cap }), addBadge(r)));
       [["Cassiana", Lc], ["Matthieu", Lc + 1]].forEach(([nm, pos]) => t.append(el("div", { class: "seat marie", style: "left:" + X(pos) + "px;top:42px" }, el("div", { class: "av marie", title: nm }, el("i", { text: nm[0] }), el("span", { text: nm })))));
       for (let k = 0; k < slots; k++) {
         const seat = el("div", { class: "seat", style: "left:" + X(posOfSlot(k)) + "px;top:42px" });
-        if (g[k]) seat.append(avatar(g[k], r.id, false, k)); else seat.append(el("i", { class: "empty-seat", "aria-hidden": "true" }));
+        if (g[k]) seat.append(avatar(g[k], r.id, false, k)); else seat.append(emptySeat(r, k));
         zone(seat, r.id, k); t.append(seat);
       }
-      zone(t, r.id, null); plan.append(t); return;
+      zone(t, r.id, null); plan.append(t); tabs.push({ r, t, W, H }); return;
     }
     const g = rawSeats(r), cap = Number(r.capacity) || 0, n = Math.max(cap, g.length), R = 96, rect = r.shape === "Rectangulaire", W = rect ? 336 : 280, H = rect ? 232 : 280, count = g.filter(Boolean).length;
     g.filter(Boolean).forEach(x => placed.add(norm(x)));
     const t = el("div", { class: "seat-table" + (rect ? " rect" : "") + (count > cap && cap ? " full" : ""), style: "width:" + W + "px;height:" + H + "px" },
-      el("div", { class: "t-disc" }, el("b", { text: r.name }), el("span", { text: count + " / " + (cap || "?") })));
+      el("div", { class: "t-disc" }, el("b", { text: r.name }), el("span", { text: count + " / " + (cap || "?") }), addBadge(r)));
     for (let i = 0; i < n; i++) {
       let x, y, topRow = false;
       if (rect) {
@@ -419,20 +441,55 @@ async function seatPlan(rows) {
         x = W / 2 + (onTop ? (k - (cnt - 1) / 2) : ((cnt - 1) / 2 - k)) * sp; y = H / 2 + (onTop ? -62 : 62); topRow = onTop;
       } else { const ang = -Math.PI / 2 + i * 2 * Math.PI / n; x = W / 2 + R * Math.cos(ang); y = H / 2 + R * Math.sin(ang); }
       const seat = el("div", { class: "seat" + (topRow ? " top" : ""), style: "left:" + x + "px;top:" + y + "px" });
-      if (g[i]) seat.append(avatar(g[i], r.id, cap && i >= cap, i)); else seat.append(el("i", { class: "empty-seat", "aria-hidden": "true" }));
+      if (g[i]) seat.append(avatar(g[i], r.id, cap && i >= cap, i)); else seat.append(emptySeat(r, i));
       zone(seat, r.id, i); t.append(seat);
     }
-    zone(t, r.id, null); plan.append(t);
+    zone(t, r.id, null); plan.append(t); tabs.push({ r, t, W, H });
   });
   // invités ayant répondu « oui » mais pas encore placés
   let names = [];
   try { const gl = await orgStore.list("org_guests"); names = [...new Set(sortRows("guests", gl).filter(x => x.presence !== "NON").map(x => ((x.prenom || "") + " " + (x.nom || "")).trim()).filter(Boolean))]; } catch {}
   if (!names.length) { let rep = []; try { rep = await store.listResponses(); } catch {} names = [...new Set(rep.filter(x => x.presence !== "non").map(x => ((x.prenom || "") + " " + (x.nom || "")).trim()).filter(Boolean))]; }
-  const left = names.filter(n => !placed.has(norm(n)));
+  left = names.filter(n => !placed.has(norm(n)));
   const chips = el("div", { class: "pool-chips" }, ...left.map(n => avatar(n, null)));
   pool.append(chips, left.length ? "" : el("small", { text: names.length ? "Tout le monde est placé 🎉" : "Les invités qui confirment leur présence apparaîtront ici." }));
   zone(pool, null);
-  wrap.append(titled("h3", "cat", "Agneau couché", "Schéma des tables", 30), hint, pool, plan);
+  // --- disposition libre des tables : positions enregistrées dans le réglage « seat_layout »
+  let layout = {}; try { layout = JSON.parse((await store.getSetting("seat_layout")) || "{}") || {}; } catch {}
+  let editing = false, saveT = null;
+  const saveLayout = () => { clearTimeout(saveT); saveT = setTimeout(async () => { try { await store.setSetting("seat_layout", JSON.stringify(layout)); } catch (e) { showToast(orgErr(e)); } }, 400); };
+  const autoPos = () => {                       // flux automatique : tables rangées par lignes de 1000 px
+    const out = {}; let x = 10, y = 10, rowH = 0; const maxW = 1000;
+    tabs.forEach(({ r, W, H }) => { if (x + W > maxW && x > 10) { x = 10; y += rowH + 24; rowH = 0; } out[r.id] = { x, y }; x += W + 24; rowH = Math.max(rowH, H); });
+    return out;
+  };
+  const scroller = el("div", { class: "seat-scroll" }, plan);
+  const applyLayout = () => {
+    const free = editing || Object.keys(layout).length > 0;
+    plan.classList.toggle("free", free); plan.classList.toggle("editing", editing);
+    if (!free) { plan.style.height = ""; plan.style.width = ""; tabs.forEach(({ t }) => { t.style.left = ""; t.style.top = ""; }); return; }
+    const auto = autoPos(); let mw = 0, mh = 0;
+    tabs.forEach(({ r, t, W, H }) => { const p = layout[r.id] || auto[r.id]; t.style.left = p.x + "px"; t.style.top = p.y + "px"; mw = Math.max(mw, p.x + W); mh = Math.max(mh, p.y + H); });
+    plan.style.width = Math.max(mw + 10, 320) + "px"; plan.style.height = (mh + 20) + "px";
+  };
+  tabs.forEach(({ r, t, W, H }) => {
+    t.addEventListener("pointerdown", e => {
+      if (!editing || (e.button != null && e.button !== 0)) return;
+      e.preventDefault(); const auto = autoPos(), start = layout[r.id] || auto[r.id], sx = e.clientX, sy = e.clientY;
+      t.setPointerCapture(e.pointerId); t.classList.add("moving");
+      const move = ev => { const nx = Math.max(0, Math.round(start.x + ev.clientX - sx)), ny = Math.max(0, Math.round(start.y + ev.clientY - sy)); layout[r.id] = { x: nx, y: ny }; t.style.left = nx + "px"; t.style.top = ny + "px"; };
+      const up = () => { t.removeEventListener("pointermove", move); t.removeEventListener("pointerup", up); t.removeEventListener("pointercancel", up); t.classList.remove("moving"); Object.keys(layout).length < tabs.length && tabs.forEach(x => { if (!layout[x.r.id]) layout[x.r.id] = autoPos()[x.r.id]; }); applyLayout(); saveLayout(); };
+      t.addEventListener("pointermove", move); t.addEventListener("pointerup", up); t.addEventListener("pointercancel", up);
+    });
+  });
+  const editBtn = el("button", { type: "button", class: "btn small", text: "✥ Modifier la disposition des tables", onclick: () => {
+    editing = !editing; if (editing && !Object.keys(layout).length) { layout = autoPos(); saveLayout(); }
+    editBtn.textContent = editing ? "✓ Terminer la disposition" : "✥ Modifier la disposition des tables"; editBtn.classList.toggle("solid", editing);
+    resetBtn.hidden = !editing && !Object.keys(layout).length; hint.textContent = editing ? "Glissez chaque table à l'endroit voulu, comme dans la salle. Les invités ne se déplacent pas pendant ce mode." : HINT; applyLayout();
+  } });
+  const resetBtn = el("button", { type: "button", class: "btn small", text: "Remettre en grille", hidden: !Object.keys(layout).length, onclick: () => { layout = {}; editing = false; editBtn.textContent = "✥ Modifier la disposition des tables"; editBtn.classList.remove("solid"); resetBtn.hidden = true; hint.textContent = HINT; applyLayout(); saveLayout(); } });
+  applyLayout();
+  wrap.append(titled("h3", "cat", "Agneau couché", "Schéma des tables", 30), el("div", { class: "seat-tools" }, editBtn, resetBtn), hint, pool, scroller);
   return wrap;
 }
 
