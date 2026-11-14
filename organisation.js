@@ -678,6 +678,17 @@ async function renderPhotoAdmin() {
         el("p", { class: "hint", text: isPub ? "Les invités voient l'onglet « Photos ». Les onglets Logement, S'y rendre, Dress code et Chants sont masqués, puisque le mariage est passé." : "Déposez vos photos ci-dessous, puis publiez la galerie quand vous êtes prêts. L'onglet « Photos » apparaîtra pour tout le monde." })),
       el("button", { class: "btn " + (isPub ? "" : "solid"), type: "button", text: isPub ? "Retirer la galerie du site" : "Publier la galerie sur le site", onclick: async () => {
         try { await store.setSetting("photos_public", isPub ? "0" : "1"); showToast(isPub ? "Galerie retirée du site" : "Galerie publiée"); renderPhotoAdmin(); applyPostWedding(); } catch (e) { showToast(orgErr(e)); } } })));
+  let curLink = ""; try { curLink = await store.getSetting("photos_link"); } catch {}
+  const lin = el("input", { type: "url", placeholder: "https://photos.app.goo.gl/… (Google Photos, Drive, Dropbox…)", "aria-label": "Lien de l'album photo", style: "min-width:0;flex:1 1 260px" }); lin.value = curLink || "";
+  const linMsg = el("p", { class: "hint", role: "status" });
+  const linSave = el("button", { class: "btn small solid", type: "button", text: "Enregistrer le lien", onclick: async () => {
+    const raw = lin.value.trim(), u = raw ? cleanUrl(raw) : "";
+    if (u === false) { linMsg.textContent = "Ce lien n'est pas valide : collez l'adresse complète de l'album."; return; }
+    try { await store.setSetting("photos_link", u || ""); lin.value = u || ""; linMsg.textContent = u ? "✓ Lien enregistré : les invités verront un bouton dans l'onglet Photos." : "✓ Lien retiré."; applyPostWedding(); } catch (e) { linMsg.textContent = "⚠ " + orgErr(e); }
+  } });
+  host.append(el("div", { class: "card", style: "margin-bottom:14px;padding:12px 14px" }, el("h3", { text: "Lien de l'album photo", style: "margin:0 0 4px" }),
+    el("p", { class: "hint", text: "Collez le lien partagé d'un album (Google Photos, Drive…). Les invités l'ouvrent depuis l'onglet Photos pour voir toutes les photos et y ajouter les leurs. Il s'affiche dès que la galerie est publiée." }),
+    el("div", { style: "display:flex;gap:8px;flex-wrap:wrap;margin-top:8px" }, lin, linSave), linMsg));
   const drop = el("label", { class: "drop", for: "photo-input" }, el("b", { text: "Ajouter des photos" }), el("span", { text: "Cliquez ou glissez vos photos ici. Plusieurs à la fois. Elles sont allégées automatiquement." }));
   const input = el("input", { id: "photo-input", type: "file", accept: "image/*", multiple: true, hidden: true });
   const status = el("p", { class: "hint", role: "status" });
@@ -737,10 +748,13 @@ document.addEventListener("keydown", e => { const lb = $("#lightbox"); if (!lb |
 /* Après le mariage : l'onglet Photos remplace les onglets pratiques */
 async function applyPostWedding() {
   if (!remote) return;
-  let pub = "0", photos = [];
+  let pub = "0", photos = [], link = "";
   try { pub = await store.getSetting("photos_public"); } catch {}
-  if (pub === "1") { try { photos = await listPhotos(); } catch {} }
-  const on = pub === "1" && photos.length > 0;
+  if (pub === "1") { try { photos = await listPhotos(); } catch {} try { link = await store.getSetting("photos_link"); } catch {} }
+  link = (typeof cleanUrl === "function" && cleanUrl(link)) || "";
+  const pl = $("#photos-link"), pa = $("#photos-link-a"); if (pl && pa) { pl.hidden = !link; if (link) pa.href = link; }
+  const on = pub === "1" && (photos.length > 0 || !!link);
+  const ps = $("#photos-sub"); if (ps) ps.textContent = photos.length ? "Merci d'avoir partagé cette journée avec nous. Cliquez sur une photo pour l'agrandir." : "Merci d'avoir partagé cette journée avec nous.";
   galleryPhotos = photos;
   document.body.classList.toggle("post", on);
   const li = $("#nav-photos"); if (li) li.hidden = !on;

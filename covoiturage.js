@@ -59,6 +59,13 @@
   const isPhone = s => /^(\+?\d[\d .-]{7,17}\d)$/.test(String(s).trim());
   const isMail = s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s).trim());
 
+  const DEF = { aller: ["L'église", "Le domaine"], retour: ["Le domaine", "Mon hébergement"] };
+  function route(r) {
+    const parts = String(r.lieu || "").split(" → ");
+    if (parts.length === 2 && parts[0] && parts[1]) return { from: parts[0], to: parts[1] };
+    const d = DEF[r.sens === "retour" ? "retour" : "aller"];      // anciennes annonces : un seul lieu
+    return r.type === "demande" ? { from: r.lieu, to: d[1] } : { from: d[0], to: r.lieu };
+  }
   function card(r) {
     const m = mine()[r.id]; const full = r.type === "offre" && Number(r.places) <= 0;
     const kind = r.type === "demande" ? "Cherche une place" : full ? "Complet" : r.places + " place" + (r.places > 1 ? "s" : "") + " disponible" + (r.places > 1 ? "s" : "");
@@ -103,9 +110,11 @@
       });
       extra.append(det);
     }
+    const rt = route(r);
     return el("article", { class: "cv-item" + (full ? " full" : "") + (r.type === "demande" ? " ask" : "") },
-      el("div", { class: "cv-top" }, el("b", { text: r.prenom }), el("span", { class: "cv-badge", text: kind })),
-      el("p", { class: "cv-line", text: (r.type === "demande" ? "Part de " : "Va à ") + r.lieu + (r.heure ? " · vers " + r.heure : "") }),
+      el("div", { class: "cv-top" }, el("span", { class: "cv-who" }, el("b", { text: r.prenom }), el("span", { class: "cv-kind", text: r.type === "demande" ? "cherche une place" : "propose" })), el("span", { class: "cv-badge", text: kind })),
+      el("dl", { class: "cv-route" }, el("dt", { text: "Départ" }), el("dd", { text: rt.from }), el("span", { class: "ar", "aria-hidden": "true", text: "↓" }), el("dt", { text: "Arrivée" }), el("dd", { text: rt.to })),
+      r.heure ? el("p", { class: "cv-line", text: "Vers " + r.heure }) : "",
       r.note ? el("p", { class: "cv-note", text: r.note }) : "",
       el("p", { class: "cv-contact", text: "Contact : " + ct }),
       actions, extra, own);
@@ -150,9 +159,10 @@
     form.addEventListener("submit", async e => {
       e.preventDefault(); msg.hidden = true;
       const f = new FormData(form); if (f.get("website")) return; // piège à robots
-      const type = f.get("type"), sens = f.get("sens"), prenom = clean(f.get("prenom")), lieu = clean(f.get("lieu")), heure = clean(f.get("heure")), contact = clean(f.get("contact")), note = clean(f.get("note"));
+      const type = f.get("type"), sens = f.get("sens"), prenom = clean(f.get("prenom")), depart = clean(f.get("depart")), arrivee = clean(f.get("arrivee")), heure = clean(f.get("heure")), contact = clean(f.get("contact")), note = clean(f.get("note"));
       let places = type === "offre" ? parseInt(f.get("places"), 10) : 0;
-      if (!prenom || !lieu || !contact) return showMsg(msg, "Merci de remplir le prénom, le lieu de départ et un moyen de vous contacter.", "err");
+      if (!prenom || !depart || !arrivee || !contact) return showMsg(msg, "Merci de remplir le prénom, le lieu de départ, le lieu d'arrivée et un moyen de vous contacter.", "err");
+      const lieu = depart.slice(0, 38) + " → " + arrivee.slice(0, 38);
       if (!isPhone(contact) && !isMail(contact)) return showMsg(msg, "Le contact doit être un numéro de téléphone ou une adresse e-mail valide.", "err");
       if (type === "offre" && !(places >= 1 && places <= 8)) return showMsg(msg, "Indiquez entre 1 et 8 places.", "err");
       if (!f.get("ok")) return showMsg(msg, "Cochez la case pour confirmer que ces informations peuvent être visibles des invités.", "err");
@@ -162,19 +172,24 @@
       try {
         await api.add({ id, type, sens, prenom, lieu, heure: heure || null, places, contact, note: note || null, edit_code });
         const m = mine(); m[id] = edit_code; saveMine(m); try { localStorage.setItem("mariage:covoit-last", String(Date.now())); } catch {}
-        form.reset(); closeForm();
+        form.reset(); auto = { d: "", a: "" }; closeForm(); syncType();
         toast("Annonce publiée. Merci ! Vous pourrez la retirer depuis cet appareil."); load();
       } catch (err) {
         showMsg(msg, /covoiturage/i.test(String(err && err.message)) || (err && err.code === "PGRST205") ? "Le covoiturage n'est pas encore activé sur le site. Revenez plus tard." : "Publication impossible pour le moment. Réessayez dans un instant.", "err");
       }
     });
     const typeSel = form.querySelector("[name=type]"), placesLbl = $("#cv-places-l");
-    const lieuT = $("#cv-lieu-t"), lieuIn = form.querySelector("[name=lieu]");
-    const syncType = () => {
-      const offre = typeSel.value === "offre"; placesLbl.hidden = !offre;
-      lieuT.textContent = offre ? "Où allez-vous ?" : "D'où partez-vous ?";
-      lieuIn.placeholder = offre ? "ex. Paris 12e, Meaux, Lagny-sur-Marne…" : "ex. l'église, Lagny-sur-Marne, un hôtel…";
+    const dep = form.querySelector("[name=depart]"), arr = form.querySelector("[name=arrivee]"), sensSel = form.querySelector("[name=sens]");
+    let auto = { d: "", a: "" };
+    const syncSens = () => {
+      const d = DEF[sensSel.value]; if (!d) return;
+      if (!dep.value || dep.value === auto.d) dep.value = d[0];
+      if (!arr.value || arr.value === auto.a) arr.value = sensSel.value === "retour" ? "" : d[1];
+      auto = { d: d[0], a: sensSel.value === "retour" ? "" : d[1] };
+      arr.placeholder = sensSel.value === "retour" ? "ex. mon hôtel, Meaux, Paris 12e…" : "ex. le domaine";
     };
+    sensSel.addEventListener("change", syncSens);
+    const syncType = () => { const offre = typeSel.value === "offre"; placesLbl.hidden = !offre; syncSens(); };
     typeSel.addEventListener("change", syncType); syncType();
   }
 
