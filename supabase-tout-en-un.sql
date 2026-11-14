@@ -387,3 +387,8 @@ alter table public.org_deco enable row level security;
 drop policy if exists org_deco_admin on public.org_deco;
 create policy org_deco_admin on public.org_deco for all to authenticated using (public.is_admin()) with check (public.is_admin());
 revoke all on public.org_deco from anon;
+
+-- ============================================================
+-- 19. DÉCORATION ET PAPETERIE : montant payé
+-- ============================================================
+alter table public.org_deco add column if not exists paid numeric;

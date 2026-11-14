@@ -99,7 +99,7 @@ const ORG = {
   deco: { table: "org_deco", label: "Décoration et papeterie", order: "created_at", defaults: { qty: 1 }, fields: [
     { k: "name", l: "Article", t: "text", req: true, wide: true, ph: "ex. miroirs, bougies, menus…" },
     { k: "link", l: "Lien", t: "text", wide: true, ph: "https://… (page du produit)" },
-    { k: "unit", l: "Prix à l'unité (€)", t: "number" }, { k: "qty", l: "Nombre total", t: "number" },
+    { k: "unit", l: "Prix à l'unité (€)", t: "number" }, { k: "qty", l: "Nombre total", t: "number" }, { k: "paid", l: "Payé (€)", t: "number" },
     { k: "notes", l: "Notes", t: "text" }] },
   vendors: { table: "org_vendors", label: "Prestataires", order: "role", defaults: { status: "À contacter", role: "Autre" }, fields: [
     { k: "name", l: "Prestataire", t: "text", req: true, wide: true }, { k: "role", l: "Catégorie", t: "select", o: ROLES, newable: true },
@@ -310,7 +310,8 @@ function orgSummary(key, rows) {
     if (rows.length) box.append(el("div", { class: "bar big" }, el("i", { style: "width:" + Math.round(done / rows.length * 100) + "%" })));
   } else if (key === "deco") {
     const articles = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0), total = rows.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0);
-    chip("références", String(rows.length)); chip("articles au total", String(articles)); chip("coût total", eur2(total));
+    const paidD = rows.reduce((a, r) => a + (Number(r.paid) || 0), 0);
+    chip("références", String(rows.length)); chip("articles au total", String(articles)); chip("prévu", eur2(total)); chip("payé", eur2(paidD)); chip("reste à payer", eur2(Math.max(0, total - paidD)), total - paidD > 0.005 ? "warn" : "");
   } else if (key === "budget") {
     const s = f => rows.reduce((a, r) => a + (Number(r[f]) || 0), 0), est = s("estimated"), paid = s("paid"), total = est;
     const fam = s("family"); chip("prévu", eur(est)); chip("pris en charge par la famille", eur(fam)); chip("à notre charge", eur(Math.max(0, est - fam))); chip("payé", eur(paid)); chip("reste à payer", eur(Math.max(0, total - paid)), total - paid > 0 ? "warn" : "");
@@ -546,7 +547,7 @@ async function renderOrgInner(key) {
     const badge = st => { const c = RETAINED.includes(st) ? "ok" : st === "Refusé (NON)" ? "no" : /attente|donner/i.test(st || "") ? "wait" : ""; return el("span", { class: "st-badge " + c, text: st || "—" }); };
     const sumFor = r => {
       if (key === "vendors") return [el("b", { text: r.name }), badge(r.status), el("span", { class: "num", text: r.price != null ? eur(r.price) : "" }), el("span", { class: "sm", text: r.phone || r.email || r.contact || r.location || "" })];
-      if (key === "deco") { const tot = (Number(r.unit) || 0) * (Number(r.qty) || 0), sm = el("span", { class: "sm" }); if (isUrl(r.link)) sm.append(el("a", { class: "lnk", href: r.link, target: "_blank", rel: "noopener noreferrer", title: r.link, text: "Voir le lien ↗", onclick: e => e.stopPropagation() })); return [el("b", { text: r.name }), sm, el("span", { class: "num", text: (r.qty || 0) + " × " + eur2(r.unit || 0) }), el("span", { class: "num", text: "= " + eur2(tot) })]; }
+      if (key === "deco") { const tot = (Number(r.unit) || 0) * (Number(r.qty) || 0), pd = Number(r.paid) || 0, sm = el("span", { class: "sm" }); if (isUrl(r.link)) sm.append(el("a", { class: "lnk", href: r.link, target: "_blank", rel: "noopener noreferrer", title: r.link, text: "Voir le lien ↗", onclick: e => e.stopPropagation() })); const st = tot > 0 && pd >= tot - 0.005 ? "Payé" : pd > 0 ? "Partiel" : "À payer"; return [el("b", { text: r.name }), sm, el("span", { class: "num", text: (r.qty || 0) + " × " + eur2(r.unit || 0) + " = " + eur2(tot) }), el("span", { class: "st-badge " + (st === "Payé" ? "ok" : st === "Partiel" ? "wait" : "no"), text: st === "Partiel" ? "Payé " + eur2(pd) : st })]; }
       if (key === "budget") return [el("b", { text: r.item }), el("span", { class: "sm", text: r.family ? "famille " + eur(r.family) : "" }), el("span", { class: "num", text: "prévu " + eur(r.estimated || 0) }), el("span", { class: "num", text: "payé " + eur(r.paid || 0) })];
       const g = guestsOf(r).length; return [el("b", { text: r.name }), el("span", { class: "sm", text: r.shape || "Ronde" }), el("span", { class: "num", text: g + " / " + (r.capacity || "?") }), el("span", { class: "sm", text: "" })];
     };
