@@ -121,7 +121,7 @@ const ORG = {
     { k: "moment", l: "Moment de la journée", t: "select", o: MOMENTS_GAME }, { k: "start_time", l: "Heure prévue", t: "time" }, { k: "duration", l: "Durée (min)", t: "number" },
     { k: "place", l: "Lieu", t: "text", ph: "ex. jardin, salle, piste de danse" }, { k: "people", l: "Participants", t: "text", ph: "ex. tout le monde, les enfants, 2 équipes" }, { k: "owner", l: "Qui l'anime", t: "text" },
     { k: "material", l: "Matériel", t: "text", wide: true }, { k: "ready", l: "Matériel prêt", t: "check" }, { k: "price", l: "Prix (€)", t: "number" },
-    { k: "prize", l: "Lots à gagner", t: "text" }, { k: "rules", l: "Règles / déroulé", t: "long", wide: true }, { k: "notes", l: "Notes", t: "text" }] },
+    { k: "prize", l: "Lots à gagner", t: "text" }, { k: "rules", l: "Règles / déroulé", t: "long", wide: true }, { k: "notes", l: "Notes", t: "long", wide: true }] },
   seating: { table: "org_tables", label: "Plan de tables", order: "position", defaults: { capacity: 10, shape: "Ronde" }, fields: [
     { k: "name", l: "Nom de la table", t: "text", req: true, ph: "ex. Table 1, Famille Martin, Amis…" }, { k: "shape", l: "Forme", t: "select", o: ["Ronde", "Rectangulaire"] }, { k: "capacity", l: "Nombre de places", t: "number" },
     { k: "guests", l: "Invités", t: "long", wide: true }, { k: "notes", l: "Notes", t: "text" }] },
@@ -376,9 +376,11 @@ function orgSummary(key, rows, deco) {
     chip("faites", done + " / " + rows.length, "c-ok"); chip("en cours", String(rows.filter(r => statusOf(r) === "En cours").length), "c-wait"); chip("en attente de retour", String(rows.filter(r => statusOf(r) === "En attente de retour").length), "c-alg"); chip("en retard", String(late), late ? "warn" : "good"); chip("avant le mariage", Math.max(0, daysBetween(todayISO(), WEDDING_ISO)) + " j", "c-kid");
     if (rows.length) box.append(el("div", { class: "bar big" }, el("i", { style: "width:" + Math.round(done / rows.length * 100) + "%" })));
   } else if (key === "deco") {
-    const articles = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0), total = rows.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0);
-    const paidD = rows.reduce((a, r) => a + (Number(r.paid) || 0), 0);
-    chip("références", String(rows.length), "c-all"); chip("articles au total", String(articles), "c-kid"); chip("prévu", eur2(total), "c-link"); const resteD = total - paidD; chip("payé", eur2(paidD), total > 0 && resteD <= 0.005 ? "good" : "c-ok"); chip("reste à payer", eur2(Math.max(0, resteD)), resteD > 0.005 ? "warn" : "good");
+    const articles = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0), total = rows.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0), env = deco ? deco.env : 0;
+    const paidD = rows.reduce((a, r) => a + (Number(r.paid) || 0), 0), resteD = total - paidD;
+    if (env > 0) { chip("budget global déco + papeterie", eur2(env), "c-link"); chip(env - total >= 0 ? "encore disponible" : "dépassement", eur2(Math.abs(env - total)), env - total >= 0 ? "good" : "warn"); }
+    chip("références", String(rows.length), "c-all"); chip("articles au total", String(articles), "c-kid"); chip("dépenses prévues", eur2(total), "c-alg");
+    chip("payé", eur2(paidD), total > 0 && resteD <= 0.005 ? "good" : "c-ok"); chip("reste à payer", eur2(Math.max(0, resteD)), resteD > 0.005 ? "warn" : "good");
   } else if (key === "budget") {
     const s = f => rows.reduce((a, r) => a + (Number(r[f]) || 0), 0), dT = deco ? deco.total : 0, dP = deco ? deco.paid : 0;
     const est = s("estimated") + dT, paid = s("paid") + dP, total = est, fam = s("family");   // le budget global inclut l'onglet « Décoration et papeterie »
@@ -693,7 +695,8 @@ async function renderOrg(key) {
   }
   return r;
 }
-async function decoStats() { try { const l = await orgStore.list("org_deco"); return { total: l.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0), paid: l.reduce((a, r) => a + (Number(r.paid) || 0), 0), count: l.length }; } catch { return null; } }
+const getDecoBudget = async () => { try { return Number(String((await store.getSetting("deco_budget")) || "").replace(",", ".")) || 0; } catch { return 0; } };
+async function decoStats() { try { const l = await orgStore.list("org_deco"), env = await getDecoBudget(), items = l.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0); return { items, env, total: env > 0 ? Math.max(env, items) : items, paid: l.reduce((a, r) => a + (Number(r.paid) || 0), 0), count: l.length }; } catch { return null; } }
 function gamesBoard(rows) {
   const hm = t => String(t || "").slice(0, 5).replace(":", "h"), ch = rows.filter(r => r.chosen), idea = rows.filter(r => !r.chosen);
   const box = el("section", { class: "card gb" }, el("h3", { text: "Programme des jeux" }));
@@ -755,8 +758,14 @@ async function renderOrgInner(key) {
   M.fields.filter(f => f.t === "select").forEach(f => rows.forEach(r => { if (r[f.k] && !f.o.includes(r[f.k])) f.o.push(r[f.k]); }));
   let tlGames = [];
   if (key === "timeline") { try { tlGames = await orgStore.list("org_games"); } catch {} if (tok !== orgTok) return; const gf = M.fields.find(f => f.k === "game"); gf.o.length = 0; tlGames.forEach(g => { if (g.name && !gf.o.includes(g.name)) gf.o.push(g.name); }); }
-  const decoS = key === "budget" ? await decoStats() : null; if (tok !== orgTok) return;
+  const decoS = key === "budget" ? await decoStats() : key === "deco" ? { env: await getDecoBudget() } : null; if (tok !== orgTok) return;
   const sumBox = orgSummary(key, rows, decoS); host.append(sumBox);
+  if (key === "deco") {
+    const bi = el("input", { type: "number", min: "0", step: "any", inputmode: "decimal", "aria-label": "Budget global décoration et papeterie (€)", placeholder: "ex. 700" }); bi.value = decoS.env || "";
+    const bm = el("span", { class: "hint" });
+    bi.addEventListener("change", async () => { const v = Number(String(bi.value).replace(",", ".")) || 0; try { await store.setSetting("deco_budget", v > 0 ? String(v) : ""); showToast("Budget global enregistré"); renderOrg("deco"); } catch (e) { showToast(orgErr(e)); } });
+    host.append(el("div", { class: "card deco-env" }, el("div", { class: "h-row" }, el("b", { text: "Budget global décoration et papeterie" }), infoTip("C'est l'enveloppe que vous prévoyez pour toute la décoration et la papeterie, sans détailler. Elle est comptée dans le budget global. Les articles ci-dessous servent à suivre ce que vous dépensez réellement dessus (si vous dépassez l'enveloppe, c'est le total des articles qui est compté).")), el("label", { class: "deco-env-in" }, bi, el("span", { text: "€" })), bm));
+  }
 
   // barre d'outils : filtres (tâches) et modèle
   const bar = el("div", { class: "org-tools" });
@@ -919,8 +928,9 @@ async function renderOrgInner(key) {
       card.append(head, el("div", { class: "org-card-body" }, g, acts));
       list.append(card);
     });
-    if (key === "budget" && decoS && decoS.count) {
-      const dc = el("div", { class: "card deco-link" }, el("b", { text: "Décoration et papeterie" }), el("span", { class: "sm", text: "compté depuis l'onglet séparé · " + decoS.count + " article" + (decoS.count > 1 ? "s" : "") }), el("span", { class: "num", text: "prévu " + eur(decoS.total) }), el("span", { class: "num pay " + payCls(decoS.total, decoS.paid), text: "● payé " + eur(decoS.paid) }), el("button", { class: "btn small", type: "button", text: "Ouvrir l'onglet", onclick: () => renderOrg("deco") }));
+    if (key === "budget" && decoS && (decoS.count || decoS.env)) {
+      const dc = el("div", { class: "card deco-link" }, el("b", { text: "Décoration et papeterie" }), el("span", { class: "sm", text: "compté depuis l'onglet séparé" + (decoS.env > 0 && decoS.items > decoS.env ? " · dépassement du budget global" : "") }),
+        el("span", { class: "num", text: (decoS.env > 0 ? "budget global " : "prévu ") + eur(decoS.total) }), el("span", { class: "num pay " + payCls(decoS.total, decoS.paid), text: "● payé " + eur(decoS.paid) }), el("button", { class: "btn small", type: "button", text: "Ouvrir l'onglet", onclick: () => renderOrg("deco") }));
       list.prepend(dc);
     }
     host.append(list);
@@ -1382,15 +1392,22 @@ async function dedupeOnce() {
 async function moveDecoBudgetOnce() {
   if ((await store.getSetting("deco_moved_v1")) === "1") return 0;
   const rows = (await orgStore.list("org_budget")).filter(r => /^(deco|decoration|papeterie)\b/.test(norm(r.cat)));
-  const names = new Set((await orgStore.list("org_deco")).map(d => norm(d.name)));
-  let n = 0;
-  for (const r of rows) {
-    const note = ["Repris du budget (" + (r.cat || "").trim() + ")", r.vendor ? "Prestataire : " + r.vendor : "", r.family ? "Part famille : " + eur(r.family) : "", r.notes || ""].filter(Boolean).join(" · ");
-    if (!names.has(norm(r.item))) { await orgStore.insert("org_deco", { name: r.item || "Sans nom", qty: 1, unit: Number(r.estimated) || 0, paid: Number(r.paid) || 0, notes: note, ...(r.link ? { link: r.link } : {}) }); names.add(norm(r.item)); }
-    await orgStore.remove("org_budget", r.id); n++;
-  }
-  await store.setSetting("deco_moved_v1", "1");
-  return n;
+  const sum = rows.reduce((a, r) => a + (Number(r.estimated) || 0), 0), cur = await getDecoBudget();
+  if (sum > 0) await store.setSetting("deco_budget", String(cur + sum));   // leurs montants deviennent le budget global de l'onglet « Décoration et papeterie »
+  for (const r of rows) await orgStore.remove("org_budget", r.id);
+  await store.setSetting("deco_moved_v1", "1"); await store.setSetting("deco_envelope_v1", "1");
+  return rows.length;
+}
+/* Corrige la première version du report : les lignes « Repris du budget » avaient été ajoutées comme de vrais articles ;
+   ce sont en fait des budgets globaux. On les transforme en budget global et on les retire des articles. */
+async function fixDecoEnvelopeOnce() {
+  if ((await store.getSetting("deco_envelope_v1")) === "1") return 0;
+  const items = (await orgStore.list("org_deco")).filter(r => /^Repris du budget/.test(String(r.notes || "")));
+  const sum = items.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0), cur = await getDecoBudget();
+  if (sum > 0) await store.setSetting("deco_budget", String(cur + sum));
+  for (const r of items) await orgStore.remove("org_deco", r.id);
+  await store.setSetting("deco_envelope_v1", "1");
+  return items.length;
 }
 /* Vide le budget une seule fois : les mariés le saisissent eux-mêmes. */
 async function clearBudgetOnce() {
@@ -1405,7 +1422,7 @@ function seedFromSheet() { return seeding || (seeding = seedInner().finally(() =
 async function seedInner() {
   try {
     await clearBudgetOnce();
-    try { const moved = await moveDecoBudgetOnce(); if (moved) { showToast(moved + " ligne" + (moved > 1 ? "s" : "") + " du budget reportée" + (moved > 1 ? "s" : "") + " dans « Décoration et papeterie » (plus de double comptage)."); if (typeof orgState !== "undefined" && $("#org-body") && !$("#org-body").closest("[hidden]")) renderOrg(orgState.key); } } catch (e) { console.warn("Report déco :", e); }
+    try { await fixDecoEnvelopeOnce(); const moved = await moveDecoBudgetOnce(); if (moved) { showToast(moved + " ligne" + (moved > 1 ? "s" : "") + " du budget reportée" + (moved > 1 ? "s" : "") + " dans « Décoration et papeterie » (plus de double comptage)."); if (typeof orgState !== "undefined" && $("#org-body") && !$("#org-body").closest("[hidden]")) renderOrg(orgState.key); } } catch (e) { console.warn("Report déco :", e); }
     if ((await store.getSetting("seed_sheet_v1")) === "1") { await dedupeOnce(); return; }
     const games = await orgStore.list("org_games"), gn = new Set(games.map(g => norm(g.name)));
     const addG = TPL.games().filter(g => !gn.has(norm(g.name)));
