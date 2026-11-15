@@ -1525,7 +1525,17 @@ document.addEventListener("click", e => { if (!e.target.closest(".print-wrap")) 
 /* avant impression : ouvrir les blocs repliables de la page et remplacer les champs des tableaux par leur texte (tout reste lisible, rien n'est coupé) */
 let _opened = [], _pv = [];
 window.preparePrint = () => {
-  if (_pv.length) return;   // déjà préparé (beforeprint peut être déclenché en plus de l'appel direct)
+  if (_pv.length) return;
+  const plan = document.querySelector("#org-body .seat-plan");   // plan de tables
+  if (plan && plan.offsetParent !== null) {
+    let z = 0.6;   // disposition en grille : les tables passent à la ligne, sur plusieurs pages si besoin (aucune table coupée)
+    if (plan.classList.contains("free")) {   // disposition libre (positions fixes) : tout le plan tient sur une page paysage
+      const w = Math.max(plan.scrollWidth, plan.offsetWidth), h = Math.max(plan.scrollHeight, plan.offsetHeight) + 200;   // + titre, zone « À placer » et débordement des places
+      z = Math.max(0.2, Math.min(1, 1020 / Math.max(w, 1), 600 / Math.max(h, 1)));
+    }
+    document.documentElement.style.setProperty("--print-zoom", z.toFixed(3));
+  }
+   // déjà préparé (beforeprint peut être déclenché en plus de l'appel direct)
   _opened = [...document.querySelectorAll(".panel.active details:not([open])")].filter(d => !d.classList.contains("org-card") && !d.classList.contains("org-addbox") && !d.classList.contains("org-invite"));
   _opened.forEach(d => d.open = true);
   document.querySelectorAll(".panel.active .org-table input:not(.sel-box), .panel.active .org-table select, .panel.active .org-table textarea").forEach(c => {
@@ -1534,6 +1544,7 @@ window.preparePrint = () => {
     c.after(v); c.classList.add("pv-hid"); _pv.push([c, v]);
   });
 };
-window.restorePrint = () => { _pv.forEach(([c, v]) => { c.classList.remove("pv-hid"); v.remove(); }); _pv = []; _opened.forEach(d => d.open = false); _opened = []; };
+window.restorePrint = () => {
+  document.documentElement.style.removeProperty("--print-zoom"); _pv.forEach(([c, v]) => { c.classList.remove("pv-hid"); v.remove(); }); _pv = []; _opened.forEach(d => d.open = false); _opened = []; };
 window.addEventListener("beforeprint", window.preparePrint);
 window.addEventListener("afterprint", window.restorePrint);
