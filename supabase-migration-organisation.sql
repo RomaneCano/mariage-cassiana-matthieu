@@ -199,6 +199,14 @@ revoke all on public.org_deco from anon;
 -- ============================================================
 alter table public.org_deco add column if not exists paid numeric;
 alter table public.org_tasks add column if not exists status text;
+alter table public.org_games add column if not exists moment text;
+alter table public.org_games add column if not exists start_time text;
+alter table public.org_games add column if not exists duration int;
+alter table public.org_games add column if not exists place text;
+alter table public.org_games add column if not exists owner text;
+alter table public.org_games add column if not exists ready boolean not null default false;
+alter table public.org_games add column if not exists prize text;
+alter table public.org_games add column if not exists rules text;
 alter table public.org_timeline add column if not exists end_time text;
 alter table public.org_timeline add column if not exists kind text;
 alter table public.org_timeline add column if not exists place text;

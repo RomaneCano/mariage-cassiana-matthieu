@@ -88,6 +88,7 @@ const STATUS = ["À contacter", "En attente de devis", "En attente de réponse",
 const RETAINED = ["Retenu (OUI)", "Réservé", "Acompte versé", "Soldé"];
 const WHO = ["Cassiana", "Matthieu", "Les deux", "Autre"];
 
+const MOMENTS_GAME = ["Après la cérémonie", "Cocktail", "Dîner", "Soirée dansante", "Fin de soirée"];
 const KINDS_TL = ["Préparatifs", "Photos", "Cérémonie", "Trajet", "Cocktail", "Repas", "Discours", "Jeu / animation", "Danse", "Logistique", "Autre"];
 const KIND_COL = { "Préparatifs": "#b9a77a", "Photos": "#8a9bb0", "Cérémonie": "#4f5020", "Trajet": "#9a8f80", "Cocktail": "#c58a4a", "Repas": "#a3592f", "Discours": "#7d6a9a", "Jeu / animation": "#c0605a", "Danse": "#d08aa0", "Logistique": "#7a8a6a", "Autre": "#8d8d80" };
 const STATUS_TASK = ["À faire", "En cours", "En attente de retour", "Terminé"];
@@ -115,9 +116,12 @@ const ORG = {
     { k: "presence", l: "Présence", t: "select", o: ["ATT", "OUI", "NON"], labels: { ATT: "En attente", OUI: "Présent(e)", NON: "Absent(e)" } },
     { k: "allergie", l: "Allergie", t: "long" }, { k: "adresse", l: "Adresse", t: "long" },
     { k: "envoi", l: "Invitation", t: "select", o: ["Courrier", "Lien", "Remise en main"] }, { k: "age", l: "Âge", t: "text" }, { k: "notes", l: "Notes", t: "long" }] },
-  games: { table: "org_games", label: "Jeux", order: "created_at", defaults: { chosen: false }, fields: [
-    { k: "chosen", l: "Retenu", t: "check" }, { k: "name", l: "Idée de jeu", t: "text", req: true, wide: true }, { k: "people", l: "Nb de personnes", t: "text" },
-    { k: "material", l: "Matériel", t: "text" }, { k: "price", l: "Prix (€)", t: "number" }, { k: "notes", l: "Notes", t: "text" }] },
+  games: { table: "org_games", label: "Jeux", order: "created_at", defaults: { chosen: false, ready: false }, fields: [
+    { k: "chosen", l: "Retenu", t: "check" }, { k: "name", l: "Jeu / animation", t: "text", req: true, wide: true },
+    { k: "moment", l: "Moment de la journée", t: "select", o: MOMENTS_GAME }, { k: "start_time", l: "Heure prévue", t: "time" }, { k: "duration", l: "Durée (min)", t: "number" },
+    { k: "place", l: "Lieu", t: "text", ph: "ex. jardin, salle, piste de danse" }, { k: "people", l: "Participants", t: "text", ph: "ex. tout le monde, les enfants, 2 équipes" }, { k: "owner", l: "Qui l'anime", t: "text" },
+    { k: "material", l: "Matériel", t: "text", wide: true }, { k: "ready", l: "Matériel prêt", t: "check" }, { k: "price", l: "Prix (€)", t: "number" },
+    { k: "prize", l: "Lots à gagner", t: "text" }, { k: "rules", l: "Règles / déroulé", t: "long", wide: true }, { k: "notes", l: "Notes", t: "text" }] },
   seating: { table: "org_tables", label: "Plan de tables", order: "position", defaults: { capacity: 10, shape: "Ronde" }, fields: [
     { k: "name", l: "Nom de la table", t: "text", req: true, ph: "ex. Table 1, Famille Martin, Amis…" }, { k: "shape", l: "Forme", t: "select", o: ["Ronde", "Rectangulaire"] }, { k: "capacity", l: "Nombre de places", t: "number" },
     { k: "guests", l: "Invités", t: "long", wide: true }, { k: "notes", l: "Notes", t: "text" }] },
@@ -286,6 +290,7 @@ function sortRows(key, rows) {
   if (key === "tasks") return by((a, b) => (a.done - b.done) || String(a.due || "9999").localeCompare(String(b.due || "9999")) || String(a.title).localeCompare(String(b.title)));
   if (key === "budget") return by((a, b) => CATS_BUDGET.indexOf(a.cat) - CATS_BUDGET.indexOf(b.cat) || String(a.item).localeCompare(String(b.item)));
   if (key === "vendors") return by((a, b) => { const ia = ROLES.indexOf(a.role), ib = ROLES.indexOf(b.role); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || String(a.created_at || "").localeCompare(String(b.created_at || "")); });
+  if (key === "games") { const k = t => { const [h, m] = String(t || "99:00").split(":").map(Number); return (h < 6 ? h + 24 : h) * 60 + (m || 0); }, mi = m => { const i = MOMENTS_GAME.indexOf(m); return i < 0 ? 99 : i; }; return by((a, b) => (!!b.chosen - !!a.chosen) || mi(a.moment) - mi(b.moment) || k(a.start_time) - k(b.start_time) || String(a.name).localeCompare(String(b.name), "fr")); }
   if (key === "seating") return by((a, b) => (a.position || 0) - (b.position || 0) || String(a.name).localeCompare(String(b.name), "fr", { numeric: true }));
   if (key === "timeline") { const k = t => { const [h, m] = String(t || "99:00").split(":").map(Number); return (h < 6 ? h + 24 : h) * 60 + (m || 0); }; return by((a, b) => k(a.time) - k(b.time)); }
   return by((a, b) => String(a.created_at || "").localeCompare(String(b.created_at || "")));
@@ -390,7 +395,9 @@ function orgSummary(key, rows, deco) {
     chip("en attente", String(c(r => !r.presence || r.presence === "ATT")), "c-wait"); chip("allergies", String(c(r => r.allergie && r.allergie.trim())), "c-alg");
     chip("enfants (0 à 12 ans)", String(c(r => { const n = parseInt(String(r.age || "").replace(/[^\d]/g, ""), 10); return !isNaN(n) && n <= 12; })), "c-kid"); const prog = e => c(r => r.envoi === e && r.invite_sent_at) + " / " + c(r => r.envoi === e); chip("courriers envoyés", prog("Courrier"), "c-post"); chip("remises en main effectuées", prog("Remise en main"), "c-hand"); chip("liens envoyés", prog("Lien"), "c-link");
   } else if (key === "games") {
-    chip("idées", String(rows.length), "c-all"); chip("retenues", String(rows.filter(r => r.chosen).length), "c-ok"); chip("coût des retenues", eur(rows.filter(r => r.chosen).reduce((a, r) => a + (Number(r.price) || 0), 0)), "c-alg");
+    const ch = rows.filter(r => r.chosen), mins = ch.reduce((a, r) => a + (Number(r.duration) || 0), 0), hmin = m => m >= 60 ? Math.floor(m / 60) + " h" + (m % 60 ? " " + String(m % 60).padStart(2, "0") : "") : m + " min";
+    chip("idées", String(rows.length), "c-all"); chip("retenues", String(ch.length), "c-ok"); chip("matériel prêt", ch.filter(r => r.ready).length + " / " + ch.length, ch.length && ch.every(r => r.ready) ? "good" : "c-wait");
+    chip("durée des jeux retenus", mins ? hmin(mins) : "—", "c-kid"); chip("coût des retenues", eur(ch.reduce((a, r) => a + (Number(r.price) || 0), 0)), "c-alg");
   } else if (key === "seating") {
     const placed = rows.reduce((a, r) => a + String(r.guests || "").split("\n").filter(x => x.trim()).length, 0), cap = rows.reduce((a, r) => a + (Number(r.capacity) || 0), 0);
     chip("tables", String(rows.length), "c-all"); chip("invités placés", String(placed), "c-ok"); chip("places", String(cap), cap && placed > cap ? "warn" : "c-link"); if (cap && placed <= cap) chip("places libres", String(cap - placed), "c-wait");
@@ -687,6 +694,27 @@ async function renderOrg(key) {
   return r;
 }
 async function decoStats() { try { const l = await orgStore.list("org_deco"); return { total: l.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0), paid: l.reduce((a, r) => a + (Number(r.paid) || 0), 0), count: l.length }; } catch { return null; } }
+function gamesBoard(rows) {
+  const hm = t => String(t || "").slice(0, 5).replace(":", "h"), ch = rows.filter(r => r.chosen), idea = rows.filter(r => !r.chosen);
+  const box = el("section", { class: "card gb" }, el("h3", { text: "Programme des jeux" }));
+  const toggle = async (r, v) => { try { await orgStore.update("org_games", r.id, { chosen: v }); renderOrg("games"); } catch (e) { showToast(orgErr(e)); } };
+  const cols = el("div", { class: "gb-cols" });
+  [...MOMENTS_GAME, ""].forEach(m => {
+    const list = ch.filter(r => (r.moment || "") === m).sort((a, b) => String(a.start_time || "99").localeCompare(String(b.start_time || "99")));
+    if (!list.length) return;   // seuls les moments où quelque chose est prévu s'affichent
+    const mins = list.reduce((a, r) => a + (Number(r.duration) || 0), 0);
+    const col = el("div", { class: "gb-col" }, el("div", { class: "gb-head" }, el("b", { text: m || "À placer dans la journée" }), el("small", { text: list.length ? list.length + " jeu" + (list.length > 1 ? "x" : "") + (mins ? " · " + mins + " min" : "") : "" })));
+    list.forEach(r => col.append(el("div", { class: "gb-item" + (r.ready ? " ready" : "") },
+      el("div", { class: "gb-line" }, el("span", { class: "gb-time", text: r.start_time ? hm(r.start_time) : "—" }), el("b", { text: r.name }),
+        el("button", { type: "button", class: "gb-star on", title: "Retirer des jeux retenus", "aria-label": "Retirer " + r.name + " des jeux retenus", text: "★", onclick: () => toggle(r, false) })),
+      el("div", { class: "gb-det" }, ...[[r.duration ? r.duration + " min" : "", ""], [r.place, ""], [r.people, ""], [r.owner ? "avec " + r.owner : "", ""]].filter(x => x[0]).length ? [el("small", { text: [r.duration ? r.duration + " min" : "", r.place, r.people, r.owner ? "avec " + r.owner : ""].filter(Boolean).join(" · ") })] : [],
+        r.material ? el("small", { class: "gb-mat", text: (r.ready ? "✓ " : "○ ") + r.material }) : "", r.prize ? el("small", { class: "gb-prize", text: "Lots : " + r.prize }) : ""))));
+    cols.append(col);
+  });
+  box.append(ch.length ? cols : el("p", { class: "hint", text: "Aucun jeu retenu pour l'instant. Retenez des idées ci-dessous (★) pour composer le programme." }));
+  if (idea.length) box.append(el("h4", { class: "gb-sub", text: "Idées à trancher (" + idea.length + ")" }), el("div", { class: "gb-ideas" }, ...idea.map(r => el("span", { class: "gb-idea" }, el("button", { type: "button", class: "gb-star", title: "Retenir ce jeu", "aria-label": "Retenir " + r.name, text: "☆", onclick: () => toggle(r, true) }), r.name))));
+  return box;
+}
 function timelinePanel(rows, games) {
   const mins = t => { if (!t) return null; const [h, m] = String(t).split(":").map(Number); return (h < 6 ? h + 24 : h) * 60 + (m || 0); };
   const hm = t => { const [h, m] = String(t).split(":"); return Number(h) + "h" + (m && m !== "00" ? m : ""); };
@@ -818,6 +846,7 @@ async function renderOrgInner(key) {
   }
   host.append(bar);
   if (key === "timeline" && rows.length) host.append(timelinePanel(rows, tlGames));
+  if (key === "games" && rows.length) host.append(gamesBoard(rows));
   if (key === "guests") host.append(invitePanel(rows));
 
   if (key === "seating" && rows.length) { const sp = await seatPlan(rows); if (tok !== orgTok) return; host.append(sp); }
@@ -848,7 +877,7 @@ async function renderOrgInner(key) {
   let shown = rows;
   if (key === "tasks") shown = rows.filter(r => (orgState.filter.status === "all" || (orgState.filter.status.startsWith("s:") ? statusOf(r) === orgState.filter.status.slice(2) : orgState.filter.status === "done" ? r.done : !r.done)) && (!orgState.filter.cat || r.cat === orgState.filter.cat));
   if (!shown.length) { host.append(el("div", { class: "empty-ico" }, icon("Agneau couché", 44)), el("p", { class: "empty", text: rows.length ? "Aucune ligne avec ce filtre." : "Rien pour l'instant. Ajoutez une première ligne avec « Ajouter »." })); return; }
-  if (key === "vendors" || key === "seating" || key === "budget" || key === "deco") {
+  if (key === "vendors" || key === "seating" || key === "budget" || key === "deco" || key === "games") {
     const list = el("div", { class: "org-cards" });
     const bar2 = el("div", { class: "org-fold" },
       el("button", { class: "btn small", type: "button", text: "Tout déplier", onclick: () => list.querySelectorAll("details.org-card").forEach(d => { d.open = true; }) }),
@@ -858,6 +887,7 @@ async function renderOrgInner(key) {
     const payCls = (est, paid) => { est = Number(est) || 0; paid = Number(paid) || 0; return est <= 0 && paid <= 0 ? "" : paid >= est - 0.005 ? "pay-ok" : paid > 0 ? "pay-part" : "pay-no"; };
     const badge = st => { const c = RETAINED.includes(st) ? "ok" : st === "Refusé (NON)" ? "no" : /attente|donner/i.test(st || "") ? "wait" : ""; return el("span", { class: "st-badge " + c, text: st || "—" }); };
     const sumFor = r => {
+      if (key === "games") { const when = [r.moment, r.start_time ? String(r.start_time).slice(0, 5).replace(":", "h") : ""].filter(Boolean).join(" · "); return [el("b", { text: (r.chosen ? "★ " : "") + r.name }), el("span", { class: "sm", text: when || "à placer" }), el("span", { class: "num", text: r.duration ? r.duration + " min" : "" }), el("span", { class: "st-badge " + (r.chosen ? (r.ready ? "ok" : "wait") : ""), text: r.chosen ? (r.ready ? "Prêt" : "À préparer") : "Idée" })]; }
       if (key === "vendors") return [el("b", { text: r.name }), badge(r.status), el("span", { class: "num", text: r.price != null ? eur(r.price) : "" }), el("span", { class: "sm", text: r.phone || r.email || r.contact || r.location || "" })];
       if (key === "deco") { const tot = (Number(r.unit) || 0) * (Number(r.qty) || 0), pd = Number(r.paid) || 0, sm = el("span", { class: "sm" }); if (isUrl(r.link)) sm.append(el("a", { class: "lnk", href: r.link, target: "_blank", rel: "noopener noreferrer", title: r.link, text: "Voir le lien ↗", onclick: e => e.stopPropagation() })); const st = tot > 0 && pd >= tot - 0.005 ? "Payé" : pd > 0 ? "Partiel" : "À payer"; return [el("b", { text: r.name }), sm, el("span", { class: "num", text: (r.qty || 0) + " × " + eur2(r.unit || 0) + " = " + eur2(tot) }), el("span", { class: "st-badge " + (st === "Payé" ? "ok" : st === "Partiel" ? "wait" : "no"), text: st === "Partiel" ? "Payé " + eur2(pd) : st })]; }
       if (key === "budget") return [el("b", { text: r.item }), el("span", { class: "sm", text: r.family ? "famille " + eur(r.family) : "" }), el("span", { class: "num", text: "prévu " + eur(r.estimated || 0) }), el("span", { class: "num pay " + payCls(r.estimated, r.paid), text: "● payé " + eur(r.paid || 0) })];

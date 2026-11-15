@@ -481,6 +481,16 @@ details.org-card>summary{position:relative}details.org-card>summary>.sel-box{pos
 .sum-chip.c-ok{background:#d8e7c4;color:#2f5a1a}.sum-chip.c-no{background:#f1d6cf;color:#7a2d20}.sum-chip.c-wait{background:#f6e8bd;color:#6b5210}
 .sum-chip.c-alg{background:#f6dcc0;color:#7a4410}.sum-chip.c-kid{background:#d9e4ee;color:#2f4a63}
 .sum-chip.c-post{background:#ebe0cd;color:#5e4a2c}.sum-chip.c-link{background:#d6e6e2;color:#2c5a52}.sum-chip.c-hand{background:#e6dcec;color:#54386a}.sum-chip.c-sent{background:#cfe2c0;color:#2f5a1a}
+.gb{margin:0 0 14px}.gb-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:8px}
+.gb-col{background:var(--paper-2);border-radius:12px;padding:10px 12px;display:grid;gap:8px;align-content:start}
+.gb-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-bottom:1px solid var(--olive-soft);padding-bottom:6px}.gb-head small{opacity:.7}
+.gb-empty{margin:0;font-size:.85rem;opacity:.6;font-style:italic}
+.gb-item{display:grid;gap:3px;background:var(--paper);border:1px solid var(--olive-soft);border-left:4px solid #c58a4a;border-radius:10px;padding:7px 10px}
+.gb-item.ready{border-left-color:#5a7a2a}.gb-time{font-weight:700;font-variant-numeric:tabular-nums;color:var(--olive)}
+.gb-line{display:flex;gap:8px;align-items:baseline}.gb-line b{flex:1;font-size:.95rem;min-width:0;overflow-wrap:anywhere}.gb-det{display:grid;gap:1px;padding-left:2px}.gb-det small{opacity:.85;font-size:.78rem;overflow-wrap:anywhere}.gb-mat{color:#6b5210}.gb-prize{color:#7a3f10}
+.gb-star{border:0;background:transparent;font-size:1.15rem;line-height:1;color:var(--olive);cursor:pointer;padding:2px 4px;min-height:0}.gb-star.on{color:#c58a1a}.gb-star:hover{transform:scale(1.15)}
+.gb-sub{margin:14px 0 6px;font-size:.95rem}.gb-ideas{display:flex;flex-wrap:wrap;gap:6px}
+.gb-idea{display:inline-flex;align-items:center;gap:2px;background:var(--paper-2);border:1px dashed var(--olive-soft);border-radius:999px;padding:2px 12px 2px 4px;font-size:.9rem}
 .sum-chip .sum-sub{display:block;font-size:.72rem;opacity:.85;margin-top:2px;font-weight:400}
 .deco-link{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 12px;padding:10px 14px;border-style:dashed}.deco-link .sm{opacity:.75;font-size:.8rem}.deco-link .btn{margin-left:auto}
 .sum-chip.good{background:#dde8cc;color:#34501b}
@@ -2301,7 +2311,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611150207"></script>
-<script src="covoiturage.js?v=202611150207"></script>
+<script src="organisation.js?v=202611150210"></script>
+<script src="covoiturage.js?v=202611150210"></script>
 </body>
 </html>
