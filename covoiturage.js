@@ -69,7 +69,7 @@
   }
   function card(r) {
     const m = mine()[r.id]; const full = r.type === "offre" && Number(r.places) <= 0;
-    const kind = r.type === "demande" ? "Recherche" : full ? "Complet" : r.places + " place" + (r.places > 1 ? "s" : "") + " disponible" + (r.places > 1 ? "s" : "");
+    const kind = r.type === "demande" ? (Number(r.places) > 1 ? "Recherche pour " + r.places + " personnes" : "Recherche") : full ? "Complet" : r.places + " place" + (r.places > 1 ? "s" : "") + " disponible" + (r.places > 1 ? "s" : "");
     const ct = String(r.contact || ""); const wa = isPhone(ct) ? waLink(ct) : "";
     const actions = el("div", { class: "cv-actions" });
     if (isPhone(ct)) actions.append(el("a", { class: "btn small solid", href: "tel:" + digits(ct), text: "Appeler" }));
@@ -178,11 +178,11 @@
       e.preventDefault(); msg.hidden = true;
       const f = new FormData(form); if (f.get("website")) return; // piège à robots
       const type = f.get("type"), sens = f.get("sens"), prenom = clean(f.get("prenom")), depart = clean(f.get("depart")), arrivee = clean(f.get("arrivee")), heure = clean(f.get("heure")), contact = clean(f.get("contact")), note = clean(f.get("note"));
-      let places = type === "offre" ? parseInt(f.get("places"), 10) : 0;
+      let places = parseInt(f.get("places"), 10);
       if (!prenom || !depart || !arrivee || !contact) return showMsg(msg, "Merci de remplir le prénom, le lieu de départ, le lieu d'arrivée et un moyen de vous contacter.", "err");
       const lieu = depart.slice(0, 38) + " → " + arrivee.slice(0, 38);
       if (!isPhone(contact) && !isMail(contact)) return showMsg(msg, "Le contact doit être un numéro de téléphone ou une adresse e-mail valide.", "err");
-      if (type === "offre" && !(places >= 1 && places <= 8)) return showMsg(msg, "Indiquez entre 1 et 8 places.", "err");
+      if (!(places >= 1 && places <= 8)) return showMsg(msg, type === "offre" ? "Indiquez entre 1 et 8 places." : "Indiquez entre 1 et 8 personnes.", "err");
       if (!f.get("ok")) return showMsg(msg, "Cochez la case pour confirmer que ces informations peuvent être visibles des invités.", "err");
       const last = Number(localStorage.getItem("mariage:covoit-last") || 0);
       if (Date.now() - last < 15000) return showMsg(msg, "Un instant avant de publier une nouvelle annonce.", "err");
@@ -190,7 +190,7 @@
       try {
         await api.add({ id, type, sens, prenom, lieu, heure: heure || null, places, contact, note: note || null, edit_code });
         const m = mine(); m[id] = edit_code; saveMine(m); try { localStorage.setItem("mariage:covoit-last", String(Date.now())); } catch {}
-        form.reset(); auto = { d: "", a: "" }; closeForm(); syncType();
+        form.reset(); lastOffre = null; auto = { d: "", a: "" }; closeForm(); syncType();
         toast("Annonce publiée. Merci ! Vous pourrez la retirer depuis cet appareil."); load();
       } catch (err) {
         showMsg(msg, /covoiturage/i.test(String(err && err.message)) || (err && err.code === "PGRST205") ? "Le covoiturage n'est pas encore activé sur le site. Revenez plus tard." : "Publication impossible pour le moment. Réessayez dans un instant.", "err");
@@ -208,7 +208,8 @@
       const ph = PH[sensSel.value]; dep.placeholder = "ex. " + ph[0]; arr.placeholder = "ex. " + ph[1];
     };
     sensSel.addEventListener("change", syncSens);
-    const syncType = () => { const offre = typeSel.value === "offre"; placesLbl.hidden = !offre; syncSens(); };
+    const placesIn = placesLbl.querySelector("input"); let lastOffre = null;
+    const syncType = () => { const offre = typeSel.value === "offre"; placesLbl.firstChild.nodeValue = offre ? "Nombre de places" : "Nombre de personnes"; if (lastOffre !== offre) { placesIn.value = offre ? "3" : "1"; lastOffre = offre; } syncSens(); };
     typeSel.addEventListener("change", syncType); syncType();
   }
 
