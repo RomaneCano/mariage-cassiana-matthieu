@@ -178,8 +178,7 @@ drop policy if exists prive_storage_admin on storage.objects;
 create policy prive_storage_admin on storage.objects for all to authenticated
   using (bucket_id = 'prive' and public.is_admin()) with check (bucket_id = 'prive' and public.is_admin());
 
--- 6. Nettoyage : efface d'éventuels textes contenant un lien collé par erreur
-delete from textes where value ilike '%google.com/maps%';
+-- (aucune suppression de données dans ce script : il ne fait qu'ajouter ou mettre à jour la structure)
 
 -- ============================================================
 -- 10. COVOITURAGE (annonces des invités : aller / retour après la soirée)
