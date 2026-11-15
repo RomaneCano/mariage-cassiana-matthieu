@@ -129,10 +129,10 @@
     const shown = list.filter(r => inG(r.sens) || (r.sens === "both" && (inG("aller") || inG("retour"))));
     const open = shown.filter(r => !isFull(r)), full = shown.filter(isFull);
     const groups = [["aller", "retour"], ["venir", "rentrer"]];
-    const HEAD = [["Le jour J, sur place", "Entre l'église, le domaine et l'hébergement", "Les petits trajets de la journée et de la fin de soirée."], ["Depuis chez vous", "Pour se rendre au mariage et rentrer chez soi", "Les trajets entre chez vous et le mariage, à l'aller comme au retour."]];
+    const HEAD = [["", "Le jour J, sur place", "Les petits trajets de la journée et de la fin de soirée."], ["", "Depuis chez vous", "Les trajets entre chez vous et le mariage, à l'aller comme au retour."]];
     groups.forEach((g, gi) => {
       if (!g.some(inG)) return;
-      const blk = el("section", { class: "cv-block b" + gi }, el("p", { class: "cv-eyebrow", text: HEAD[gi][0] }), el("h3", { class: "cv-btitle", text: HEAD[gi][1] }), el("p", { class: "cv-bsub", text: HEAD[gi][2] }));
+      const blk = el("section", { class: "cv-block b" + gi }, filter === "all" ? el("h3", { class: "cv-btitle", text: HEAD[gi][1] }) : "");
       host.append(blk);
       const cols = el("div", { class: "cv-cols" + (g.filter(inG).length > 1 ? "" : " one") }); blk.append(cols);
       g.forEach(sv => {
