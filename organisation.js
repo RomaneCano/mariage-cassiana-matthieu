@@ -374,7 +374,6 @@ function orgSummary(key, rows, deco) {
   if (key === "tasks") {
     const done = rows.filter(r => r.done).length, late = rows.filter(r => !r.done && r.due && r.due < todayISO()).length;
     chip("faites", done + " / " + rows.length, "c-ok"); chip("en cours", String(rows.filter(r => statusOf(r) === "En cours").length), "c-wait"); chip("en attente de retour", String(rows.filter(r => statusOf(r) === "En attente de retour").length), "c-alg"); chip("en retard", String(late), late ? "warn" : "good"); chip("avant le mariage", Math.max(0, daysBetween(todayISO(), WEDDING_ISO)) + " j", "c-kid");
-    if (rows.length) box.append(el("div", { class: "bar big" }, el("i", { style: "width:" + Math.round(done / rows.length * 100) + "%" })));
   } else if (key === "deco") {
     const articles = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0), total = rows.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0), env = deco ? deco.env : 0;
     const paidD = rows.reduce((a, r) => a + (Number(r.paid) || 0), 0), resteD = total - paidD;
