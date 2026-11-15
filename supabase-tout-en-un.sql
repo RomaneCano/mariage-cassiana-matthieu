@@ -391,6 +391,7 @@ revoke all on public.org_deco from anon;
 -- 19. DÉCORATION ET PAPETERIE : montant payé
 -- ============================================================
 alter table public.org_deco add column if not exists paid numeric;
+alter table public.org_tasks add column if not exists status text;
 
 -- ============================================================
 -- 20. COVOITURAGE : trajets depuis / vers d'autres villes

@@ -88,9 +88,10 @@ const STATUS = ["À contacter", "En attente de devis", "En attente de réponse",
 const RETAINED = ["Retenu (OUI)", "Réservé", "Acompte versé", "Soldé"];
 const WHO = ["Cassiana", "Matthieu", "Les deux", "Autre"];
 
+const STATUS_TASK = ["À faire", "En cours", "En attente de retour", "Terminé"];
 const ORG = {
-  tasks: { table: "org_tasks", label: "Tâches", order: "due", defaults: { done: false, cat: CATS_TASK[0], who: "Les deux" }, fields: [
-    { k: "done", l: "Fait", t: "check" }, { k: "title", l: "Tâche", t: "text", req: true, wide: true }, { k: "cat", l: "Catégorie", t: "select", o: CATS_TASK, newable: true },
+  tasks: { table: "org_tasks", label: "Tâches", order: "due", defaults: { done: false, status: STATUS_TASK[0], cat: CATS_TASK[0], who: "Les deux" }, fields: [
+    { k: "done", l: "Fait", t: "check" }, { k: "title", l: "Tâche", t: "text", req: true, wide: true }, { k: "status", l: "Statut", t: "select", o: STATUS_TASK }, { k: "cat", l: "Catégorie", t: "select", o: CATS_TASK, newable: true },
     { k: "due", l: "Échéance", t: "date" }, { k: "who", l: "Qui", t: "select", o: WHO }, { k: "notes", l: "Notes", t: "text" }] },
   budget: { table: "org_budget", label: "Budget", order: "cat", defaults: { cat: CATS_BUDGET[0] }, fields: [
     { k: "cat", l: "Poste", t: "select", o: CATS_BUDGET, newable: true }, { k: "item", l: "Dépense", t: "text", req: true, wide: true },
@@ -264,6 +265,7 @@ const orgStore = {
 const orgErr = e => "Non enregistré : " + explainErr(e) + (/table|relation|schema/i.test(String((e && e.message) || "")) || (e && e.code === "PGRST205") ? " Exécutez supabase-tout-en-un.sql dans Supabase." : "");
 
 const orgOpen = new Set();
+const statusOf = r => r.status || (r.done ? "Terminé" : "À faire");
 const orgState = { key: "tasks", filter: { status: "todo", cat: "", gp: "", gq: "" } };
 
 function sortRows(key, rows) {
@@ -353,7 +355,7 @@ function orgSummary(key, rows) {
   const chip = (label, value, cls) => box.append(el("div", { class: "sum-chip " + (cls || "") }, el("b", { text: value }), el("span", { text: label })));
   if (key === "tasks") {
     const done = rows.filter(r => r.done).length, late = rows.filter(r => !r.done && r.due && r.due < todayISO()).length;
-    chip("faites", done + " / " + rows.length); chip("en retard", String(late), late ? "warn" : "good"); chip("avant le mariage", Math.max(0, daysBetween(todayISO(), WEDDING_ISO)) + " j");
+    chip("faites", done + " / " + rows.length); chip("en cours", String(rows.filter(r => statusOf(r) === "En cours").length)); chip("en attente de retour", String(rows.filter(r => statusOf(r) === "En attente de retour").length)); chip("en retard", String(late), late ? "warn" : "good"); chip("avant le mariage", Math.max(0, daysBetween(todayISO(), WEDDING_ISO)) + " j");
     if (rows.length) box.append(el("div", { class: "bar big" }, el("i", { style: "width:" + Math.round(done / rows.length * 100) + "%" })));
   } else if (key === "deco") {
     const articles = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0), total = rows.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0);
@@ -686,7 +688,7 @@ async function renderOrgInner(key) {
   // barre d'outils : filtres (tâches) et modèle
   const bar = el("div", { class: "org-tools" });
   if (key === "tasks") {
-    const st = el("select", { "aria-label": "Afficher" }, el("option", { value: "all", text: "Toutes" }), el("option", { value: "todo", text: "À faire" }), el("option", { value: "done", text: "Faites" })); st.value = orgState.filter.status;
+    const st = el("select", { "aria-label": "Afficher" }, el("option", { value: "all", text: "Toutes" }), el("option", { value: "todo", text: "Non terminées" }), ...STATUS_TASK.map(x => el("option", { value: "s:" + x, text: x }))); st.value = orgState.filter.status;
     const ct = el("select", { "aria-label": "Catégorie" }, el("option", { value: "", text: "Toutes les catégories" }), ...ORG.tasks.fields.find(f => f.k === "cat").o.map(c => el("option", { value: c, text: c }))); ct.value = orgState.filter.cat;
     st.addEventListener("change", () => { orgState.filter.status = st.value; renderOrg(key); }); ct.addEventListener("change", () => { orgState.filter.cat = ct.value; renderOrg(key); });
     bar.append(st, ct);
@@ -733,7 +735,7 @@ async function renderOrgInner(key) {
 
   // tableau modifiable
   let shown = rows;
-  if (key === "tasks") shown = rows.filter(r => (orgState.filter.status === "all" || (orgState.filter.status === "done" ? r.done : !r.done)) && (!orgState.filter.cat || r.cat === orgState.filter.cat));
+  if (key === "tasks") shown = rows.filter(r => (orgState.filter.status === "all" || (orgState.filter.status.startsWith("s:") ? statusOf(r) === orgState.filter.status.slice(2) : orgState.filter.status === "done" ? r.done : !r.done)) && (!orgState.filter.cat || r.cat === orgState.filter.cat));
   if (!shown.length) { host.append(el("div", { class: "empty-ico" }, icon("Agneau couché", 44)), el("p", { class: "empty", text: rows.length ? "Aucune ligne avec ce filtre." : "Rien pour l'instant. Ajoutez une première ligne avec « Ajouter »." })); return; }
   if (key === "vendors" || key === "seating" || key === "budget" || key === "deco") {
     const list = el("div", { class: "org-cards" });
@@ -792,10 +794,11 @@ async function renderOrgInner(key) {
     const tr = el("tr", { class: (late ? "late " : "") + (key === "tasks" && r.done ? "done" : "") + (key === "guests" ? " p-" + (r.presence || "ATT") : "") });
     if (key === "guests") { tr.dataset.q = norm((r.nom || "") + " " + (r.prenom || "")); tr.dataset.p = r.presence || "ATT"; tr.dataset.a = r.allergie && r.allergie.trim() ? "1" : "0"; }
     M.fields.forEach(f => {
-      const inp = fieldInput(f, r[f.k]);
+      const inp = fieldInput(f, f.k === "status" && key === "tasks" ? statusOf(r) : r[f.k]);
+      if (key === "tasks" && f.k === "status") inp.dataset.st = statusOf(r);
       inp.addEventListener("change", async () => {
         const v = readInput(f, inp);
-        try { await orgStore.update(M.table, r.id, { [f.k]: v }); r[f.k] = v; if (key === "tasks" || key === "budget" || key === "seating" || (key === "guests" && (f.k === "presence" || f.k === "allergie" || f.k === "envoi" || f.k === "age"))) renderOrg(key); else showToast("Enregistré"); }
+        try { const patch = { [f.k]: v }; if (key === "tasks" && f.k === "done") patch.status = v ? "Terminé" : (statusOf(r) === "Terminé" ? "À faire" : statusOf(r)); if (key === "tasks" && f.k === "status") patch.done = v === "Terminé"; await orgStore.update(M.table, r.id, patch); Object.assign(r, patch); if (key === "tasks" || key === "budget" || key === "seating" || (key === "guests" && (f.k === "presence" || f.k === "allergie" || f.k === "envoi" || f.k === "age"))) renderOrg(key); else showToast("Enregistré"); }
         catch (e) { showToast(orgErr(e)); }
       });
       tr.append(el("td", { "data-label": f.l }, inp));
