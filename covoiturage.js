@@ -141,7 +141,7 @@
   };
   const searching = () => !!(sq.t || sq.d || sq.a || sq.n);
   function refreshSearch() {
-    const f = $("#cv-search"); if (!f) return; f.hidden = list.length < 5 && !searching();
+    const f = $("#cv-search"); if (!f) return; f.hidden = list.length < 1 && !searching();
     const dl = $("#cv-places-dl"); if (dl) { const set = new Set(); list.forEach(r => split(r).forEach(x => x && set.add(x))); dl.replaceChildren(...[...set].sort().map(v => el("option", { value: v }))); }
   }
   const isFull = r => r.type === "offre" && Number(r.places) <= 0;
