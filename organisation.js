@@ -347,6 +347,7 @@ function fieldInput(f, value, row) {
 }
 const cleanUrl = v => { v = String(v || "").trim(); if (!v) return null; if (!/^https?:\/\//i.test(v)) v = "https://" + v; try { const u = new URL(v); return /^https?:$/.test(u.protocol) && u.hostname.includes(".") ? u.href : false; } catch { return false; } };
 const isMail = v => typeof v === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/1SgGemnXjo-43lK3OXvgsrz1SolY3qrb3utOY1PdD11I/edit?gid=0#gid=0";   // tableur des invités (mis à jour par le script Google à chaque réponse)
 const INVITE_KEY_LS = "mariage:invite-key";
 /* Envoi du lien d'invitation par e-mail : le script Google envoie le message depuis le Gmail des mariés (clé d'envoi requise) */
 async function sendInvite(g) {
@@ -825,16 +826,7 @@ async function renderOrgInner(key) {
   } }));
   let sheetForm = null;
   if (key === "guests") {
-    let su = ""; try { su = ((await store.getSetting("sheet_url")) || "").trim(); } catch {}
-    if (tok !== orgTok) return;
-    const isSheet = u => /^https:\/\/docs\.google\.com\/spreadsheets\//i.test(u);
-    const form = el("form", { class: "sheet-form", hidden: true, novalidate: true }), inp = el("input", { type: "url", placeholder: "https://docs.google.com/spreadsheets/d/…", "aria-label": "Lien du Google Sheet", value: su });
-    form.append(inp, el("button", { type: "submit", class: "btn small solid", text: "Enregistrer" }), su ? el("button", { type: "button", class: "btn small danger", text: "Retirer", onclick: async () => { try { await store.setSetting("sheet_url", ""); showToast("Lien retiré"); renderOrg("guests"); } catch (e) { showToast(orgErr(e)); } } }) : "");
-    form.addEventListener("submit", async e => { e.preventDefault(); const u = inp.value.trim(); if (!isSheet(u)) return showToast("Collez le lien de votre Google Sheet (il commence par https://docs.google.com/spreadsheets/)."); try { await store.setSetting("sheet_url", u); showToast("Lien du Google Sheet enregistré"); renderOrg("guests"); } catch (err) { showToast(orgErr(err)); } });
-    bar.append(su && isSheet(su)
-      ? el("span", { class: "sheet-wrap" }, el("a", { class: "btn small", href: su, target: "_blank", rel: "noopener noreferrer", title: "Ouvre votre tableur Google. Chaque réponse envoyée depuis le site y est reportée automatiquement par le script (Apps Script).", text: "↗ Ouvrir le Google Sheet" }), el("button", { type: "button", class: "btn small", title: "Changer ou retirer le lien", "aria-label": "Modifier le lien du Google Sheet", text: "✎", onclick: () => { form.hidden = !form.hidden; if (!form.hidden) inp.focus(); } }))
-      : el("button", { type: "button", class: "btn small", text: "+ Lien du Google Sheet", title: "Collez ici le lien de votre Google Sheet pour l'ouvrir en un clic depuis cet onglet", onclick: () => { form.hidden = !form.hidden; if (!form.hidden) inp.focus(); } }));
-    sheetForm = form;
+    bar.append(el("a", { class: "btn small", href: SHEET_URL, target: "_blank", rel: "noopener noreferrer", title: "Ouvre votre tableur Google. Chaque réponse envoyée depuis le site y est reportée automatiquement par le script (Apps Script).", text: "↗ Ouvrir le Google Sheet" }));
   }
   if (rows.length) {
     let selMode = false, selBar = null;
