@@ -209,8 +209,9 @@
       const f = new FormData(form); if (f.get("website")) return; // piège à robots
       const type = f.get("type"), sens = f.get("sens"), prenom = clean(f.get("prenom")), depart = clean(f.get("depart")), arrivee = clean(f.get("arrivee")), heure = clean(f.get("heure")), contact = clean(f.get("contact")), note = clean(f.get("note"));
       let places = parseInt(f.get("places"), 10);
-      if (!prenom || !depart || !arrivee || !contact) return showMsg(msg, "Merci de remplir le prénom, le lieu de départ, le lieu d'arrivée et un moyen de vous contacter.", "err");
-      const lieu = depart.slice(0, 38) + " → " + arrivee.slice(0, 38);
+      const arriveeF = arrivee || (sens === "retour" ? "Mon hébergement" : "");
+      if (!prenom || !depart || !arriveeF || !contact) return showMsg(msg, "Merci de remplir le prénom, le lieu de départ, le lieu d'arrivée et un moyen de vous contacter.", "err");
+      const lieu = depart.slice(0, 38) + " → " + arriveeF.slice(0, 38);
       if (!isPhone(contact) && !isMail(contact)) return showMsg(msg, "Le contact doit être un numéro de téléphone ou une adresse e-mail valide.", "err");
       if (!(places >= 1 && places <= 8)) return showMsg(msg, type === "offre" ? "Indiquez entre 1 et 8 places." : "Indiquez entre 1 et 8 personnes.", "err");
       if (!f.get("ok")) return showMsg(msg, "Cochez la case pour confirmer que ces informations peuvent être visibles des invités.", "err");
@@ -232,9 +233,12 @@
     const PH = { aller: ["l'église", "le domaine"], retour: ["le domaine", "mon hôtel, Meaux, Paris 12e…"], venir: ["chez moi, Paris, Toulouse…", "le mariage"], rentrer: ["le mariage", "chez moi, Paris, Toulouse…"] };
     const syncSens = () => {
       const d = DEF[sensSel.value]; if (!d) return;
-      if (!dep.value || dep.value === auto.d) dep.value = d[0];
-      if (!arr.value || arr.value === auto.a) arr.value = d[1];
+      const jj = sensSel.value === "aller", rr = sensSel.value === "retour";   // trajets du jour J : le titre dit déjà d'où à où
+      if (jj || rr || !dep.value || dep.value === auto.d) dep.value = d[0];
+      if (jj || !arr.value || arr.value === auto.a) arr.value = d[1];
       auto = { d: d[0], a: d[1] };
+      dep.closest("label").hidden = jj || rr; arr.closest("label").hidden = jj;
+      dep.required = !(jj || rr); arr.required = !(jj || rr);
       const ph = PH[sensSel.value]; dep.placeholder = "ex. " + ph[0]; arr.placeholder = "ex. " + ph[1];
     };
     sensSel.addEventListener("change", syncSens);
