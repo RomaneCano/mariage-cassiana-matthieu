@@ -422,6 +422,15 @@ body.sorting .admin-main button,body.sorting .admin-tabs button{outline:1.5px da
 .org-table select[data-st="En attente de retour"]{background:#f8dfc9;border-color:#c0702f;color:#7a3f10}
 .org-table select[data-st="Terminé"]{background:#dde8cc;border-color:#5a7a2a;color:#34501b}
 .org-table input[aria-label="Étape"]{min-width:230px}.org-table input[aria-label="Lieu"]{min-width:150px}
+.tl-prop{margin-bottom:14px}.tl-prop-list{display:grid;gap:2px;max-height:380px;overflow:auto;margin:8px 0 12px;border-top:1px solid var(--olive-soft)}
+.tl-prop-row{display:grid;grid-template-columns:auto 150px 1fr;gap:10px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--olive-soft);cursor:pointer}
+.tl-prop-t{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}.tl-prop-n{display:grid;min-width:0}.tl-prop-n small{opacity:.75}
+.sel-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px;padding:8px 12px;border-radius:12px;background:#f1ddd6;position:sticky;top:6px;z-index:5}
+.sel-box{width:20px;height:20px;accent-color:#a3392a;cursor:pointer}
+.sel-td,.sel-th{width:34px;padding-right:0!important}
+details.org-card>summary{position:relative}details.org-card>summary>.sel-box{position:absolute;right:12px;top:50%;transform:translateY(-50%)}
+.tl-prop-act{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:640px){.tl-prop-row{grid-template-columns:auto 1fr}.tl-prop-t{grid-column:2}.tl-prop-n{grid-column:2}}
 .tl-panel{margin-bottom:14px}.tl{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:0}
 .tl-item{display:grid;grid-template-columns:84px 1fr;gap:14px;position:relative;padding:0 0 14px}
 .tl-item::before{content:"";position:absolute;left:97px;top:8px;bottom:-6px;width:2px;background:var(--olive-soft);opacity:.35}
@@ -2188,7 +2197,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611150101"></script>
-<script src="covoiturage.js?v=202611150101"></script>
+<script src="organisation.js?v=202611150110"></script>
+<script src="covoiturage.js?v=202611150110"></script>
 </body>
 </html>

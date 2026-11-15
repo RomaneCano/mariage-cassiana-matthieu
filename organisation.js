@@ -746,17 +746,70 @@ async function renderOrgInner(key) {
     seatHist.ui(); bar.append(un, re);
     if (!rows.length) seatHist.live = { rows, rot: () => "{}", layout: () => "{}" };
   }
-  if (key === "timeline") bar.append(el("button", { type: "button", class: "btn small", text: "✦ Proposer un déroulé type", title: "Ajoute les étapes manquantes (lieux, types, jeux à placer) sans toucher aux vôtres", onclick: async () => {
-    try {
-      let added = 0, filled = 0; const byTime = new Map(rows.map(r => [r.time, r]));
-      for (const t of TPL.timeline()) {
-        const ex = byTime.get(t.time);
-        if (!ex) { await orgStore.insert("org_timeline", t); added++; }
-        else { const patch = {}; ["end_time", "kind", "place"].forEach(k => { if (!ex[k] && t[k]) patch[k] = t[k]; }); if (Object.keys(patch).length) { await orgStore.update("org_timeline", ex.id, patch); filled++; } }
-      }
-      showToast(added || filled ? added + " étape(s) ajoutée(s), " + filled + " complétée(s)." : "Votre déroulé contient déjà toutes les étapes proposées."); renderOrg("timeline");
-    } catch (e) { showToast(orgErr(e)); }
+  let tlProp = null;
+  if (key === "timeline") bar.append(el("button", { type: "button", class: "btn small", text: "✦ Proposer un déroulé type", title: "Vous choisissez les étapes à ajouter ; rien n'est imposé", onclick: () => {
+    if (tlProp) { tlProp.remove(); tlProp = null; return; }
+    const byTime = new Map(rows.map(r => [r.time, r])), items = [];
+    TPL.timeline().forEach(t => {
+      const ex = byTime.get(t.time);
+      if (!ex) items.push({ t, kind: "new" });
+      else { const patch = {}; ["end_time", "kind", "place"].forEach(k => { if (!ex[k] && t[k]) patch[k] = t[k]; }); if (Object.keys(patch).length) items.push({ t, ex, patch, kind: "fill" }); }
+    });
+    const box = el("section", { class: "card tl-prop" }, el("h3", { text: "Déroulé proposé" }));
+    if (!items.length) { box.append(el("p", { class: "hint", text: "Votre déroulé contient déjà toutes les étapes proposées." }), el("button", { type: "button", class: "btn small", text: "Fermer", onclick: () => { box.remove(); tlProp = null; } })); }
+    else {
+      box.append(el("p", { class: "hint", text: "Décochez ce que vous ne voulez pas : seules les étapes cochées seront ajoutées. Vos étapes ne sont jamais modifiées sans votre accord." }));
+      const list = el("div", { class: "tl-prop-list" }), checks = [];
+      items.forEach(it => {
+        const cb = el("input", { type: "checkbox" }); cb.checked = true; checks.push(cb);
+        list.append(el("label", { class: "tl-prop-row" }, cb, el("span", { class: "tl-prop-t", text: it.t.time + (it.t.end_time ? " → " + it.t.end_time : "") }), el("span", { class: "tl-prop-n" }, el("b", { text: it.kind === "fill" ? it.ex.title : it.t.title }), el("small", { text: it.kind === "fill" ? "Compléter votre étape : " + Object.keys(it.patch).map(k => ({ end_time: "heure de fin", kind: "type", place: "lieu" }[k])).join(", ") : (it.t.place ? "Lieu : " + it.t.place : "Nouvelle étape") }))));
+      });
+      const cnt = el("span", {}), upd = () => { const n = checks.filter(c => c.checked).length; go.disabled = !n; go.textContent = "Ajouter la sélection (" + n + ")"; };
+      const go = el("button", { type: "button", class: "btn small solid", onclick: async () => {
+        go.disabled = true;
+        try {
+          let added = 0, filled = 0;
+          for (let k = 0; k < items.length; k++) { if (!checks[k].checked) continue; const it = items[k]; if (it.kind === "new") { await orgStore.insert("org_timeline", it.t); added++; } else { await orgStore.update("org_timeline", it.ex.id, it.patch); filled++; } }
+          showToast(added + " étape(s) ajoutée(s), " + filled + " complétée(s)."); renderOrg("timeline");
+        } catch (e) { showToast(orgErr(e)); go.disabled = false; }
+      } });
+      list.addEventListener("change", upd);
+      box.append(list, el("div", { class: "tl-prop-act" }, go,
+        el("button", { type: "button", class: "btn small", text: "Tout décocher", onclick: () => { const all = checks.some(c => c.checked); checks.forEach(c => c.checked = !all); upd(); } }),
+        el("button", { type: "button", class: "btn small", text: "Annuler", onclick: () => { box.remove(); tlProp = null; } })));
+      upd();
+    }
+    tlProp = box; bar.after(box);
   } }));
+  if (rows.length) {
+    let selMode = false, selBar = null;
+    const delBtn = el("button", { type: "button", class: "btn small", text: "☑ Sélectionner pour supprimer" });
+    const rowsEls = () => [...host.querySelectorAll("[data-rid]")];
+    const picked = () => rowsEls().filter(x => !x.hidden && x.querySelector(".sel-box:checked")).map(x => x.dataset.rid);
+    const refresh = () => { if (!selBar) return; const n = picked().length; selBar.go.disabled = !n; selBar.go.textContent = "Supprimer la sélection (" + n + ")"; };
+    const stop = () => { selMode = false; delBtn.classList.remove("solid"); delBtn.textContent = "☑ Sélectionner pour supprimer"; host.classList.remove("sel-mode"); host.querySelectorAll(".sel-box,.sel-td,.sel-th").forEach(x => x.remove()); if (selBar) { selBar.box.remove(); selBar = null; } };
+    delBtn.addEventListener("click", () => {
+      if (selMode) return stop();
+      selMode = true; delBtn.classList.add("solid"); delBtn.textContent = "✓ Terminer la sélection"; host.classList.add("sel-mode");
+      host.querySelectorAll("table.org-table thead tr").forEach(tr => tr.prepend(el("th", { class: "sel-th" })));
+      rowsEls().forEach(x => {
+        const cb = el("input", { type: "checkbox", class: "sel-box", "aria-label": "Sélectionner cette ligne" });
+        cb.addEventListener("click", e => e.stopPropagation()); cb.addEventListener("change", refresh);
+        if (x.tagName === "TR") x.prepend(el("td", { class: "sel-td" }, cb)); else { const sm = x.querySelector("summary"); if (sm) sm.append(cb); }
+      });
+      const go = el("button", { type: "button", class: "btn small danger", disabled: true, onclick: async () => {
+        const ids = picked(); if (!ids.length) return;
+        if (!window.confirm("Supprimer " + ids.length + " ligne" + (ids.length > 1 ? "s" : "") + " ? Cette action est définitive.")) return;
+        go.disabled = true;
+        try { for (const id of ids) { await orgStore.remove(M.table, id); orgOpen.delete(id); } showToast(ids.length + " ligne" + (ids.length > 1 ? "s supprimées" : " supprimée") + "."); renderOrg(key); }
+        catch (e) { showToast(orgErr(e)); renderOrg(key); }
+      } });
+      const all = el("button", { type: "button", class: "btn small", text: "Tout sélectionner", onclick: () => { const els = rowsEls().filter(x => !x.hidden); const every = els.every(x => x.querySelector(".sel-box")?.checked); els.forEach(x => { const c = x.querySelector(".sel-box"); if (c) c.checked = !every; }); refresh(); } });
+      selBar = { go, box: el("div", { class: "sel-bar" }, go, all, el("button", { type: "button", class: "btn small", text: "Annuler", onclick: stop })) };
+      bar.after(selBar.box); refresh();
+    });
+    bar.append(delBtn);
+  }
   host.append(bar);
   if (key === "timeline" && rows.length) host.append(timelinePanel(rows, tlGames));
   if (key === "guests") host.append(invitePanel(rows));
@@ -806,7 +859,7 @@ async function renderOrgInner(key) {
     shown.forEach((r, i) => {
       if (key === "budget" && r.cat !== lastCat) { lastCat = r.cat; const inCat = rows.filter(x => x.cat === r.cat), sub = inCat.reduce((a, x) => a + (Number(x.estimated) || 0), 0), fam = inCat.reduce((a, x) => a + (Number(x.family) || 0), 0); list.append(el("h3", { class: "org-grp", text: (r.cat || "Sans poste") + " · " + eur(sub) + (fam ? " · dont famille " + eur(fam) : "") })); }
       if (key === "vendors" && r.role !== lastCat) { lastCat = r.role; list.append(el("h3", { class: "org-grp", text: (r.role || "Autre") + " · " + rows.filter(x => x.role === r.role).length })); }
-      const card = el("details", { class: "card org-card" });
+      const card = el("details", { class: "card org-card", "data-rid": r.id });
       if (orgOpen.has(r.id)) card.open = true;
       card.addEventListener("toggle", () => { if (card.open) orgOpen.add(r.id); else orgOpen.delete(r.id); });
       const head = el("summary", { class: "org-sum-row" }); const fill = () => head.replaceChildren(...sumFor(r)); fill();
@@ -842,7 +895,7 @@ async function renderOrgInner(key) {
       tb.append(el("tr", { class: "grp" }, el("td", { colspan: String(M.fields.length + 1), text: r.cat + " · " + eur(sub) })));
     }
     const late = key === "tasks" && !r.done && r.due && r.due < todayISO();
-    const tr = el("tr", { class: (late ? "late " : "") + (key === "tasks" && r.done ? "done" : "") + (key === "guests" ? " p-" + (r.presence || "ATT") : "") });
+    const tr = el("tr", { "data-rid": r.id, class: (late ? "late " : "") + (key === "tasks" && r.done ? "done" : "") + (key === "guests" ? " p-" + (r.presence || "ATT") : "") });
     if (key === "guests") { tr.dataset.q = norm((r.nom || "") + " " + (r.prenom || "")); tr.dataset.p = r.presence || "ATT"; tr.dataset.a = r.allergie && r.allergie.trim() ? "1" : "0"; }
     M.fields.forEach(f => {
       const inp = fieldInput(f, f.k === "status" && key === "tasks" ? statusOf(r) : r[f.k]);
