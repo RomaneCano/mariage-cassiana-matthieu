@@ -328,8 +328,9 @@ function fieldInput(f, value, row) {
   }
   else if (f.t === "check") { inp = el("input", { type: "checkbox" }); inp.checked = !!value; }
   else if (f.t === "long" && f.k === "guests") inp = guestEditor(value, row ? row.capacity : 10);
-  else if (f.t === "long") {
-    inp = el("textarea", { rows: "1" }); inp.value = value || "";
+  else if (f.t === "long" || f.t === "text") {   // les textes passent à la ligne et grandissent : tout reste lisible
+    inp = el("textarea", { rows: "1" }); inp.value = value == null ? "" : value;
+    if (f.t === "text") inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
     const grow = () => { inp.style.height = "auto"; if (inp.scrollHeight) inp.style.height = (inp.scrollHeight + 2) + "px"; };
     inp.addEventListener("input", grow);
     new ResizeObserver(() => { if (inp._w !== inp.offsetWidth) { inp._w = inp.offsetWidth; grow(); } }).observe(inp);
@@ -362,7 +363,7 @@ async function sendInvite(g) {
 const isUrl = v => typeof v === "string" && /^https?:\/\//i.test(v);
 const readInput = (f, inp) => f.t === "check" ? inp.checked : f.t === "number" ? (inp.value === "" ? null : Number(inp.value)) : (inp.value.trim() === "" ? null : inp.value.trim());
 
-function orgSummary(key, rows) {
+function orgSummary(key, rows, deco) {
   const box = el("div", { class: "org-sum" });
   const chip = (label, value, cls) => box.append(el("div", { class: "sum-chip " + (cls || "") }, el("b", { text: value }), el("span", { text: label })));
   if (key === "tasks") {
@@ -374,8 +375,11 @@ function orgSummary(key, rows) {
     const paidD = rows.reduce((a, r) => a + (Number(r.paid) || 0), 0);
     chip("références", String(rows.length), "c-all"); chip("articles au total", String(articles), "c-kid"); chip("prévu", eur2(total), "c-link"); const resteD = total - paidD; chip("payé", eur2(paidD), total > 0 && resteD <= 0.005 ? "good" : "c-ok"); chip("reste à payer", eur2(Math.max(0, resteD)), resteD > 0.005 ? "warn" : "good");
   } else if (key === "budget") {
-    const s = f => rows.reduce((a, r) => a + (Number(r[f]) || 0), 0), est = s("estimated"), paid = s("paid"), total = est;
-    const fam = s("family"); chip("prévu", eur(est), "c-link"); chip("pris en charge par la famille", eur(fam), "c-hand"); chip("à notre charge", eur(Math.max(0, est - fam)), "c-post"); chip("payé", eur(paid), total > 0 && total - paid <= 0 ? "good" : "c-ok"); chip("reste à payer", eur(Math.max(0, total - paid)), total - paid > 0 ? "warn" : "good");
+    const s = f => rows.reduce((a, r) => a + (Number(r[f]) || 0), 0), dT = deco ? deco.total : 0, dP = deco ? deco.paid : 0;
+    const est = s("estimated") + dT, paid = s("paid") + dP, total = est, fam = s("family");   // le budget global inclut l'onglet « Décoration et papeterie »
+    const big = el("div", { class: "sum-chip c-link" }, el("b", { text: eur(est) }), el("span", { text: "prévu au total" }), dT > 0 ? el("small", { class: "sum-sub", text: "dont " + eur(dT) + " de décoration et papeterie (onglet séparé)" }) : "");
+    box.append(big);
+    chip("pris en charge par la famille", eur(fam), "c-hand"); chip("à notre charge", eur(Math.max(0, est - fam)), "c-post"); chip("payé", eur(paid), total > 0 && total - paid <= 0 ? "good" : "c-ok"); chip("reste à payer", eur(Math.max(0, total - paid)), total - paid > 0 ? "warn" : "good");
   } else if (key === "vendors") {
     const c = st => rows.filter(r => st.includes(r.status)).length;
     chip("à contacter", String(c(["À contacter"]))); chip("en attente", String(c(["En attente de devis", "En attente de réponse", "Réponse finale à donner", "Réponse négative à donner"]))); chip("retenus", String(c(RETAINED))); chip("refusés", String(c(["Refusé (NON)"])));
@@ -632,13 +636,13 @@ async function seatPlan(rows) {
       t.addEventListener("pointermove", move); t.addEventListener("pointerup", up); t.addEventListener("pointercancel", up);
     });
   });
-  const multiBtn = el("button", { type: "button", class: "btn small", text: "☑ Sélection multiple", onclick: () => { multiMode = !multiMode; sel = null; if (!multiMode) selMany = []; multiBtn.classList.toggle("solid", multiMode); multiBtn.textContent = multiMode ? "✓ Terminer la sélection multiple" : "☑ Sélection multiple"; if (!multiMode) { seatHist.undo.length = 0; seatHist.redo.length = 0; histRefresh(); } refreshMulti(); } });
-  const editBtn = el("button", { type: "button", class: "btn small", text: "✥ Modifier la disposition des tables", onclick: () => {
+  const multiBtn = el("button", { type: "button", class: "btn small", text: "☑ Sélection multiple", title: "Cochez plusieurs invités, puis touchez une table ou un « + » pour les placer d'un coup.", onclick: () => { multiMode = !multiMode; sel = null; if (!multiMode) selMany = []; multiBtn.classList.toggle("solid", multiMode); multiBtn.textContent = multiMode ? "✓ Terminer la sélection multiple" : "☑ Sélection multiple"; if (!multiMode) { seatHist.undo.length = 0; seatHist.redo.length = 0; histRefresh(); } refreshMulti(); } });
+  const editBtn = el("button", { type: "button", class: "btn small", text: "✥ Modifier la disposition des tables", title: "Déplacez chaque table librement avec la souris ou le doigt, pour reproduire le plan de la salle. Les invités ne bougent pas pendant ce mode.", onclick: () => {
     editing = !editing; if (editing && !Object.keys(layout).length) { histPush(); layout = autoPos(); saveLayout(); }
     editBtn.textContent = editing ? "✓ Terminer la disposition" : "✥ Modifier la disposition des tables"; if (!editing) { seatHist.undo.length = 0; seatHist.redo.length = 0; histRefresh(); showToast("Disposition enregistrée"); } editBtn.classList.toggle("solid", editing);
     resetBtn.hidden = !editing && !Object.keys(layout).length; hint.textContent = editing ? "Glissez chaque table à l'endroit voulu. Les invités ne se déplacent pas pendant ce mode." : ""; hint.hidden = !editing; applyLayout();
   } });
-  const resetBtn = el("button", { type: "button", class: "btn small", text: "Remettre en grille", hidden: !Object.keys(layout).length, onclick: () => { histPush(); layout = {}; editing = false; editBtn.textContent = "✥ Modifier la disposition des tables"; editBtn.classList.remove("solid"); resetBtn.hidden = true; hint.textContent = ""; hint.hidden = true; applyLayout(); saveLayout(); } });
+  const resetBtn = el("button", { type: "button", class: "btn small", text: "Remettre en grille", title: "Annule la disposition libre : toutes les tables reviennent se ranger en grille régulière, dans l'ordre de la liste, comme au départ. Les invités restent à leur table et rien n'est supprimé. Vous pouvez revenir en arrière avec « Annuler ».", "aria-label": "Remettre les tables en grille (annule la disposition libre)", hidden: !Object.keys(layout).length, onclick: () => { histPush(); layout = {}; editing = false; editBtn.textContent = "✥ Modifier la disposition des tables"; editBtn.classList.remove("solid"); resetBtn.hidden = true; hint.textContent = ""; hint.hidden = true; applyLayout(); saveLayout(); } });
   applyLayout();
   wrap.append(titled("h3", "cat", "Agneau couché", "Schéma des tables", 30), el("div", { class: "seat-tools" }, multiBtn, editBtn, resetBtn, tip), hint, multiBar, pool, scroller);
   return wrap;
@@ -667,8 +671,7 @@ function invitePanel(rows) {
     showToast(ok + " invitation(s) envoyée(s)"); renderOrg("guests");
   });
   box.append(
-    infoTip("Renseignez l'e-mail de l'invité et choisissez « Lien » dans la colonne Invitation. Il reçoit le lien du site et un bouton pour confirmer sa présence, une seule fois."),
-    el("div", { style: "display:flex;gap:10px;flex-wrap:wrap;align-items:center" }, keyIn, btn), status);
+    el("div", { style: "display:flex;gap:10px;flex-wrap:wrap;align-items:center" }, keyIn, btn, infoTip("Renseignez l'e-mail de l'invité et choisissez « Lien » dans la colonne Invitation. Il reçoit le lien du site et un bouton pour confirmer sa présence, une seule fois.")), status);
   return box;
 }
 let orgTok = 0, lastOrgKey = null;
@@ -683,7 +686,7 @@ async function renderOrg(key) {
   }
   return r;
 }
-async function decoTotal() { try { return (await orgStore.list("org_deco")).reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0); } catch { return null; } }
+async function decoStats() { try { const l = await orgStore.list("org_deco"); return { total: l.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0), paid: l.reduce((a, r) => a + (Number(r.paid) || 0), 0), count: l.length }; } catch { return null; } }
 function timelinePanel(rows, games) {
   const mins = t => { if (!t) return null; const [h, m] = String(t).split(":").map(Number); return (h < 6 ? h + 24 : h) * 60 + (m || 0); };
   const hm = t => { const [h, m] = String(t).split(":"); return Number(h) + "h" + (m && m !== "00" ? m : ""); };
@@ -713,18 +716,19 @@ async function renderOrgInner(key) {
   const tok = ++orgTok;
   orgState.key = key;
   document.querySelectorAll("[data-org]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.org === key)));
-  const host = $("#org-body"); host.replaceChildren();
+  const host = $("#org-body"); host.replaceChildren(); host.dataset.key = key;
   if (key === "notes") return renderNotes(host, () => tok === orgTok);
   const M = ORG[key]; let rows = [];
   try { rows = await orgStore.list(M.table); } catch (e) { host.append(el("p", { class: "msg err", text: "Impossible de charger : " + explainErr(e) + " Exécutez supabase-tout-en-un.sql dans Supabase." })); return; }
   if (tok !== orgTok) return;
   rows = sortRows(key, rows);
+  setExport($("#org-body"), () => buildOrgExport(key, M, rows));
   if (key === "guests") rows.filter(r => r.envoi === "QR code").forEach(r => { r.envoi = "Lien"; orgStore.update(M.table, r.id, { envoi: "Lien" }).catch(() => {}); });   // ancien libellé
   M.fields.filter(f => f.t === "select").forEach(f => rows.forEach(r => { if (r[f.k] && !f.o.includes(r[f.k])) f.o.push(r[f.k]); }));
   let tlGames = [];
   if (key === "timeline") { try { tlGames = await orgStore.list("org_games"); } catch {} if (tok !== orgTok) return; const gf = M.fields.find(f => f.k === "game"); gf.o.length = 0; tlGames.forEach(g => { if (g.name && !gf.o.includes(g.name)) gf.o.push(g.name); }); }
-  const sumBox = orgSummary(key, rows); host.append(sumBox);
-  if (key === "budget") decoTotal().then(t => { if (t != null && t > 0 && tok === orgTok) sumBox.append(el("div", { class: "sum-chip" }, el("b", { text: eur2(t) }), el("span", { text: "décoration et papeterie (en plus)" }))); });
+  const decoS = key === "budget" ? await decoStats() : null; if (tok !== orgTok) return;
+  const sumBox = orgSummary(key, rows, decoS); host.append(sumBox);
 
   // barre d'outils : filtres (tâches) et modèle
   const bar = el("div", { class: "org-tools" });
@@ -744,7 +748,7 @@ async function renderOrgInner(key) {
   }
   if (key === "seating") {
     const un = el("button", { type: "button", class: "btn small hist-btn", onclick: histUndo }), re = el("button", { type: "button", class: "btn small hist-btn", onclick: histRedo }), sv = el("button", { type: "button", class: "btn small hist-btn hist-save", title: "Valider les modifications : vide l'historique d'annulation (tout est déjà enregistré automatiquement)", onclick: () => { seatHist.undo.length = 0; seatHist.redo.length = 0; histRefresh(); showToast("Plan de tables enregistré."); } });
-    seatHist.ui = () => { un.textContent = "↶ Annuler" + (seatHist.undo.length ? " (" + seatHist.undo.length + ")" : ""); re.textContent = "↷ Rétablir"; sv.textContent = "💾 Enregistrer"; un.disabled = !seatHist.undo.length; re.disabled = !seatHist.redo.length; sv.disabled = !seatHist.undo.length && !seatHist.redo.length; un.title = "Annuler la dernière modification (Ctrl+Z)"; re.title = "Rétablir (Ctrl+Y)"; };
+    seatHist.ui = () => { un.textContent = "↶ Annuler" + (seatHist.undo.length ? " (" + seatHist.undo.length + ")" : ""); re.textContent = "↷ Rétablir"; sv.replaceChildren(icon("Valider", 16), " Enregistrer"); un.disabled = !seatHist.undo.length; re.disabled = !seatHist.redo.length; sv.disabled = !seatHist.undo.length && !seatHist.redo.length; un.title = "Annuler la dernière modification (Ctrl+Z)"; re.title = "Rétablir (Ctrl+Y)"; };
     seatHist.ui(); bar.append(un, re, sv);
     if (!rows.length) seatHist.live = { rows, rot: () => "{}", layout: () => "{}" };
   }
@@ -885,6 +889,10 @@ async function renderOrgInner(key) {
       card.append(head, el("div", { class: "org-card-body" }, g, acts));
       list.append(card);
     });
+    if (key === "budget" && decoS && decoS.count) {
+      const dc = el("div", { class: "card deco-link" }, el("b", { text: "Décoration et papeterie" }), el("span", { class: "sm", text: "compté depuis l'onglet séparé · " + decoS.count + " article" + (decoS.count > 1 ? "s" : "") }), el("span", { class: "num", text: "prévu " + eur(decoS.total) }), el("span", { class: "num pay " + payCls(decoS.total, decoS.paid), text: "● payé " + eur(decoS.paid) }), el("button", { class: "btn small", type: "button", text: "Ouvrir l'onglet", onclick: () => renderOrg("deco") }));
+      list.prepend(dc);
+    }
     host.append(list);
     return;
   }
@@ -994,6 +1002,7 @@ async function journalSpace(host, author, alive) {
   let entries = [];
   try { const r = await jRpc("journal_list", { p_author: author, p_code: code() }); if (!r.ok) { jState.codes[author] = null; return journalSpace(host, author, alive); } entries = r.entries || []; } catch (e) { host.append(el("p", { class: "msg err", text: orgErr(e) })); return; }
   if (!alive()) return;
+  setExport(host, () => ({ name: "journal-" + author, title: shared ? "Notes communes" : "Journal de " + name, headers: ["Date", "Type", "Titre", "Texte", "Fait", "Enregistré le"], rows: entries.slice().sort((a, b) => String(a.entry_date).localeCompare(String(b.entry_date)) || String(a.created_at).localeCompare(String(b.created_at))).map(e => [frDate(e.entry_date), e.kind, e.title || "", e.body, e.kind === "À faire" ? (e.done ? "Oui" : "Non") : "", new Date(e.created_at).toLocaleString("fr-FR")]) }));
   let editing = null;
   const top = el("div", { class: "j-top" }, el("h3", { text: shared ? "Notes communes" : "Journal de " + name }),
     el("div", { class: "j-top-btns" }, shared ? "" : unlocked ? "" : el("button", { type: "button", class: "btn small", text: "🔒 Verrouiller", onclick: () => { jState.codes[author] = null; journalSpace(host, author, alive); } }), shared ? "" : el("button", { type: "button", class: "btn small", text: "Changer le code", onclick: () => changeCode() })));
@@ -1105,8 +1114,7 @@ async function renderPhotoAdmin() {
     if (u === false) { linMsg.textContent = "Ce lien n'est pas valide : collez l'adresse complète de l'album."; return; }
     try { await store.setSetting("photos_link", u || ""); lin.value = u || ""; linMsg.textContent = u ? "✓ Lien enregistré : les invités verront un bouton dans l'onglet Photos." : "✓ Lien retiré."; applyPostWedding(); } catch (e) { linMsg.textContent = "⚠ " + orgErr(e); }
   } });
-  host.append(el("div", { class: "card", style: "margin-bottom:14px;padding:12px 14px" }, el("h3", { text: "Lien de l'album photo", style: "margin:0 0 4px" }),
-    infoTip("Collez le lien partagé d'un album (Google Photos, Drive…). Les invités l'ouvrent depuis l'onglet Photos pour voir toutes les photos et y ajouter les leurs. Il s'affiche dès que la galerie est publiée."),
+  host.append(el("div", { class: "card", style: "margin-bottom:14px;padding:12px 14px" }, el("div", { class: "h-row" }, el("h3", { text: "Lien de l'album photo", style: "margin:0" }), infoTip("Collez le lien partagé d'un album (Google Photos, Drive…). Les invités l'ouvrent depuis l'onglet Photos pour voir toutes les photos et y ajouter les leurs. Il s'affiche dès que la galerie est publiée.")),
     el("div", { style: "display:flex;gap:8px;flex-wrap:wrap;margin-top:8px" }, lin, linSave), linMsg));
   const drop = el("label", { class: "drop", for: "photo-input" }, el("b", { text: "Ajouter des photos" }), el("span", { text: "Cliquez ou glissez vos photos ici. Plusieurs à la fois. Elles sont allégées automatiquement." }));
   const input = el("input", { id: "photo-input", type: "file", accept: "image/*", multiple: true, hidden: true });
@@ -1122,7 +1130,7 @@ async function renderPhotoAdmin() {
   drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); go([...e.dataTransfer.files].filter(f => f.type.startsWith("image/"))); });
   host.append(drop, input, status);
   if (!photos.length) { host.append(el("p", { class: "empty", text: "Aucune photo pour l'instant." })); return; }
-  host.append(el("p", { class: "hint", text: photos.length + " photo(s)." }), infoTip("Les flèches changent l'ordre d'affichage."));
+  host.append(el("div", { class: "h-row" }, el("p", { class: "hint", text: photos.length + " photo(s)." }), infoTip("Les flèches changent l'ordre d'affichage.")));
   const grid = el("div", { class: "pg-admin" });
   photos.forEach((p, i) => {
     const cap = el("input", { type: "text", maxlength: "120", placeholder: "Légende (facultatif)", "aria-label": "Légende" }); cap.value = p.caption || "";
@@ -1207,6 +1215,8 @@ const ICONS = {
   "Épi de blé": '<path d="M32 60V22" class="ln"/><g class="ln"><ellipse cx="25" cy="42" rx="4" ry="8" transform="rotate(-25 25 42)"/><ellipse cx="39" cy="42" rx="4" ry="8" transform="rotate(25 39 42)"/><ellipse cx="25" cy="29" rx="4" ry="8" transform="rotate(-25 25 29)"/><ellipse cx="39" cy="29" rx="4" ry="8" transform="rotate(25 39 29)"/><ellipse cx="32" cy="14" rx="4" ry="8"/></g>',
   "Rameau d'olivier": '<path d="M8 54C20 44 38 32 56 10" class="ln"/><g class="ln"><ellipse cx="20" cy="40" rx="3.5" ry="8" transform="rotate(50 20 40)"/><ellipse cx="30" cy="49" rx="3.5" ry="8" transform="rotate(-10 30 49)"/><ellipse cx="32" cy="31" rx="3.5" ry="8" transform="rotate(50 32 31)"/><ellipse cx="43" cy="39" rx="3.5" ry="8" transform="rotate(-5 43 39)"/><ellipse cx="45" cy="21" rx="3.5" ry="8" transform="rotate(50 45 21)"/><ellipse cx="55" cy="29" rx="3.5" ry="8" transform="rotate(5 55 29)"/></g>',
   "Plus": '<circle cx="32" cy="32" r="24" class="ln"/><path d="M32 20v24M20 32h24" class="ln"/>',
+  "Valider": '<circle cx="32" cy="32" r="24" class="ln"/><path d="M20 33l9 9 16-19" class="ln"/>',
+  "Imprimer": '<path d="M18 24V8h28v16" class="ln"/><rect x="7" y="24" width="50" height="24" rx="5" class="ln"/><path d="M18 40h28v17H18z" class="ln"/><path d="M45 32h4" class="ln thin"/>',
   "Bougie": '<path d="M23 26h18v32H23z" class="ln"/><path d="M32 26v-5" class="ln thin"/><path d="M32 4c6 6 8 10 8 13a8 8 0 0 1-16 0c0-3 2-7 8-13z" class="ln"/>'
 };
 const icon = (name, size) => { const s = el("span", { class: "ico", role: "img", "aria-label": name, title: name }); s.innerHTML = '<svg viewBox="0 0 64 64" width="' + (size || 56) + '" height="' + (size || 56) + '" aria-hidden="true">' + ICONS[name] + "</svg>"; return s; };
@@ -1337,6 +1347,21 @@ async function dedupeOnce() {
   await clean("org_games", r => norm(r.name));
   await store.setSetting("dedupe_v1", "1");
 }
+/* Les lignes du budget classées en « Décoration » ou « Papeterie » sont reportées dans l'onglet « Décoration et papeterie » (une seule fois),
+   pour ne plus compter ces postes deux fois. Elles sont retirées du budget seulement après avoir été copiées. */
+async function moveDecoBudgetOnce() {
+  if ((await store.getSetting("deco_moved_v1")) === "1") return 0;
+  const rows = (await orgStore.list("org_budget")).filter(r => /^(deco|decoration|papeterie)\b/.test(norm(r.cat)));
+  const names = new Set((await orgStore.list("org_deco")).map(d => norm(d.name)));
+  let n = 0;
+  for (const r of rows) {
+    const note = ["Repris du budget (" + (r.cat || "").trim() + ")", r.vendor ? "Prestataire : " + r.vendor : "", r.family ? "Part famille : " + eur(r.family) : "", r.notes || ""].filter(Boolean).join(" · ");
+    if (!names.has(norm(r.item))) { await orgStore.insert("org_deco", { name: r.item || "Sans nom", qty: 1, unit: Number(r.estimated) || 0, paid: Number(r.paid) || 0, notes: note, ...(r.link ? { link: r.link } : {}) }); names.add(norm(r.item)); }
+    await orgStore.remove("org_budget", r.id); n++;
+  }
+  await store.setSetting("deco_moved_v1", "1");
+  return n;
+}
 /* Vide le budget une seule fois : les mariés le saisissent eux-mêmes. */
 async function clearBudgetOnce() {
   if ((await store.getSetting("budget_cleared_v1")) === "1") return;
@@ -1350,6 +1375,7 @@ function seedFromSheet() { return seeding || (seeding = seedInner().finally(() =
 async function seedInner() {
   try {
     await clearBudgetOnce();
+    try { const moved = await moveDecoBudgetOnce(); if (moved) { showToast(moved + " ligne" + (moved > 1 ? "s" : "") + " du budget reportée" + (moved > 1 ? "s" : "") + " dans « Décoration et papeterie » (plus de double comptage)."); if (typeof orgState !== "undefined" && $("#org-body") && !$("#org-body").closest("[hidden]")) renderOrg(orgState.key); } } catch (e) { console.warn("Report déco :", e); }
     if ((await store.getSetting("seed_sheet_v1")) === "1") { await dedupeOnce(); return; }
     const games = await orgStore.list("org_games"), gn = new Set(games.map(g => norm(g.name)));
     const addG = TPL.games().filter(g => !gn.has(norm(g.name)));
@@ -1365,3 +1391,74 @@ function adminExtraRefresh() { seedFromSheet(); buildAdminShell(); const pc = $(
 buildAdminShell();
 applyPostWedding();
 if (!$("#admin-panel").hidden) adminExtraRefresh(); // l'espace s'est ouvert avant le chargement de ce fichier
+
+
+/* ============ IMPRESSION ET EXPORTS (petite icône en haut à droite de chaque page) ============ */
+let exportSource = null;
+window.setExport = (host, build) => { exportSource = { host, build }; };
+const currentExport = () => { if (!exportSource || !exportSource.host.isConnected || !exportSource.host.getClientRects().length) return null; try { return exportSource.build(); } catch { return null; } };
+const fmtCell = (f, v, r) => {
+  if (v == null || v === "") return "";
+  if (f.t === "check") return v ? "Oui" : "Non";
+  if (f.t === "select") return (f.labels && f.labels[v]) || v;
+  if (f.t === "date") return frDate(v);
+  if (f.t === "number") return Number(v);
+  return String(v);
+};
+function buildOrgExport(key, M, rows) {
+  if (key === "seating") return { name: "plan-de-tables", title: "Plan de tables", headers: ["Table", "Forme", "Places", "Invités placés", "Invités"], rows: rows.map(r => [r.name, r.shape || "Ronde", Number(r.capacity) || "", guestsOf(r).length, guestsOf(r).join("; ")]) };
+  const headers = M.fields.map(f => f.l), out = rows.map(r => M.fields.map(f => fmtCell(f, f.k === "status" && key === "tasks" ? statusOf(r) : r[f.k], r)));
+  if (key === "guests") { headers.push("Invitation envoyée le"); rows.forEach((r, i) => out[i].push(r.invite_sent_at ? frDate(String(r.invite_sent_at).slice(0, 10)) : "")); }
+  if (key === "deco") { headers.push("Total (€)"); rows.forEach((r, i) => out[i].push((Number(r.unit) || 0) * (Number(r.qty) || 0))); }
+  if (key === "budget") { headers.push("Reste à payer (€)"); rows.forEach((r, i) => out[i].push((Number(r.estimated) || 0) - (Number(r.paid) || 0))); }
+  return { name: { tasks: "taches", guests: "invites", budget: "budget", deco: "decoration-papeterie", games: "jeux", timeline: "jour-j" }[key] || key, title: M.label, headers, rows: out };
+}
+const csvCell = v => { const t = String(v == null ? "" : v).replace(/"/g, '""'); return /[";\r\n]/.test(t) ? '"' + t + '"' : t; };
+const stamp = () => todayISO();
+function saveBlob(blob, filename) { const a = el("a", { href: URL.createObjectURL(blob), download: filename }); document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
+const exportCSV = d => saveBlob(new Blob(["﻿" + [d.headers, ...d.rows].map(r => r.map(csvCell).join(";")).join("\r\n")], { type: "text/csv;charset=utf-8" }), "mariage-" + d.name + "-" + stamp() + ".csv");
+let xlsxLoading = null;
+const loadXLSX = () => window.XLSX ? Promise.resolve() : (xlsxLoading = xlsxLoading || new Promise((ok, ko) => { const s = el("script", { src: "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" }); s.onload = ok; s.onerror = () => { xlsxLoading = null; ko(new Error("xlsx")); }; document.head.append(s); }));
+async function exportXLSX(d) {
+  try {
+    await loadXLSX();
+    const ws = XLSX.utils.aoa_to_sheet([d.headers, ...d.rows]);
+    ws["!cols"] = d.headers.map((h, i) => ({ wch: Math.min(60, Math.max(String(h).length, ...d.rows.map(r => String(r[i] == null ? "" : r[i]).split("\n")[0].length)) + 2) }));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, String(d.title || d.name).slice(0, 31).replace(/[\\\/\?\*\[\]:]/g, " "));
+    XLSX.writeFile(wb, "mariage-" + d.name + "-" + stamp() + ".xlsx");
+  } catch { showToast("Export Excel indisponible (connexion ?). Fichier CSV téléchargé à la place, il s'ouvre aussi dans Excel."); exportCSV(d); }
+}
+function addPrintButtons() {
+  document.querySelectorAll(".panel").forEach(panel => {
+    if (panel.querySelector(":scope > .print-wrap")) return;
+    const menu = el("div", { class: "print-menu", role: "menu", hidden: true });
+    const btn = el("button", { type: "button", class: "print-btn", "aria-label": "Imprimer ou exporter cette page", title: "Imprimer ou exporter", "aria-haspopup": "true" }, icon("Imprimer", 18));
+    const close = () => { menu.hidden = true; };
+    const item = (text, fn) => el("button", { type: "button", role: "menuitem", text, onclick: () => { close(); fn(); } });
+    btn.addEventListener("click", e => {
+      e.stopPropagation(); const open = menu.hidden; document.querySelectorAll(".print-menu").forEach(m => m.hidden = true); if (!open) return;
+      const d = currentExport();
+      menu.replaceChildren(item("🖨  Imprimer ou enregistrer en PDF", () => setTimeout(() => window.print(), 50)), ...(d && d.rows.length ? [el("hr"), item("Exporter en Excel (.xlsx)", () => exportXLSX(d)), item("Exporter en CSV", () => exportCSV(d))] : []));
+      menu.hidden = false;
+    });
+    panel.prepend(el("div", { class: "print-wrap" }, btn, menu));
+  });
+}
+document.addEventListener("click", e => { if (!e.target.closest(".print-wrap")) document.querySelectorAll(".print-menu").forEach(m => m.hidden = true); });
+addPrintButtons();
+
+/* avant impression : ouvrir les blocs repliables de la page et remplacer les champs des tableaux par leur texte (tout reste lisible, rien n'est coupé) */
+let _opened = [], _pv = [];
+window.preparePrint = () => {
+  if (_pv.length) return;   // déjà préparé (beforeprint peut être déclenché en plus de l'appel direct)
+  _opened = [...document.querySelectorAll(".panel.active details:not([open])")].filter(d => !d.classList.contains("org-card") && !d.classList.contains("org-addbox") && !d.classList.contains("org-invite"));
+  _opened.forEach(d => d.open = true);
+  document.querySelectorAll(".panel.active .org-table input:not(.sel-box), .panel.active .org-table select, .panel.active .org-table textarea").forEach(c => {
+    const txt = c.type === "checkbox" ? (c.checked ? "✓" : "") : c.tagName === "SELECT" ? ((c.selectedOptions[0] && c.selectedOptions[0].textContent) || "") : c.type === "date" && c.value ? frDate(c.value) : c.value;
+    const v = el("span", { class: "print-val" + (c.classList.contains("has-alg") ? " alg" : ""), text: txt === "—" ? "" : txt });
+    c.after(v); c.classList.add("pv-hid"); _pv.push([c, v]);
+  });
+};
+window.restorePrint = () => { _pv.forEach(([c, v]) => { c.classList.remove("pv-hid"); v.remove(); }); _pv = []; _opened.forEach(d => d.open = false); _opened = []; };
+window.addEventListener("beforeprint", window.preparePrint);
+window.addEventListener("afterprint", window.restorePrint);
