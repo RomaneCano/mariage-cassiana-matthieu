@@ -1879,7 +1879,10 @@ async function saveText(n){
 function explainErr(e){
   const m = String((e && (e.message || e.details)) || e || ""), c = (e && e.code) || "";
   if (/bucket not found|resource was not found/i.test(m)) return "le dossier de photos n'existe pas : exécutez supabase-tout-en-un.sql dans Supabase.";
-  if (c === "PGRST204" || c === "42703" || /lyrics/i.test(m)) return "la colonne des paroles n'existe pas : exécutez le SQL « supabase-migration-paroles.sql » dans Supabase.";
+  if (c === "PGRST204" || c === "42703" || /could not find the '.+' column|column .+ does not exist/i.test(m)) {
+    const col = (m.match(/'([^']+)' column of '([^']+)'/) || m.match(/column "?([a-z_]+)"? of relation "?([a-z_]+)"?/i) || m.match(/column "?([a-z_.]+)"? does not exist/i) || []);
+    return "il manque une colonne dans la base" + (col[1] ? " (« " + col[1] + " »" + (col[2] ? ", table « " + col[2] + " »" : "") + ")" : "") + " : exécutez le fichier supabase-tout-en-un.sql dans le SQL Editor de Supabase, puis rechargez la page.";
+  }
   if (c === "PGRST205" || c === "42P01" || /could not find the table|does not exist/i.test(m)) return "la table « textes » n'existe pas dans Supabase : exécutez le fichier supabase-migration-textes.sql dans le SQL Editor.";
   if (c === "42501" || c === "PGRST301" || /row-level security|permission denied|not allowed/i.test(m)) return "ce compte n'a pas le droit d'écrire : vérifiez que votre adresse est dans la table « admins » et que vous êtes connecté(e).";
   if (/jwt|expired|not authenticated|invalid token/i.test(m)) return "votre session a expiré : reconnectez-vous via « Espace mariés ».";
