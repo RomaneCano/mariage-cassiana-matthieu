@@ -971,7 +971,7 @@ async function journalSpace(host, author, alive) {
   try { jState.status = await jRpc("journal_status", {}); } catch (e) { host.replaceChildren(el("p", { class: "msg err", text: "Le journal n'est pas encore installé dans Supabase. Exécutez supabase-tout-en-un.sql (ou supabase-migration-journal.sql) dans le SQL Editor." })); return; }
   if (!alive()) return;
   const unlocked = shared || jState.status.unlocked || jUnlocked();
-  const code = () => jState.codes[author];
+  const code = () => jState.codes[author] || null;   // null (et non undefined) : sinon le paramètre disparaît de l'appel
   host.replaceChildren();
   // 1. pas encore de code : on le crée
   if (!shared && !jState.status[author]) {
