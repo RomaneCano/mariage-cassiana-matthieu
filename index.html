@@ -435,6 +435,10 @@ body.sorting .admin-main button,body.sorting .admin-tabs button{outline:1.5px da
 .tl-meta{font-size:.84rem;opacity:.85;margin-top:2px}
 .tl-game{margin-top:4px;font-size:.84rem;display:inline-block;background:#f6ecc9;color:#6b5210;border-radius:8px;padding:2px 10px}
 @media(max-width:640px){.tl-item{grid-template-columns:62px 1fr;gap:10px}.tl-item::before{left:71px}.tl-item::after{left:65px}}
+.rs-add{margin:2px 0 14px;display:inline-flex}
+.rs-person{border:1px solid var(--olive-soft);border-radius:14px;padding:12px 14px;margin:0 0 12px;display:grid;gap:10px;background:var(--paper)}
+.rs-ph{display:flex;justify-content:space-between;align-items:center}
+.rs-rm{border:0;background:transparent;color:#8c3a2a;text-decoration:underline;cursor:pointer;font:inherit;font-size:.85rem}
 .sum-chip.good{background:#dde8cc;color:#34501b}
 .org-sum-row .num.pay{font-weight:700}.num.pay-ok{color:#2f6b1f}.num.pay-part{color:#8a6310}.num.pay-no{color:#a3392a}
 .info-wrap{position:relative;display:inline-flex;align-items:center}
@@ -1132,6 +1136,8 @@ details[open] > :not(summary){animation:unfold .45s ease-out backwards}
         </div>
         <p class="hint">Ces informations servent uniquement à préparer le repas. Elles ne sont lues que par les mariés et le traiteur.</p>
       </div>
+      <div id="rs-more"></div>
+      <button class="btn small rs-add" type="button" id="rs-add">+ Ajouter une autre personne (conjoint, enfant…)</button>
       <button class="btn solid" type="submit" id="rs-submit">Envoyer ma réponse</button>
       <p class="msg" id="rs-msg" role="status" hidden></p>
     </form>
@@ -1251,7 +1257,7 @@ const CONTENT = {
   ],
   allergens: ["Arachides","Fruits à coque","Gluten","Lactose / lait","Œufs","Poisson","Crustacés","Mollusques","Soja","Sésame","Moutarde","Céleri","Sulfites","Fruits exotiques","Végétarien","Sans porc"],
   faq: [
-    ["Comment confirmer ma présence et signaler une allergie ?","Merci de répondre avant le 9 juillet 2027, soit trois mois avant le mariage. Remplissez le formulaire ci-dessous, une réponse par personne, enfants compris. Vous pouvez aussi écrire à cassmattas@gmail.com.","form"],
+    ["Comment confirmer ma présence et signaler une allergie ?","Merci de répondre avant le 9 juillet 2027, soit trois mois avant le mariage. Remplissez le formulaire ci-dessous, une réponse par personne, enfants compris. Pour répondre pour toute la famille en une fois, utilisez le bouton « Ajouter une autre personne ». Vous pouvez aussi écrire à cassmattas@gmail.com.","form"],
     ["Comment s'y rendre ?","L'église est au 1 rue du Docteur-Nodier à Lagny-sur-Marne. Le domaine, le Clos du Colombier, est à Fontenay-Trésigny, environ 40 minutes de route plus loin.","route"],
     ["Où se garer à l'église ?","Dans l'un des parkings du centre de Lagny-sur-Marne indiqués dans la section « Comment s'y rendre ? », puis à pied jusqu'à l'église."],
     ["Y a-t-il de la place pour se garer au domaine ?","Oui, environ 100 places sur place."],
@@ -1551,6 +1557,18 @@ function bindRsvpForm(){
     detail.style.display = val("hasallergy") === "oui" ? "grid" : "none";
   };
   form.addEventListener("change", sync); sync();
+  const more = $("#rs-more"); let seq = 0;
+  const addPerson = () => {
+    const n = ++seq, id = "rp" + n, card = el("fieldset", { class: "rs-person", "data-n": String(n) });
+    const radio = (v, t) => el("label", { for: id + "-" + v }, el("input", { type: "radio", name: id + "-pres", id: id + "-" + v, value: v }), el("span", { text: t }));
+    card.append(
+      el("div", { class: "rs-ph" }, el("b", { text: "Personne " + (more.children.length + 2) }), el("button", { type: "button", class: "rs-rm", "aria-label": "Retirer cette personne", text: "Retirer", onclick: () => { card.remove(); [...more.children].forEach((c, i) => c.querySelector(".rs-ph b").textContent = "Personne " + (i + 2)); } })),
+      el("div", { class: "two-f" }, el("label", {}, "Prénom", el("input", { class: "rp-prenom", maxlength: "60", autocomplete: "off" })), el("label", {}, "Nom", el("input", { class: "rp-nom", maxlength: "60", value: $("#rs-nom").value.trim(), autocomplete: "off" }))),
+      el("div", { class: "chips" }, radio("oui", "Présent(e)"), radio("non", "Absent(e)")),
+      el("label", {}, "Allergie ou intolérance (laisser vide si aucune)", el("input", { class: "rp-allergie", maxlength: "200", placeholder: "Exemple : gluten, arachides" })));
+    more.append(card); card.querySelector(".rp-prenom").focus();
+  };
+  $("#rs-add").addEventListener("click", addPerson);
   form.addEventListener("submit", async ev => {
     ev.preventDefault();
     const prenom = $("#rs-prenom").value.trim(), nom = $("#rs-nom").value.trim(), presence = val("presence");
@@ -1565,12 +1583,21 @@ function bindRsvpForm(){
         if (!picked.length && !autre) return showMsg(msg, "Choisissez au moins une allergie, ou décrivez-la dans le champ de précision.", "err");
       }
     }
+    const extras = [];
+    for (const c of more.children) {
+      const pr = c.querySelector(".rp-prenom").value.trim(), nm = c.querySelector(".rp-nom").value.trim(), pres = (c.querySelector("input[type=radio]:checked") || {}).value, al = c.querySelector(".rp-allergie").value.trim();
+      if (!pr || !nm) return showMsg(msg, "Indiquez le prénom et le nom de chaque personne ajoutée (ou retirez-la).", "err");
+      if (!pres) return showMsg(msg, "Indiquez si " + pr + " sera présent(e).", "err");
+      extras.push({ prenom: pr, nom: nm, presence: pres, allergies: pres === "oui" ? al : "", categories: [] });
+    }
     submit.disabled = true;
     try {
-      const match = await store.addResponse({ prenom, nom, presence, allergies: [...picked, ...(autre ? [autre] : [])].join(", "), categories: picked });
-      form.reset(); sync();
+      const all = [{ prenom, nom, presence, allergies: [...picked, ...(autre ? [autre] : [])].join(", "), categories: picked }, ...extras];
+      const matches = []; for (const rec of all) matches.push(await store.addResponse(rec));
+      const match = matches.find(m => m === "inconnu" || m === "ambigu") || matches[0];
+      form.reset(); more.replaceChildren(); sync();
       const lost = match === "inconnu" || match === "ambigu";
-      showMsg(msg, (presence === "oui" ? "Merci, votre présence est bien enregistrée. Nous avons hâte de vous voir !" : "Merci de nous avoir prévenus. Vous nous manquerez.") + (lost ? " Nous n'avons pas pu retrouver votre ligne automatiquement dans la liste des invités : pas d'inquiétude, votre réponse est conservée et les mariés feront le lien." : ""), "ok");
+      showMsg(msg, (all.length > 1 ? "Merci, les " + all.length + " réponses sont bien enregistrées." + (all.some(r => r.presence === "oui") ? " Nous avons hâte de vous voir !" : "") : presence === "oui" ? "Merci, votre présence est bien enregistrée. Nous avons hâte de vous voir !" : "Merci de nous avoir prévenus. Vous nous manquerez.") + (lost ? " Nous n'avons pas pu retrouver votre ligne automatiquement dans la liste des invités : pas d'inquiétude, votre réponse est conservée et les mariés feront le lien." : ""), "ok");
     } catch { showMsg(msg, "L'envoi n'a pas fonctionné. Vérifiez votre connexion et réessayez, ou écrivez-nous par e-mail.", "err"); }
     submit.disabled = false;
   });
