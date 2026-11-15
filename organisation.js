@@ -380,7 +380,7 @@ function orgSummary(key, rows, deco) {
     const paidD = rows.reduce((a, r) => a + (Number(r.paid) || 0), 0), resteD = total - paidD;
     if (env > 0) { chip("budget global déco + papeterie", eur2(env), "c-link"); chip(env - total >= 0 ? "encore disponible" : "dépassement", eur2(Math.abs(env - total)), env - total >= 0 ? "good" : "warn"); }
     chip("références", String(rows.length), "c-all"); chip("articles au total", String(articles), "c-kid"); chip("dépenses prévues", eur2(total), "c-alg");
-    chip("payé", eur2(paidD), total > 0 && resteD <= 0.005 ? "good" : "c-ok"); chip("reste à payer", eur2(Math.max(0, resteD)), resteD > 0.005 ? "warn" : "good");
+    chip("payé", eur2(paidD), total > 0 && resteD <= 0.005 ? "good" : "c-ok"); if (paidD > 0) chip("reste à payer", eur2(Math.max(0, resteD)), resteD > 0.005 ? "warn" : "good");   // masqué tant que rien n'est payé (il répéterait « dépenses prévues »)
   } else if (key === "budget") {
     const s = f => rows.reduce((a, r) => a + (Number(r[f]) || 0), 0), dT = deco ? deco.total : 0, dP = deco ? deco.paid : 0;
     const est = s("estimated") + dT, paid = s("paid") + dP, total = est, fam = s("family");   // le budget global inclut l'onglet « Décoration et papeterie »
