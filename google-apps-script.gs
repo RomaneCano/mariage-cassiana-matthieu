@@ -26,11 +26,15 @@ function safe(s) {
 
 function doGet() { return ContentService.createTextOutput("ok"); }
 
+// La feuille des invités : l'onglet nommé SHEET_NAME s'il existe, sinon le premier onglet du classeur.
+function guestSheet(ss) { return ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0]; }
+
 function doPost(e) {
   const rec = JSON.parse(e.postData.contents);
   if (rec && rec.action === "invite") return handleInvite(rec);
+  if (rec && rec.action === "sync") return handleSync(rec);
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sh = ss.getSheetByName(SHEET_NAME);
+  const sh = guestSheet(ss);
   const last = sh.getLastRow();
   const values = sh.getRange(HEADER_ROW + 1, 1, Math.max(1, last - HEADER_ROW), COL_ALLERGIE).getValues();
   const nom = norm(rec.nom), prenom = norm(rec.prenom);
@@ -110,4 +114,36 @@ function handleInvite(rec) {
   } catch (err) { return jsonOut({ ok: false, error: "Envoi impossible : " + err }); }
   cache.put(ck, "1", 21600);
   return jsonOut({ ok: true });
+}
+
+
+/* ---------------------------------------------------------------------------
+   SYNCHRONISATION DEPUIS LE SITE (liste d'invités de l'espace des mariés -> ce tableur)
+   Même mot de passe que l'envoi d'e-mails (propriété INVITE_KEY). Ne touche qu'aux colonnes Présence et Allergie des lignes
+   existantes (jamais d'effacement), et ajoute à la fin les invités absents du tableur.
+   --------------------------------------------------------------------------- */
+function handleSync(rec) {
+  const key = PropertiesService.getScriptProperties().getProperty("INVITE_KEY");
+  if (!key) return jsonOut({ ok: false, error: "Mot de passe non configuré (propriété INVITE_KEY du script)." });
+  if (String(rec.key || "") !== key) return jsonOut({ ok: false, error: "Mot de passe incorrect." });
+  const ss = SpreadsheetApp.getActiveSpreadsheet(), sh = guestSheet(ss);
+  const last = sh.getLastRow();
+  const values = last > HEADER_ROW ? sh.getRange(HEADER_ROW + 1, 1, last - HEADER_ROW, 7).getValues() : [];
+  const index = {};
+  values.forEach(function (r, i) { const k = norm(r[0]) + "|" + norm(r[1]); if (!(k in index)) index[k] = i; });
+  let updated = 0; const toAdd = [];
+  (rec.guests || []).slice(0, 1500).forEach(function (g) {
+    const k = norm(g.nom) + "|" + norm(g.prenom);
+    const pres = g.presence === "OUI" ? "OUI" : g.presence === "NON" ? "NON" : "ATT";
+    if (k in index) {
+      const i = index[k], row = HEADER_ROW + 1 + i, cur = values[i];
+      if (String(cur[3] || "") !== pres && !(pres === "ATT" && cur[3])) { sh.getRange(row, 4).setValue(pres); updated++; }
+      const al = safe(g.allergie);
+      if (al && String(cur[4] || "").indexOf(al) === -1) { sh.getRange(row, 5).setValue(cur[4] ? cur[4] + ", " + al : al); updated++; }
+    } else if (norm(g.prenom)) {
+      toAdd.push([safe(g.nom), safe(g.prenom), safe(g.tel), pres, safe(g.allergie), safe(g.adresse), safe(g.age)]);
+    }
+  });
+  if (toAdd.length) sh.getRange(sh.getLastRow() + 1, 1, toAdd.length, 7).setValues(toAdd);
+  return jsonOut({ ok: true, updated: updated, added: toAdd.length });
 }

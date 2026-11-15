@@ -274,8 +274,8 @@ document.addEventListener("keydown", e => {
 });
 const orgStore = {
   async list(t) { const { data, error } = await remote.from(t).select("*"); if (error) throw error; return data || []; },
-  async insert(t, rows) { if (t === "org_tables") histPush(); const { data, error } = await remote.from(t).insert(rows).select(); if (error) throw error; if (!data || !data.length) throw { code: "42501", message: "row-level security" }; return data; },
-  async update(t, id, patch) { if (t === "org_tables") histPush(); const { data, error } = await remote.from(t).update(patch).eq("id", id).select(); if (error) throw error; if (!data || !data.length) throw { code: "42501", message: "row-level security" }; },
+  async insert(t, rows) { if (t === "org_tables") histPush(); if (t === "org_guests") scheduleSheetSync(); const { data, error } = await remote.from(t).insert(rows).select(); if (error) throw error; if (!data || !data.length) throw { code: "42501", message: "row-level security" }; return data; },
+  async update(t, id, patch) { if (t === "org_tables") histPush(); if (t === "org_guests") scheduleSheetSync(); const { data, error } = await remote.from(t).update(patch).eq("id", id).select(); if (error) throw error; if (!data || !data.length) throw { code: "42501", message: "row-level security" }; },
   async remove(t, id) { if (t === "org_tables") histPush(); const { error } = await remote.from(t).delete().eq("id", id); if (error) throw error; }
 };
 const orgErr = e => "Non enregistré : " + explainErr(e) + (/table|relation|schema/i.test(String((e && e.message) || "")) || (e && e.code === "PGRST205") ? " Exécutez supabase-tout-en-un.sql dans Supabase." : "");
@@ -347,6 +347,25 @@ function fieldInput(f, value, row) {
 }
 const cleanUrl = v => { v = String(v || "").trim(); if (!v) return null; if (!/^https?:\/\//i.test(v)) v = "https://" + v; try { const u = new URL(v); return /^https?:$/.test(u.protocol) && u.hostname.includes(".") ? u.href : false; } catch { return false; } };
 const isMail = v => typeof v === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+let sheetTimer = null, sheetStatusEl = null;
+const setSheetStatus = t => { if (sheetStatusEl && sheetStatusEl.isConnected) sheetStatusEl.textContent = t; };
+/* Recopie la liste d'invités dans le Google Sheet (présence, allergies, nouveaux invités) via le script Google */
+async function syncSheet(silent) {
+  const url = (typeof CONFIG !== "undefined" && CONFIG.APPS_SCRIPT_URL) || ""; if (!url) return;
+  let key = ""; try { key = sessionStorage.getItem(INVITE_KEY_LS) || ""; } catch {}
+  if (!key) { if (silent) return; key = (window.prompt("Mot de passe d'envoi (le même que pour les invitations par e-mail) :") || "").trim(); if (!key) return; try { sessionStorage.setItem(INVITE_KEY_LS, key); } catch {} }
+  setSheetStatus("Synchronisation…");
+  try {
+    const guests = (await orgStore.list("org_guests")).map(r => ({ nom: r.nom || "", prenom: r.prenom || "", tel: r.tel || "", presence: r.presence || "ATT", allergie: r.allergie || "", adresse: r.adresse || "", age: r.age || "" }));
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "sync", key, guests }) });
+    const j = await r.json();
+    if (!j.ok) { setSheetStatus("Échec : " + (j.error || "refusé")); if (!silent) showToast(j.error || "Synchronisation refusée."); if (/incorrect/i.test(j.error || "")) { try { sessionStorage.removeItem(INVITE_KEY_LS); } catch {} } return; }
+    const hm = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    setSheetStatus("Synchronisé à " + hm + (j.updated || j.added ? " (" + j.updated + " mise(s) à jour, " + j.added + " ajout(s))" : ""));
+    if (!silent) showToast("Google Sheet synchronisé : " + j.updated + " mise(s) à jour, " + j.added + " ajout(s).");
+  } catch (e) { setSheetStatus("Synchronisation impossible"); if (!silent) showToast("Synchronisation impossible : le script Google n'a pas répondu (a-t-il été redéployé avec la dernière version ?)."); }
+}
+const scheduleSheetSync = () => { clearTimeout(sheetTimer); sheetTimer = setTimeout(() => syncSheet(true), 4000); };
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/1SgGemnXjo-43lK3OXvgsrz1SolY3qrb3utOY1PdD11I/edit?gid=0#gid=0";   // tableur des invités (mis à jour par le script Google à chaque réponse)
 const INVITE_KEY_LS = "mariage:invite-key";
 /* Envoi du lien d'invitation par e-mail : le script Google envoie le message depuis le Gmail des mariés (clé d'envoi requise) */
@@ -826,7 +845,9 @@ async function renderOrgInner(key) {
   } }));
   let sheetForm = null;
   if (key === "guests") {
-    bar.append(el("a", { class: "btn small", href: SHEET_URL, target: "_blank", rel: "noopener noreferrer", title: "Ouvre votre tableur Google. Chaque réponse envoyée depuis le site y est reportée automatiquement par le script (Apps Script).", text: "↗ Ouvrir le Google Sheet" }));
+    sheetStatusEl = el("small", { class: "sheet-status", text: "" });
+    bar.append(el("a", { class: "btn small", href: SHEET_URL, target: "_blank", rel: "noopener noreferrer", title: "Ouvre votre tableur Google.", text: "↗ Ouvrir le Google Sheet" }),
+      el("button", { type: "button", class: "btn small", title: "Recopie la liste d'invités du site dans le Google Sheet : présences, allergies, et invités ajoutés. Rien n'est effacé dans le tableur. Se fait aussi automatiquement après chaque modification (une fois le mot de passe d'envoi saisi).", text: "↻ Synchroniser le Google Sheet", onclick: () => syncSheet(false) }), sheetStatusEl);
   }
   if (rows.length) {
     let selMode = false, selBar = null;
