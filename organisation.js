@@ -492,14 +492,14 @@ async function seatPlan(rows) {
       }
       zone(t, r.id, null); plan.append(t); tabs.push({ r, t, W, H }); return;
     }
-    const g = rawSeats(r), cap = Number(r.capacity) || 0, n = Math.max(cap, g.length), R = 96, rect = r.shape === "Rectangulaire", rot = rect ? ((Number(rotMap[r.id]) || 0) % 360 + 360) % 360 : 0, vert = rot % 180 === 90, W0 = rect ? 336 : 280, H0 = rect ? 232 : 280, W = vert ? H0 : W0, H = vert ? W0 : H0, count = g.filter(Boolean).length;
+    const g = rawSeats(r), cap = Number(r.capacity) || 0, n = Math.max(cap, g.length), rect = r.shape === "Rectangulaire", perSide = Math.ceil(n / 2), R = Math.max(96, Math.ceil(n * 64 / (2 * Math.PI))), rot = rect ? ((Number(rotMap[r.id]) || 0) % 360 + 360) % 360 : 0, vert = rot % 180 === 90, W0 = rect ? Math.max(336, perSide * 66 + 84) : Math.max(280, 2 * R + 100), H0 = rect ? 232 : Math.max(280, 2 * R + 100), W = vert ? H0 : W0, H = vert ? W0 : H0, count = g.filter(Boolean).length;
     g.filter(Boolean).forEach(x => placed.add(norm(x)));
     const t = el("div", { class: "seat-table" + (rect ? " rect" : "") + (vert ? " vert" : "") + (count > cap && cap ? " full" : ""), style: "width:" + W + "px;height:" + H + "px" },
       el("div", { class: "t-disc" }, el("b", { text: r.name }), el("span", { text: count + " / " + (cap || "?") }), addBadge(r)));
     for (let i = 0; i < n; i++) {
       let x, y, topRow = false;
       if (rect) {
-        const top = Math.ceil(n / 2), bot = n - top, onTop = i < top, k = onTop ? i : i - top, cnt = onTop ? top : bot, sp = Math.min(60, (W0 - 70) / Math.max(1, cnt));
+        const top = Math.ceil(n / 2), bot = n - top, onTop = i < top, k = onTop ? i : i - top, cnt = onTop ? top : bot, sp = Math.min(66, (W0 - 84) / Math.max(1, cnt));
         const dx = (onTop ? (k - (cnt - 1) / 2) : ((cnt - 1) / 2 - k)) * sp, dy = onTop ? -62 : 62, th = rot * Math.PI / 180;
         x = W / 2 + dx * Math.cos(th) - dy * Math.sin(th); y = H / 2 + dx * Math.sin(th) + dy * Math.cos(th); topRow = rot === 0 ? onTop : rot === 180 ? !onTop : false;
       } else { const ang = -Math.PI / 2 + i * 2 * Math.PI / n; x = W / 2 + R * Math.cos(ang); y = H / 2 + R * Math.sin(ang); }
@@ -526,12 +526,34 @@ async function seatPlan(rows) {
     tabs.forEach(({ r, W, H }) => { if (x + W > maxW && x > 10) { x = 10; y += rowH + 24; rowH = 0; } out[r.id] = { x, y }; x += W + 24; rowH = Math.max(rowH, H); });
     return out;
   };
+  plan.style.setProperty("--cw", Math.max(300, ...tabs.filter(x => !/honneur/i.test(x.r.name || "")).map(x => x.W)) + "px");
   const scroller = el("div", { class: "seat-scroll" }, plan);
-  const applyLayout = () => {
+  // aucune table ne doit en recouvrir une autre : on pousse vers le bas ou la droite tant que ça se chevauche
+  const resolveOverlaps = (fixedId) => {
+    const GAP = 18; let changed = false;
+    const box = (id) => { const t = tabs.find(x => x.r.id === id), p = layout[id]; return { id, x: p.x, y: p.y, w: t.W, h: t.H }; };
+    const hit = (a, b) => a.x < b.x + b.w + GAP && b.x < a.x + a.w + GAP && a.y < b.y + b.h + GAP && b.y < a.y + a.h + GAP;
+    const order = tabs.map(x => x.r.id).sort((a, b) => (a === fixedId ? -1 : b === fixedId ? 1 : (layout[a].y - layout[b].y) || (layout[a].x - layout[b].x)));
+    const done = [];
+    order.forEach(id => {
+      for (let guard = 0; guard < 60; guard++) {
+        const me = box(id), other = done.map(box).find(o => hit(me, o)); if (!other) break;
+        const dx = (me.x + me.w / 2) - (other.x + other.w / 2), dy = (me.y + me.h / 2) - (other.y + other.h / 2);
+        const pushX = other.x + other.w + GAP - me.x, pushXneg = me.x + me.w + GAP - other.x, pushY = other.y + other.h + GAP - me.y, pushYneg = me.y + me.h + GAP - other.y;
+        if (Math.abs(dx) / (me.w + other.w) > Math.abs(dy) / (me.h + other.h)) layout[id].x = Math.max(0, dx >= 0 ? me.x + pushX : me.x - pushXneg); else layout[id].y = Math.max(0, dy >= 0 ? me.y + pushY : me.y - pushYneg);
+        if (layout[id].x < 0) layout[id].x = 0; if (layout[id].y < 0) layout[id].y = 0; changed = true;
+      }
+      done.push(id);
+    });
+    return changed;
+  };
+  const applyLayout = (fixedId) => {
     const free = editing || Object.keys(layout).length > 0;
     plan.classList.toggle("free", free); plan.classList.toggle("editing", editing);
     if (!free) { plan.style.height = ""; plan.style.width = ""; tabs.forEach(({ t }) => { t.style.left = ""; t.style.top = ""; }); return; }
-    const auto = autoPos(); let mw = 0, mh = 0;
+    const auto = autoPos(); tabs.forEach(({ r }) => { if (!layout[r.id]) layout[r.id] = { ...auto[r.id] }; });
+    if (resolveOverlaps(typeof fixedId === "string" ? fixedId : null)) saveLayout();
+    let mw = 0, mh = 0;
     tabs.forEach(({ r, t, W, H }) => { const p = layout[r.id] || auto[r.id]; t.style.left = p.x + "px"; t.style.top = p.y + "px"; mw = Math.max(mw, p.x + W); mh = Math.max(mh, p.y + H); });
     plan.style.width = Math.max(mw + 10, 320) + "px"; plan.style.height = (mh + 20) + "px";
   };
@@ -541,7 +563,7 @@ async function seatPlan(rows) {
       e.preventDefault(); const auto = autoPos(), start = layout[r.id] || auto[r.id], sx = e.clientX, sy = e.clientY;
       t.setPointerCapture(e.pointerId); t.classList.add("moving");
       const move = ev => { const nx = Math.max(0, Math.round(start.x + ev.clientX - sx)), ny = Math.max(0, Math.round(start.y + ev.clientY - sy)); layout[r.id] = { x: nx, y: ny }; t.style.left = nx + "px"; t.style.top = ny + "px"; };
-      const up = () => { t.removeEventListener("pointermove", move); t.removeEventListener("pointerup", up); t.removeEventListener("pointercancel", up); t.classList.remove("moving"); Object.keys(layout).length < tabs.length && tabs.forEach(x => { if (!layout[x.r.id]) layout[x.r.id] = autoPos()[x.r.id]; }); applyLayout(); saveLayout(); };
+      const up = () => { t.removeEventListener("pointermove", move); t.removeEventListener("pointerup", up); t.removeEventListener("pointercancel", up); t.classList.remove("moving"); Object.keys(layout).length < tabs.length && tabs.forEach(x => { if (!layout[x.r.id]) layout[x.r.id] = autoPos()[x.r.id]; }); applyLayout(r.id); saveLayout(); };
       t.addEventListener("pointermove", move); t.addEventListener("pointerup", up); t.addEventListener("pointercancel", up);
     });
   });
