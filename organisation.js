@@ -743,9 +743,9 @@ async function renderOrgInner(key) {
     bar.append(gp, gq);
   }
   if (key === "seating") {
-    const un = el("button", { type: "button", class: "btn small", onclick: histUndo }), re = el("button", { type: "button", class: "btn small", onclick: histRedo });
-    seatHist.ui = () => { un.textContent = "↶ Annuler" + (seatHist.undo.length ? " (" + seatHist.undo.length + ")" : ""); re.textContent = "↷ Rétablir"; un.disabled = !seatHist.undo.length; re.disabled = !seatHist.redo.length; un.title = "Annuler la dernière modification (Ctrl+Z)"; re.title = "Rétablir (Ctrl+Y)"; };
-    seatHist.ui(); bar.append(un, re);
+    const un = el("button", { type: "button", class: "btn small hist-btn", onclick: histUndo }), re = el("button", { type: "button", class: "btn small hist-btn", onclick: histRedo }), sv = el("button", { type: "button", class: "btn small hist-btn hist-save", title: "Valider les modifications : vide l'historique d'annulation (tout est déjà enregistré automatiquement)", onclick: () => { seatHist.undo.length = 0; seatHist.redo.length = 0; histRefresh(); showToast("Plan de tables enregistré."); } });
+    seatHist.ui = () => { un.textContent = "↶ Annuler" + (seatHist.undo.length ? " (" + seatHist.undo.length + ")" : ""); re.textContent = "↷ Rétablir"; sv.textContent = "💾 Enregistrer"; un.disabled = !seatHist.undo.length; re.disabled = !seatHist.redo.length; sv.disabled = !seatHist.undo.length && !seatHist.redo.length; un.title = "Annuler la dernière modification (Ctrl+Z)"; re.title = "Rétablir (Ctrl+Y)"; };
+    seatHist.ui(); bar.append(un, re, sv);
     if (!rows.length) seatHist.live = { rows, rot: () => "{}", layout: () => "{}" };
   }
   let tlProp = null;
