@@ -122,23 +122,41 @@
   }
   const toast = t => { if (typeof showToast === "function") showToast(t); else alert(t); };
 
+  const nz = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const sq = { t: "", d: "", a: "", n: 0 };
+  const split = r => { const i = String(r.lieu || "").indexOf(" → "); return i < 0 ? [r.lieu || "", r.lieu || ""] : [r.lieu.slice(0, i), r.lieu.slice(i + 3)]; };
+  const matchQ = r => {
+    if (sq.t && r.type !== sq.t) return false;
+    const [d, a] = split(r);
+    if (sq.d && !nz(d).includes(nz(sq.d))) return false;
+    if (sq.a && !nz(a).includes(nz(sq.a))) return false;
+    if (sq.n && !(r.type === "offre" && Number(r.places) >= sq.n)) return false;
+    return true;
+  };
+  const searching = () => !!(sq.t || sq.d || sq.a || sq.n);
+  function refreshSearch() {
+    const f = $("#cv-search"); if (!f) return; f.hidden = list.length < 5 && !searching();
+    const dl = $("#cv-places-dl"); if (dl) { const set = new Set(); list.forEach(r => split(r).forEach(x => x && set.add(x))); dl.replaceChildren(...[...set].sort().map(v => el("option", { value: v }))); }
+  }
   const isFull = r => r.type === "offre" && Number(r.places) <= 0;
   function renderList() {
     const host = $("#cv-list"); if (!host) return; host.replaceChildren();
     const GRP = { j: ["aller", "retour"], h: ["venir", "rentrer"] }, inG = sv => filter === "all" || filter === sv || (GRP[filter] || []).includes(sv);
-    const shown = list.filter(r => inG(r.sens) || (r.sens === "both" && (inG("aller") || inG("retour"))));
+    const shown = list.filter(r => (inG(r.sens) || (r.sens === "both" && (inG("aller") || inG("retour")))) && matchQ(r));
+    refreshSearch(); const cnt = $("#cv-count"); if (cnt) { cnt.hidden = !searching(); cnt.textContent = shown.length ? shown.length + " annonce" + (shown.length > 1 ? "s correspondent" : " correspond") + " à votre recherche." : "Aucune annonce ne correspond. Essayez moins de critères ou proposez votre propre trajet."; }
     const open = shown.filter(r => !isFull(r)), full = shown.filter(isFull);
     const groups = [["aller", "retour"], ["venir", "rentrer"]];
     const HEAD = [["", "Le jour J, sur place", "Les petits trajets de la journée et de la fin de soirée."], ["", "Depuis chez vous", "Les trajets entre chez vous et le mariage, à l'aller comme au retour."]];
     groups.forEach((g, gi) => {
       if (!g.some(inG)) return;
       const blk = el("section", { class: "cv-block b" + gi }, filter === "all" ? el("h3", { class: "cv-btitle", text: HEAD[gi][1] }) : "");
-      host.append(blk);
+      host.append(blk); if (searching() && !g.some(sv => open.some(r => r.sens === sv || (r.sens === "both" && gi === 0)))) { blk.remove(); return; }
       const cols = el("div", { class: "cv-cols" + (g.filter(inG).length > 1 ? "" : " one") }); blk.append(cols);
       g.forEach(sv => {
         if (!inG(sv)) return;
         const rows = open.filter(r => r.sens === sv || r.sens === "both" && gi === 0);
         const col = el("div", { class: "cv-col" }, el("h3", { class: "cat", text: SENS[sv] }), el("p", { class: "cv-sub", text: SUBS[sv] }));
+        if (!rows.length && searching()) return;
         if (!rows.length) col.append(el("p", { class: "hint cv-empty", text: "Aucune annonce pour l'instant. Soyez le premier à vous proposer !" }));
         else col.append(el("div", { class: "cv-grid" }, ...rows.map(card)));
         cols.append(col);
@@ -153,6 +171,12 @@
 
   function build() {
     if (panelBuilt) return; panelBuilt = true;
+    const sf = $("#cv-search");
+    if (sf) {
+      const upd = () => { sq.t = sf.elements.t.value; sq.d = sf.elements.d.value; sq.a = sf.elements.a.value; sq.n = Number(sf.elements.n.value) || 0; renderList(); };
+      sf.addEventListener("input", upd); sf.addEventListener("change", upd); sf.addEventListener("submit", e => { e.preventDefault(); upd(); });
+      $("#cv-search-clear").addEventListener("click", () => { sf.reset(); upd(); });
+    }
     const fbox = $("#cv-filter"), sub = $("#cv-sub2");
     const SUBL = { j: [["j", "Les deux trajets"], ["aller", "De l'église au domaine"], ["retour", "Du domaine à l'hébergement"]], h: [["h", "Les deux trajets"], ["venir", "Se rendre au mariage"], ["rentrer", "Rentrer chez soi"]] };
     const refreshF = () => {

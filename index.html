@@ -635,6 +635,11 @@ body.on-conn #edit-fab{display:none}
 .cv-chip{border:0;border-bottom:2px solid transparent;background:transparent;color:var(--olive);font:inherit;font-size:.9rem;padding:4px 2px;cursor:pointer;opacity:.75}
 .cv-chip:hover{opacity:1}.cv-chip[aria-pressed="true"]{opacity:1;border-bottom-color:var(--olive);font-weight:700}
 @media(max-width:600px){.cv-seg button{padding:9px 10px;font-size:.82rem}}
+.cv-search[hidden]{display:none}
+.cv-search{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 12px;align-items:end;margin:0 0 14px;padding:12px 14px;border:1px solid var(--olive-soft);border-radius:16px;background:var(--paper-2)}
+.cv-search label{display:grid;gap:4px;font-size:.82rem;font-weight:700;text-align:left}
+.cv-search input,.cv-search select{min-height:42px}
+.cv-count{text-align:center;margin:0 0 12px;font-weight:700}
 .cv-block{margin:0 0 22px;padding:16px clamp(12px,2.5vw,26px) 12px;border-radius:18px;border:1.5px solid var(--olive-soft);background:var(--paper-2);text-align:center}
 .cv-block.b1{background:var(--paper);border:1.5px solid var(--olive-soft)}
 .cv-eyebrow{margin:0;font-size:var(--fs-label);letter-spacing:.2em;text-transform:uppercase;font-weight:700;color:var(--olive)}
@@ -968,6 +973,15 @@ details[open] > :not(summary){animation:unfold .45s ease-out backwards}
         </div>
         <div class="cv-sub2" id="cv-sub2" hidden></div>
       </div>
+      <form class="cv-search" id="cv-search" hidden autocomplete="off" role="search" aria-label="Chercher un covoiturage">
+        <label>Je cherche<select name="t"><option value="">Tout</option><option value="offre">Places proposées</option><option value="demande">Recherches</option></select></label>
+        <label>Départ<input name="d" type="search" list="cv-places-dl" placeholder="ex. Paris, église…"></label>
+        <label>Arrivée<input name="a" type="search" list="cv-places-dl" placeholder="ex. Lagny, domaine…"></label>
+        <label>Places libres<select name="n"><option value="0">Peu importe</option><option value="1">1 ou plus</option><option value="2">2 ou plus</option><option value="3">3 ou plus</option><option value="4">4 ou plus</option><option value="5">5 ou plus</option></select></label>
+        <button type="button" class="btn small" id="cv-search-clear">Effacer</button>
+        <datalist id="cv-places-dl"></datalist>
+      </form>
+      <p class="hint cv-count" id="cv-count" hidden role="status"></p>
       <div id="cv-list"></div>
     </section>
 
@@ -2174,7 +2188,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611150057"></script>
-<script src="covoiturage.js?v=202611150057"></script>
+<script src="organisation.js?v=202611150101"></script>
+<script src="covoiturage.js?v=202611150101"></script>
 </body>
 </html>
