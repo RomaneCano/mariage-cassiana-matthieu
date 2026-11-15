@@ -57,21 +57,25 @@ revoke all on public.covoit_reservations from anon, authenticated;
 grant select, delete on public.covoit_reservations to authenticated;
 drop policy if exists covoit_res_admin on public.covoit_reservations;
 create policy covoit_res_admin on public.covoit_reservations for all to authenticated using (public.is_admin()) with check (public.is_admin());
-create or replace function public.covoit_prendre(p_id uuid, p_prenom text, p_contact text) returns void
+alter table public.covoit_reservations add column if not exists nb int not null default 1 check (nb between 1 and 8);
+drop function if exists public.covoit_prendre(uuid, text, text);
+drop function if exists public.covoit_passagers(uuid, text);
+create or replace function public.covoit_prendre(p_id uuid, p_prenom text, p_contact text, p_nb int default 1) returns void
 language plpgsql security definer set search_path = public as $$
 begin
   if char_length(coalesce(p_prenom,'')) not between 1 and 40 or char_length(coalesce(p_contact,'')) not between 5 and 80 then raise exception 'informations invalides'; end if;
-  update public.covoiturage set places = places - 1 where id = p_id and type = 'offre' and places > 0;
-  if not found then raise exception 'plus de place'; end if;
-  insert into public.covoit_reservations (offer_id, prenom, contact) values (p_id, p_prenom, p_contact);
+  if p_nb is null or p_nb < 1 or p_nb > 8 then raise exception 'nombre de places invalide'; end if;
+  update public.covoiturage set places = places - p_nb where id = p_id and type = 'offre' and places >= p_nb;
+  if not found then raise exception 'plus assez de places'; end if;
+  insert into public.covoit_reservations (offer_id, prenom, contact, nb) values (p_id, p_prenom, p_contact, p_nb);
 end $$;
-create or replace function public.covoit_passagers(p_id uuid, p_code text) returns table (prenom text, contact text, created_at timestamptz)
+create or replace function public.covoit_passagers(p_id uuid, p_code text) returns table (prenom text, contact text, created_at timestamptz, nb int)
 language plpgsql security definer set search_path = public as $$
 begin
   if not exists (select 1 from public.covoiturage where id = p_id and edit_code = p_code) then raise exception 'code invalide'; end if;
-  return query select r.prenom, r.contact, r.created_at from public.covoit_reservations r where r.offer_id = p_id order by r.created_at;
+  return query select r.prenom, r.contact, r.created_at, r.nb from public.covoit_reservations r where r.offer_id = p_id order by r.created_at;
 end $$;
-grant execute on function public.covoit_prendre(uuid, text, text) to anon, authenticated;
+grant execute on function public.covoit_prendre(uuid, text, text, int) to anon, authenticated;
 grant execute on function public.covoit_passagers(uuid, text) to anon, authenticated;
 
 -- ============================================================

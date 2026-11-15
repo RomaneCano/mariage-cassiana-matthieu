@@ -32,11 +32,12 @@
       }
       local.write("covoit", local.read("covoit").filter(r => r.id !== id));
     },
-    async take(id, prenom, contact) {
-      if (remote) { const { error } = await remote.rpc("covoit_prendre", { p_id: id, p_prenom: prenom, p_contact: contact }); if (error) throw error; return; }
-      const l = local.read("covoit"), r = l.find(x => x.id === id); if (!r || r.places < 1) throw new Error("complet");
-      r.places -= 1; local.write("covoit", l);
-      const res = local.read("covoit-res"); res.push({ offer_id: id, prenom, contact, created_at: new Date().toISOString() }); local.write("covoit-res", res);
+    async take(id, prenom, contact, nb) {
+      nb = nb || 1;
+      if (remote) { const args = { p_id: id, p_prenom: prenom, p_contact: contact }; if (nb > 1) args.p_nb = nb; const { error } = await remote.rpc("covoit_prendre", args); if (error) throw error; return; }
+      const l = local.read("covoit"), r = l.find(x => x.id === id); if (!r || r.places < nb) throw new Error("complet");
+      r.places -= nb; local.write("covoit", l);
+      const res = local.read("covoit-res"); res.push({ offer_id: id, prenom, contact, nb, created_at: new Date().toISOString() }); local.write("covoit-res", res);
     },
     async passengers(id, c) {
       if (remote) { const { data, error } = await remote.rpc("covoit_passagers", { p_id: id, p_code: c }); if (error) throw error; return data || []; }
@@ -86,18 +87,20 @@
       const f = el("form", { class: "cv-take", hidden: true, novalidate: true },
         el("label", {}, el("span", { text: "Votre prénom" }), el("input", { name: "prenom", maxlength: "40", autocomplete: "given-name", required: true })),
         el("label", {}, el("span", { text: "Votre téléphone ou e-mail" }), el("input", { name: "contact", maxlength: "80", autocomplete: "off", required: true })),
+        Number(r.places) > 1 ? el("label", {}, el("span", { text: "Nombre de places à réserver" }), el("select", { name: "nb" }, ...Array.from({ length: Math.min(8, Number(r.places)) }, (_, i) => el("option", { value: String(i + 1), text: i === 0 ? "1 place (moi seul)" : (i + 1) + " places (moi + " + i + " autre" + (i > 1 ? "s" : "") + ")" })))) : "",
         el("label", { class: "cv-ok" }, el("input", { type: "checkbox", name: "ok" }), el("span", { text: "J'accepte que ces informations soient transmises à " + r.prenom + "." })),
         el("p", { class: "msg", hidden: true }),
-        el("button", { class: "btn small solid", type: "submit", text: "Confirmer ma place" }));
+        el("button", { class: "btn small solid", type: "submit", text: "Confirmer ma réservation" }));
       f.addEventListener("submit", async e => {
         e.preventDefault(); const msg = f.querySelector(".msg"), d = new FormData(f), pr = clean(d.get("prenom")), co = clean(d.get("contact"));
         if (!pr || !co) return showMsg(msg, "Merci d'indiquer votre prénom et un moyen de vous contacter.", "err");
         if (!isPhone(co) && !isMail(co)) return showMsg(msg, "Le contact doit être un numéro de téléphone ou une adresse e-mail valide.", "err");
         if (!d.get("ok")) return showMsg(msg, "Cochez la case pour confirmer.", "err");
-        try { await api.take(r.id, pr, co); toast("Place réservée. " + r.prenom + " a bien reçu vos coordonnées. Vous pouvez aussi la contacter."); load(); }
-        catch { showMsg(msg, "Cette place n'est plus disponible ou la réservation a échoué. Réessayez.", "err"); load(); }
+        const nb = Math.max(1, parseInt(d.get("nb"), 10) || 1);
+        try { await api.take(r.id, pr, co, nb); toast((nb > 1 ? nb + " places réservées. " : "Place réservée. ") + r.prenom + " a bien reçu vos coordonnées. Vous pouvez aussi la contacter."); load(); }
+        catch (err) { showMsg(msg, err && err.code === "PGRST202" ? "Réserver plusieurs places n'est pas encore activé. Réservez une place à la fois pour l'instant." : "Il ne reste plus assez de places ou la réservation a échoué. Réessayez.", "err"); load(); }
       });
-      extra.append(el("button", { class: "btn small solid", type: "button", text: "Prendre une place", onclick: () => { f.hidden = !f.hidden; if (!f.hidden) f.querySelector("input").focus(); } }), f);
+      extra.append(el("button", { class: "btn small solid", type: "button", text: Number(r.places) > 1 ? "Prendre une ou plusieurs places" : "Prendre la dernière place", onclick: () => { f.hidden = !f.hidden; if (!f.hidden) f.querySelector("input").focus(); } }), f);
     }
     if (m && r.type === "offre") {
       const det = el("details", { class: "cv-pass" }, el("summary", { text: "Mes passagers" }));
@@ -106,7 +109,7 @@
         if (!det.open || loaded) return; loaded = true;
         try {
           const ps = await api.passengers(r.id, m);
-          det.append(ps.length ? el("ul", {}, ...ps.map(x => el("li", {}, el("b", { text: x.prenom }), " · " + x.contact + " ", isPhone(x.contact) ? el("a", { href: "tel:" + digits(x.contact), text: "Appeler" }) : isMail(x.contact) ? el("a", { href: "mailto:" + x.contact.trim(), text: "Écrire" }) : ""))) : el("p", { class: "hint", text: "Personne n'a encore pris de place." }));
+          det.append(ps.length ? el("ul", {}, ...ps.map(x => el("li", {}, el("b", { text: x.prenom }), (x.nb > 1 ? " (" + x.nb + " places)" : "") + " · " + x.contact + " ", isPhone(x.contact) ? el("a", { href: "tel:" + digits(x.contact), text: "Appeler" }) : isMail(x.contact) ? el("a", { href: "mailto:" + x.contact.trim(), text: "Écrire" }) : ""))) : el("p", { class: "hint", text: "Personne n'a encore pris de place." }));
         } catch { det.append(el("p", { class: "hint", text: "Liste indisponible pour le moment." })); }
       });
       extra.append(det);
