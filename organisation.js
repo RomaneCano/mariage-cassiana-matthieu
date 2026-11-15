@@ -847,7 +847,7 @@ async function renderOrgInner(key) {
   if (key === "guests") {
     sheetStatusEl = el("small", { class: "sheet-status", text: "" });
     bar.append(el("a", { class: "btn small", href: SHEET_URL, target: "_blank", rel: "noopener noreferrer", title: "Ouvre votre tableur Google.", text: "↗ Ouvrir le Google Sheet" }),
-      el("button", { type: "button", class: "btn small", title: "Recopie la liste d'invités du site dans le Google Sheet : présences, allergies, et invités ajoutés. Rien n'est effacé dans le tableur. Se fait aussi automatiquement après chaque modification (une fois le mot de passe d'envoi saisi).", text: "↻ Synchroniser le Google Sheet", onclick: () => syncSheet(false) }), sheetStatusEl);
+      el("button", { type: "button", class: "btn small", title: "Sens unique, du site vers le tableur : le site fait foi. Recopie présences, allergies (et téléphone, adresse, âge s'ils sont renseignés) et ajoute les invités manquants. Le tableur ne modifie jamais le site, et aucune ligne n'est supprimée. Se fait aussi automatiquement après chaque modification (une fois le mot de passe d'envoi saisi).", text: "↻ Synchroniser le Google Sheet", onclick: () => syncSheet(false) }), sheetStatusEl);
   }
   if (rows.length) {
     let selMode = false, selBar = null;

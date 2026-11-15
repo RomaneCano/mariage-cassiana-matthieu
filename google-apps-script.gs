@@ -118,9 +118,12 @@ function handleInvite(rec) {
 
 
 /* ---------------------------------------------------------------------------
-   SYNCHRONISATION DEPUIS LE SITE (liste d'invités de l'espace des mariés -> ce tableur)
-   Même mot de passe que l'envoi d'e-mails (propriété INVITE_KEY). Ne touche qu'aux colonnes Présence et Allergie des lignes
-   existantes (jamais d'effacement), et ajoute à la fin les invités absents du tableur.
+   SYNCHRONISATION DEPUIS LE SITE  (sens unique : site -> tableur, jamais l'inverse)
+   Le site fait foi. Pour chaque invité du site déjà présent dans le tableur (même nom + prénom) :
+     - Présence (D) et Allergie (E) sont recopiées telles qu'elles sont sur le site ;
+     - Téléphone (C), Adresse (F) et Âge (G) sont mis à jour seulement si le site a une valeur.
+   Les invités du site absents du tableur sont ajoutés à la fin. Aucune ligne n'est jamais supprimée.
+   Même mot de passe que l'envoi d'e-mails (propriété INVITE_KEY).
    --------------------------------------------------------------------------- */
 function handleSync(rec) {
   const key = PropertiesService.getScriptProperties().getProperty("INVITE_KEY");
@@ -137,9 +140,15 @@ function handleSync(rec) {
     const pres = g.presence === "OUI" ? "OUI" : g.presence === "NON" ? "NON" : "ATT";
     if (k in index) {
       const i = index[k], row = HEADER_ROW + 1 + i, cur = values[i];
-      if (String(cur[3] || "") !== pres && !(pres === "ATT" && cur[3])) { sh.getRange(row, 4).setValue(pres); updated++; }
+      let changed = false;
+      if (String(cur[3] || "") !== pres) { sh.getRange(row, 4).setValue(pres); changed = true; }
       const al = safe(g.allergie);
-      if (al && String(cur[4] || "").indexOf(al) === -1) { sh.getRange(row, 5).setValue(cur[4] ? cur[4] + ", " + al : al); updated++; }
+      if (String(cur[4] || "") !== al) { sh.getRange(row, 5).setValue(al); changed = true; }
+      [[3, g.tel], [6, g.adresse], [7, g.age]].forEach(function (c) {
+        const v = safe(c[1]);
+        if (v && String(cur[c[0] - 1] || "") !== v) { sh.getRange(row, c[0]).setValue(v); changed = true; }
+      });
+      if (changed) updated++;
     } else if (norm(g.prenom)) {
       toAdd.push([safe(g.nom), safe(g.prenom), safe(g.tel), pres, safe(g.allergie), safe(g.adresse), safe(g.age)]);
     }
