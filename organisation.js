@@ -1476,7 +1476,7 @@ async function exportXLSX(d) {
   } catch { showToast("Export Excel indisponible (connexion ?). Fichier CSV téléchargé à la place, il s'ouvre aussi dans Excel."); exportCSV(d); }
 }
 function addPrintButtons() {
-  document.querySelectorAll(".panel").forEach(panel => {
+  document.querySelectorAll("#panel-connexion").forEach(panel => {   // uniquement l'espace des mariés (affiché seulement dans Organisation, voir le CSS)
     if (panel.querySelector(":scope > .print-wrap")) return;
     const menu = el("div", { class: "print-menu", role: "menu", hidden: true });
     const btn = el("button", { type: "button", class: "print-btn", "aria-label": "Imprimer ou exporter cette page", title: "Imprimer ou exporter", "aria-haspopup": "true" }, icon("Imprimer", 18));

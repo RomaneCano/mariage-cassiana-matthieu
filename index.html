@@ -764,6 +764,7 @@ body.on-conn #edit-fab{display:none}
 /* ---- Impression / PDF ---- */
 .panel{position:relative}
 .print-wrap{position:absolute;top:6px;right:10px;z-index:20}
+#panel-connexion:not(:has(section[data-main-sec="org"]:not([hidden]))) .print-wrap,#panel-connexion:has(#admin-panel[hidden]) .print-wrap{display:none}
 .print-btn{width:30px;height:30px;min-height:0;padding:0;border-radius:50%;border:1px solid var(--olive-soft);background:var(--paper);color:var(--olive);display:inline-grid;place-items:center;cursor:pointer;opacity:.85}
 .print-btn:hover{opacity:1;background:var(--paper-2)}.print-btn .ico{display:inline-flex}
 .print-menu{position:absolute;top:36px;right:0;min-width:250px;background:var(--paper);border:1px solid var(--olive-soft);border-radius:12px;box-shadow:0 8px 24px rgba(60,60,20,.22);padding:6px;display:grid;gap:2px}
@@ -2329,7 +2330,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611150224"></script>
-<script src="covoiturage.js?v=202611150224"></script>
+<script src="organisation.js?v=202611150226"></script>
+<script src="covoiturage.js?v=202611150226"></script>
 </body>
 </html>
