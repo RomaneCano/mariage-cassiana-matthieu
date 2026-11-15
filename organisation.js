@@ -111,10 +111,10 @@ const ORG = {
     { k: "contact", l: "Contact", t: "text" }, { k: "phone", l: "Téléphone", t: "text" }, { k: "email", l: "E-mail", t: "text" },
     { k: "availability", l: "Disponibilité", t: "text" }, { k: "deposit", l: "Acompte (€)", t: "number" }, { k: "notes", l: "Notes", t: "long", wide: true }] },
   guests: { table: "org_guests", label: "Invités", order: "position", defaults: { presence: "ATT" }, fields: [
-    { k: "nom", l: "Nom", t: "text" }, { k: "prenom", l: "Prénom", t: "text", req: true }, { k: "tel", l: "Téléphone", t: "text" }, { k: "email", l: "E-mail", t: "text" },
+    { k: "nom", l: "Nom", t: "long" }, { k: "prenom", l: "Prénom", t: "long", req: true }, { k: "tel", l: "Téléphone", t: "text" }, { k: "email", l: "E-mail", t: "text" },
     { k: "presence", l: "Présence", t: "select", o: ["ATT", "OUI", "NON"], labels: { ATT: "En attente", OUI: "Présent(e)", NON: "Absent(e)" } },
-    { k: "allergie", l: "Allergie", t: "text" }, { k: "adresse", l: "Adresse", t: "text" },
-    { k: "envoi", l: "Invitation", t: "select", o: ["Courrier", "Lien", "Remise en main"] }, { k: "age", l: "Âge", t: "text" }, { k: "notes", l: "Notes", t: "text" }] },
+    { k: "allergie", l: "Allergie", t: "long" }, { k: "adresse", l: "Adresse", t: "long" },
+    { k: "envoi", l: "Invitation", t: "select", o: ["Courrier", "Lien", "Remise en main"] }, { k: "age", l: "Âge", t: "text" }, { k: "notes", l: "Notes", t: "long" }] },
   games: { table: "org_games", label: "Jeux", order: "created_at", defaults: { chosen: false }, fields: [
     { k: "chosen", l: "Retenu", t: "check" }, { k: "name", l: "Idée de jeu", t: "text", req: true, wide: true }, { k: "people", l: "Nb de personnes", t: "text" },
     { k: "material", l: "Matériel", t: "text" }, { k: "price", l: "Prix (€)", t: "number" }, { k: "notes", l: "Notes", t: "text" }] },
@@ -384,7 +384,7 @@ function orgSummary(key, rows) {
     const c = f => rows.filter(f).length;
     chip("invités", String(rows.length), "c-all"); chip("présents", String(c(r => r.presence === "OUI")), "c-ok"); chip("absents", String(c(r => r.presence === "NON")), "c-no");
     chip("en attente", String(c(r => !r.presence || r.presence === "ATT")), "c-wait"); chip("allergies", String(c(r => r.allergie && r.allergie.trim())), "c-alg");
-    chip("enfants (0 à 12 ans)", String(c(r => { const n = parseInt(String(r.age || "").replace(/[^\d]/g, ""), 10); return !isNaN(n) && n <= 12; })), "c-kid"); chip("courrier", String(c(r => r.envoi === "Courrier")), "c-post"); chip("lien", String(c(r => r.envoi === "Lien")), "c-link"); chip("remise en main", String(c(r => r.envoi === "Remise en main")), "c-hand"); chip("liens envoyés", String(c(r => r.invite_sent_at)), "c-sent");
+    chip("enfants (0 à 12 ans)", String(c(r => { const n = parseInt(String(r.age || "").replace(/[^\d]/g, ""), 10); return !isNaN(n) && n <= 12; })), "c-kid"); const prog = e => c(r => r.envoi === e && r.invite_sent_at) + " / " + c(r => r.envoi === e); chip("courriers envoyés", prog("Courrier"), "c-post"); chip("remises en main effectuées", prog("Remise en main"), "c-hand"); chip("liens envoyés", prog("Lien"), "c-link");
   } else if (key === "games") {
     chip("idées", String(rows.length)); chip("retenues", String(rows.filter(r => r.chosen).length)); chip("coût des retenues", eur(rows.filter(r => r.chosen).reduce((a, r) => a + (Number(r.price) || 0), 0)));
   } else if (key === "seating") {
@@ -887,7 +887,7 @@ async function renderOrgInner(key) {
     return;
   }
   const table = el("table", { class: "org-table" + (key === "guests" ? " guests" : "") });
-  table.append(el("thead", {}, el("tr", {}, ...M.fields.map(f => el("th", { text: f.l })), ...(key === "seating" ? [el("th", { text: "Ordre" })] : []), ...(key === "guests" ? [el("th", { text: "Lien d'invitation" })] : []), el("th", {}))));
+  table.append(el("thead", {}, el("tr", {}, ...M.fields.map(f => el("th", { text: f.l })), ...(key === "seating" ? [el("th", { text: "Ordre" })] : []), ...(key === "guests" ? [el("th", { text: "Envoi de l'invitation" })] : []), el("th", {}))));
   const tb = el("tbody");
   let lastCat = null;
   shown.forEach(r => {
@@ -901,6 +901,8 @@ async function renderOrgInner(key) {
     M.fields.forEach(f => {
       const inp = fieldInput(f, f.k === "status" && key === "tasks" ? statusOf(r) : r[f.k]);
       if (key === "tasks" && f.k === "status") inp.dataset.st = statusOf(r);
+      if (key === "guests" && (f.k === "nom" || f.k === "prenom")) inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
+      if (key === "guests" && f.k === "allergie") { const mark = () => inp.classList.toggle("has-alg", !!inp.value.trim()); mark(); inp.addEventListener("input", mark); }
       inp.addEventListener("change", async () => {
         const v = readInput(f, inp);
         try { const patch = { [f.k]: v }; if (key === "tasks" && f.k === "done") patch.status = v ? "Terminé" : (statusOf(r) === "Terminé" ? "À faire" : statusOf(r)); if (key === "tasks" && f.k === "status") patch.done = v === "Terminé"; await orgStore.update(M.table, r.id, patch); Object.assign(r, patch); if (key === "tasks" || key === "budget" || key === "seating" || key === "timeline" || (key === "guests" && (f.k === "presence" || f.k === "allergie" || f.k === "envoi" || f.k === "age"))) renderOrg(key); else showToast("Enregistré"); }
@@ -920,7 +922,10 @@ async function renderOrgInner(key) {
           try { const res = await sendInvite(r); const when = new Date().toISOString(); await orgStore.update("org_guests", r.id, { invite_sent_at: when }); r.invite_sent_at = when; showToast("Lien envoyé à " + (r.prenom || "") + (res === "ok" ? "" : " (vérifiez dans Gmail > Envoyés)")); renderOrg("guests"); }
           catch (e) { showToast(e.message || String(e)); send.disabled = false; send.textContent = "Envoyer le lien"; }
         } });
-      tr.append(el("td", { class: "sendcell" }, send, el("small", { class: "sentat", text: r.invite_sent_at ? "✓ " + frDate(String(r.invite_sent_at).slice(0, 10)) : "" })));
+      const manual = r.envoi === "Courrier" || r.envoi === "Remise en main", doneTxt = r.envoi === "Courrier" ? "Courrier envoyé" : "Remise en main effectuée", todoTxt = r.envoi === "Courrier" ? "Marquer le courrier envoyé" : "Marquer la remise effectuée";
+      const mark = el("button", { class: "btn small" + (r.invite_sent_at ? " sent-ok" : ""), type: "button", text: r.invite_sent_at ? "✓ " + doneTxt : todoTxt, title: r.invite_sent_at ? "Cliquer pour annuler" : "Garder une trace", onclick: async () => {
+        try { const when = r.invite_sent_at ? null : new Date().toISOString(); await orgStore.update("org_guests", r.id, { invite_sent_at: when }); r.invite_sent_at = when; renderOrg("guests"); } catch (e) { showToast(orgErr(e)); } } });
+      tr.append(el("td", { class: "sendcell" }, manual ? mark : send, el("small", { class: "sentat", text: r.invite_sent_at ? "✓ " + frDate(String(r.invite_sent_at).slice(0, 10)) : "" })));
     }
     tr.append(el("td", {}, el("button", { class: "btn small danger", type: "button", text: "Supprimer", "aria-label": "Supprimer la ligne", onclick: async () => {
       try { await orgStore.remove(M.table, r.id); renderOrg(key); } catch (e) { showToast(orgErr(e)); }
