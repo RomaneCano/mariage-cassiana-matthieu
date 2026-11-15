@@ -208,11 +208,58 @@ const TPL = {
   ].map(([time, title]) => ({ time, title }))
 };
 
+function infoTip(text) {
+  const pop = el("div", { class: "info-pop", role: "note", hidden: true, text });
+  const b = el("button", { type: "button", class: "info-btn", "aria-label": "Informations d'utilisation", title: "Comment ça marche ?", text: "i", onclick: e => { e.stopPropagation(); const open = pop.hidden; document.querySelectorAll(".info-pop").forEach(x => x.hidden = true); pop.hidden = !open; } });
+  const wrap = el("span", { class: "info-wrap" }, b, pop); wrap.pop = pop; return wrap;
+}
+document.addEventListener("click", e => { if (!e.target.closest(".info-wrap")) document.querySelectorAll(".info-pop").forEach(x => x.hidden = true); });
+const seatHist = { undo: [], redo: [], live: null, grp: false, busy: false, ui: null };
+function histSnap() {
+  const l = seatHist.live; if (!l) return null;
+  return { rows: JSON.parse(JSON.stringify(l.rows || [])), rot: l.rot(), layout: l.layout() };
+}
+function histPush() {                      // appelée AVANT une modification ; les modifications d'un même geste (≈ 0,7 s) forment une seule étape
+  if (seatHist.busy || seatHist.grp || !seatHist.live) return;
+  seatHist.grp = true; setTimeout(() => { seatHist.grp = false; }, 700);
+  const snap = histSnap(); if (!snap) return;
+  seatHist.undo.push(snap); if (seatHist.undo.length > 60) seatHist.undo.shift(); seatHist.redo.length = 0; histRefresh();
+}
+function histRefresh() { if (seatHist.ui) seatHist.ui(); }
+async function histRestore(snap) {
+  const cur = seatHist.live.rows, curBy = new Map(cur.map(r => [r.id, r])), snapBy = new Map(snap.rows.map(r => [r.id, r]));
+  const same = (a, b) => ["name", "capacity", "shape", "guests", "notes", "position"].every(k => String(a[k] ?? "") === String(b[k] ?? ""));
+  for (const r of snap.rows) {
+    const c = curBy.get(r.id);
+    if (!c) await orgStore.insert("org_tables", r);
+    else if (!same(c, r)) await orgStore.update("org_tables", r.id, { name: r.name, capacity: r.capacity, shape: r.shape || null, guests: r.guests || null, notes: r.notes || null, position: r.position });
+  }
+  for (const c of cur) if (!snapBy.has(c.id)) await orgStore.remove("org_tables", c.id);
+  if (snap.rot !== seatHist.live.rot()) await store.setSetting("seat_rot", snap.rot);
+  if (snap.layout !== seatHist.live.layout()) await store.setSetting("seat_layout", snap.layout);
+}
+async function histMove(from, to) {
+  if (!from.length || seatHist.busy || !seatHist.live) return;
+  seatHist.busy = true;
+  try {
+    const here = histSnap(), snap = from.pop(); to.push(here); await histRestore(snap);
+    showToast(from === seatHist.undo ? "Modification annulée" : "Modification rétablie");
+  } catch (e) { showToast(orgErr(e)); }
+  seatHist.busy = false; seatHist.grp = false; histRefresh();
+  renderOrg("seating");
+}
+const histUndo = () => histMove(seatHist.undo, seatHist.redo), histRedo = () => histMove(seatHist.redo, seatHist.undo);
+document.addEventListener("keydown", e => {
+  if (orgState.key !== "seating" || !(e.ctrlKey || e.metaKey) || /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || "") || (e.target && e.target.isContentEditable)) return;
+  if (!document.querySelector("#org-body .seat-plan-wrap") && !seatHist.undo.length && !seatHist.redo.length) return;
+  const k = String(e.key).toLowerCase();
+  if (k === "z" && !e.shiftKey) { e.preventDefault(); histUndo(); } else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); histRedo(); }
+});
 const orgStore = {
   async list(t) { const { data, error } = await remote.from(t).select("*"); if (error) throw error; return data || []; },
-  async insert(t, rows) { const { data, error } = await remote.from(t).insert(rows).select(); if (error) throw error; if (!data || !data.length) throw { code: "42501", message: "row-level security" }; return data; },
-  async update(t, id, patch) { const { data, error } = await remote.from(t).update(patch).eq("id", id).select(); if (error) throw error; if (!data || !data.length) throw { code: "42501", message: "row-level security" }; },
-  async remove(t, id) { const { error } = await remote.from(t).delete().eq("id", id); if (error) throw error; }
+  async insert(t, rows) { if (t === "org_tables") histPush(); const { data, error } = await remote.from(t).insert(rows).select(); if (error) throw error; if (!data || !data.length) throw { code: "42501", message: "row-level security" }; return data; },
+  async update(t, id, patch) { if (t === "org_tables") histPush(); const { data, error } = await remote.from(t).update(patch).eq("id", id).select(); if (error) throw error; if (!data || !data.length) throw { code: "42501", message: "row-level security" }; },
+  async remove(t, id) { if (t === "org_tables") histPush(); const { error } = await remote.from(t).delete().eq("id", id); if (error) throw error; }
 };
 const orgErr = e => "Non enregistré : " + explainErr(e) + (/table|relation|schema/i.test(String((e && e.message) || "")) || (e && e.code === "PGRST205") ? " Exécutez supabase-tout-en-un.sql dans Supabase." : "");
 
@@ -306,15 +353,15 @@ function orgSummary(key, rows) {
   const chip = (label, value, cls) => box.append(el("div", { class: "sum-chip " + (cls || "") }, el("b", { text: value }), el("span", { text: label })));
   if (key === "tasks") {
     const done = rows.filter(r => r.done).length, late = rows.filter(r => !r.done && r.due && r.due < todayISO()).length;
-    chip("faites", done + " / " + rows.length); chip("en retard", String(late), late ? "warn" : ""); chip("avant le mariage", Math.max(0, daysBetween(todayISO(), WEDDING_ISO)) + " j");
+    chip("faites", done + " / " + rows.length); chip("en retard", String(late), late ? "warn" : "good"); chip("avant le mariage", Math.max(0, daysBetween(todayISO(), WEDDING_ISO)) + " j");
     if (rows.length) box.append(el("div", { class: "bar big" }, el("i", { style: "width:" + Math.round(done / rows.length * 100) + "%" })));
   } else if (key === "deco") {
     const articles = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0), total = rows.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0);
     const paidD = rows.reduce((a, r) => a + (Number(r.paid) || 0), 0);
-    chip("références", String(rows.length)); chip("articles au total", String(articles)); chip("prévu", eur2(total)); chip("payé", eur2(paidD)); chip("reste à payer", eur2(Math.max(0, total - paidD)), total - paidD > 0.005 ? "warn" : "");
+    chip("références", String(rows.length)); chip("articles au total", String(articles)); chip("prévu", eur2(total)); const resteD = total - paidD; chip("payé", eur2(paidD), total > 0 && resteD <= 0.005 ? "good" : paidD > 0 ? "" : ""); chip("reste à payer", eur2(Math.max(0, resteD)), resteD > 0.005 ? "warn" : "good");
   } else if (key === "budget") {
     const s = f => rows.reduce((a, r) => a + (Number(r[f]) || 0), 0), est = s("estimated"), paid = s("paid"), total = est;
-    const fam = s("family"); chip("prévu", eur(est)); chip("pris en charge par la famille", eur(fam)); chip("à notre charge", eur(Math.max(0, est - fam))); chip("payé", eur(paid)); chip("reste à payer", eur(Math.max(0, total - paid)), total - paid > 0 ? "warn" : "");
+    const fam = s("family"); chip("prévu", eur(est)); chip("pris en charge par la famille", eur(fam)); chip("à notre charge", eur(Math.max(0, est - fam))); chip("payé", eur(paid), total > 0 && total - paid <= 0 ? "good" : ""); chip("reste à payer", eur(Math.max(0, total - paid)), total - paid > 0 ? "warn" : "good");
   } else if (key === "vendors") {
     const c = st => rows.filter(r => st.includes(r.status)).length;
     chip("à contacter", String(c(["À contacter"]))); chip("en attente", String(c(["En attente de devis", "En attente de réponse", "Réponse finale à donner", "Réponse négative à donner"]))); chip("retenus", String(c(RETAINED))); chip("refusés", String(c(["Refusé (NON)"])));
@@ -348,7 +395,7 @@ async function seatPlan(rows) {
   const saveRot = async () => { try { await store.setSetting("seat_rot", JSON.stringify(rotMap)); } catch (e) { showToast(orgErr(e)); } };
   const wrap = el("section", { class: "seat-plan-wrap" });
   const HINT = "Glissez un invité sur une place (libre ou occupée : ils échangent) ou sur une autre table. Touchez un « + » pour ajouter un ou plusieurs invités sans glisser, ou utilisez « Sélection multiple » (Ctrl/Maj + clic). Sur téléphone : touchez l'invité, puis la place. Déposez-le dans « À placer » pour le retirer.";
-  const hint = el("p", { class: "hint", text: HINT });
+  const hint = el("p", { class: "hint", hidden: true }); const tip = infoTip(HINT);
   const plan = el("div", { class: "seat-plan" });
   const pool = el("div", { class: "seat-pool", "data-pool": "1" }, el("b", { text: "À placer" }));
   const save = async (r, list) => { const a = list.slice(); while (a.length && !a[a.length - 1]) a.pop(); const v = a.join("\n"); await orgStore.update(M.table, r.id, { guests: v }); r.guests = v; };
@@ -422,7 +469,7 @@ async function seatPlan(rows) {
       if (sel && !(sel.name === name && sel.from === fromId)) { const s0 = sel; sel = null; if (fromId) place(s0.from, s0.idx, s0.name, fromId, idx); return; }   // 2e clic sur un invité : échange de places
       sel = sel && sel.name === name && sel.from === fromId ? null : { from: fromId, idx, name };
       document.querySelectorAll(".av.sel").forEach(x => x.classList.remove("sel")); if (sel) a.classList.add("sel");
-      hint.textContent = sel ? name + " : touchez maintenant la place libre, un autre invité (pour échanger) ou une table." : "Glissez un invité sur une place (libre ou occupée : ils échangent) ou sur une autre table. Sur téléphone : touchez l'invité, puis la place. Déposez-le dans « À placer » pour le retirer.";
+      hint.textContent = sel ? name + " : touchez maintenant la place libre, un autre invité (pour échanger) ou une table." : ""; hint.hidden = !sel;
     });
     return a;
   };
@@ -468,10 +515,10 @@ async function seatPlan(rows) {
   }
   const addBadge = (r, honneur) => {
     const plus = el("button", { type: "button", class: "t-add", "aria-label": "Ajouter des invités à " + r.name, title: "Ajouter des invités", text: "+", onclick: e => { e.stopPropagation(); if (selMany.length) placeMany(selMany.slice(), r.id, null); else openPicker(r.id, null); } });
-    if (honneur) return plus;
+    if (honneur) return el("div", { class: "t-btns" }, plus, el("button", { type: "button", class: "t-add t-tool", "aria-label": "Faire pivoter la table " + r.name, title: "Faire pivoter de 90°", text: "⟳", onclick: async e => { e.stopPropagation(); histPush(); rotMap[r.id] = ((Number(rotMap[r.id]) || 0) + 90) % 360; await saveRot(); renderOrg("seating"); } }));
     const rect = r.shape === "Rectangulaire";
     const btns = [plus];
-    if (rect) btns.push(el("button", { type: "button", class: "t-add t-tool", "aria-label": "Faire pivoter la table " + r.name, title: "Faire pivoter de 90°", text: "⟳", onclick: async e => { e.stopPropagation(); rotMap[r.id] = ((Number(rotMap[r.id]) || 0) + 90) % 360; await saveRot(); renderOrg("seating"); } }));
+    if (rect) btns.push(el("button", { type: "button", class: "t-add t-tool", "aria-label": "Faire pivoter la table " + r.name, title: "Faire pivoter de 90°", text: "⟳", onclick: async e => { e.stopPropagation(); histPush(); rotMap[r.id] = ((Number(rotMap[r.id]) || 0) + 90) % 360; await saveRot(); renderOrg("seating"); } }));
     btns.push(el("button", { type: "button", class: "t-add t-tool", "aria-label": "Passer la table " + r.name + (rect ? " en ronde" : " en rectangulaire"), title: rect ? "Passer en table ronde (les invités sont conservés)" : "Passer en table rectangulaire (les invités sont conservés)", text: rect ? "◯" : "▭", onclick: async e => { e.stopPropagation(); try { await orgStore.update(M.table, r.id, { shape: rect ? "Ronde" : "Rectangulaire" }); r.shape = rect ? "Ronde" : "Rectangulaire"; renderOrg("seating"); } catch (er) { showToast(orgErr(er)); } } }));
     return el("div", { class: "t-btns" }, ...btns);
   };
@@ -480,13 +527,14 @@ async function seatPlan(rows) {
   const placed = new Set();
   rows.forEach(r => {
     if (/honneur/i.test(r.name || "")) {   // table d'honneur : les mariés au centre, côte à côte, invités de part et d'autre
-      const g = rawSeats(r), count = g.filter(Boolean).length, cap = Math.max(Number(r.capacity) || 0, 2), slots = Math.max(cap - 2, g.length), m = slots + 2, sp = 60, W = Math.max(320, m * sp + 40), H = 180;
+      const g = rawSeats(r), count = g.filter(Boolean).length, cap = Math.max(Number(r.capacity) || 0, 2), slots = Math.max(cap - 2, g.length), m = slots + 2, sp = 62, W0 = Math.max(320, m * sp + 40), H0 = 180, hrot = ((Number(rotMap[r.id]) || 0) % 360 + 360) % 360, hv = hrot % 180 === 90, W = hv ? H0 : W0, H = hv ? W0 : H0, hth = hrot * Math.PI / 180;
+      const hpos = (bx, by) => { const dx = bx - W0 / 2, dy = by - H0 / 2; return [W / 2 + dx * Math.cos(hth) - dy * Math.sin(hth), H / 2 + dx * Math.sin(hth) + dy * Math.cos(hth)]; };
       g.filter(Boolean).forEach(x => placed.add(norm(x)));
-      const Lc = Math.ceil(slots / 2), x0 = W / 2 - (m - 1) * sp / 2, X = pos => x0 + pos * sp, posOfSlot = k => (k % 2 === 0 ? Lc - 1 - k / 2 : Lc + 2 + (k - 1) / 2);
-      const t = el("div", { class: "seat-table honneur" + (count + 2 > cap ? " full" : ""), style: "width:" + W + "px;height:" + H + "px" }, el("div", { class: "t-disc" }, el("b", { text: r.name }), el("span", { text: (count + 2) + " / " + cap }), addBadge(r, true)));
-      [["Cassiana", Lc], ["Matthieu", Lc + 1]].forEach(([nm, pos]) => t.append(el("div", { class: "seat marie", style: "left:" + X(pos) + "px;top:42px" }, el("div", { class: "av marie", title: nm }, el("i", { text: nm[0] }), el("span", { text: nm })))));
+      const Lc = Math.ceil(slots / 2), x0 = W0 / 2 - (m - 1) * sp / 2, X = pos => x0 + pos * sp, posOfSlot = k => (k % 2 === 0 ? Lc - 1 - k / 2 : Lc + 2 + (k - 1) / 2);
+      const t = el("div", { class: "seat-table honneur" + (hrot ? " rot" + hrot : "") + (count + 2 > cap ? " full" : ""), style: "width:" + W + "px;height:" + H + "px" }, el("div", { class: "t-disc" }, el("b", { text: r.name }), el("span", { text: (count + 2) + " / " + cap }), addBadge(r, true)));
+      [["Cassiana", Lc], ["Matthieu", Lc + 1]].forEach(([nm, pos]) => t.append(el("div", { class: "seat marie", style: (([hx, hy]) => "left:" + hx + "px;top:" + hy + "px")(hpos(X(pos), 42)) }, el("div", { class: "av marie", title: nm }, el("i", { text: nm[0] }), el("span", { text: nm })))));
       for (let k = 0; k < slots; k++) {
-        const seat = el("div", { class: "seat", style: "left:" + X(posOfSlot(k)) + "px;top:42px" });
+        const seat = el("div", { class: "seat", style: (([hx, hy]) => "left:" + hx + "px;top:" + hy + "px")(hpos(X(posOfSlot(k)), 42)) });
         if (g[k]) seat.append(avatar(g[k], r.id, false, k)); else seat.append(emptySeat(r, k));
         zone(seat, r.id, k); t.append(seat);
       }
@@ -519,6 +567,7 @@ async function seatPlan(rows) {
   zone(pool, null);
   // --- disposition libre des tables : positions enregistrées dans le réglage « seat_layout »
   let layout = {}; try { layout = JSON.parse((await store.getSetting("seat_layout")) || "{}") || {}; } catch {}
+  seatHist.live = { rows, rot: () => JSON.stringify(rotMap), layout: () => JSON.stringify(layout) };
   let editing = false, saveT = null;
   const saveLayout = () => { clearTimeout(saveT); saveT = setTimeout(async () => { try { await store.setSetting("seat_layout", JSON.stringify(layout)); } catch (e) { showToast(orgErr(e)); } }, 400); };
   const autoPos = () => {                       // flux automatique : tables rangées par lignes de 1000 px
@@ -560,7 +609,7 @@ async function seatPlan(rows) {
   tabs.forEach(({ r, t, W, H }) => {
     t.addEventListener("pointerdown", e => {
       if (!editing || (e.button != null && e.button !== 0)) return;
-      e.preventDefault(); const auto = autoPos(), start = layout[r.id] || auto[r.id], sx = e.clientX, sy = e.clientY;
+      e.preventDefault(); histPush(); const auto = autoPos(), start = layout[r.id] || auto[r.id], sx = e.clientX, sy = e.clientY;
       t.setPointerCapture(e.pointerId); t.classList.add("moving");
       const move = ev => { const nx = Math.max(0, Math.round(start.x + ev.clientX - sx)), ny = Math.max(0, Math.round(start.y + ev.clientY - sy)); layout[r.id] = { x: nx, y: ny }; t.style.left = nx + "px"; t.style.top = ny + "px"; };
       const up = () => { t.removeEventListener("pointermove", move); t.removeEventListener("pointerup", up); t.removeEventListener("pointercancel", up); t.classList.remove("moving"); Object.keys(layout).length < tabs.length && tabs.forEach(x => { if (!layout[x.r.id]) layout[x.r.id] = autoPos()[x.r.id]; }); applyLayout(r.id); saveLayout(); };
@@ -569,13 +618,13 @@ async function seatPlan(rows) {
   });
   const multiBtn = el("button", { type: "button", class: "btn small", text: "☑ Sélection multiple", onclick: () => { multiMode = !multiMode; sel = null; if (!multiMode) selMany = []; multiBtn.classList.toggle("solid", multiMode); multiBtn.textContent = multiMode ? "✓ Terminer la sélection multiple" : "☑ Sélection multiple"; refreshMulti(); } });
   const editBtn = el("button", { type: "button", class: "btn small", text: "✥ Modifier la disposition des tables", onclick: () => {
-    editing = !editing; if (editing && !Object.keys(layout).length) { layout = autoPos(); saveLayout(); }
+    editing = !editing; if (editing && !Object.keys(layout).length) { histPush(); layout = autoPos(); saveLayout(); }
     editBtn.textContent = editing ? "✓ Terminer la disposition" : "✥ Modifier la disposition des tables"; editBtn.classList.toggle("solid", editing);
-    resetBtn.hidden = !editing && !Object.keys(layout).length; hint.textContent = editing ? "Glissez chaque table à l'endroit voulu, comme dans la salle. Les invités ne se déplacent pas pendant ce mode." : HINT; applyLayout();
+    resetBtn.hidden = !editing && !Object.keys(layout).length; hint.textContent = editing ? "Glissez chaque table à l'endroit voulu. Les invités ne se déplacent pas pendant ce mode." : ""; hint.hidden = !editing; applyLayout();
   } });
-  const resetBtn = el("button", { type: "button", class: "btn small", text: "Remettre en grille", hidden: !Object.keys(layout).length, onclick: () => { layout = {}; editing = false; editBtn.textContent = "✥ Modifier la disposition des tables"; editBtn.classList.remove("solid"); resetBtn.hidden = true; hint.textContent = HINT; applyLayout(); saveLayout(); } });
+  const resetBtn = el("button", { type: "button", class: "btn small", text: "Remettre en grille", hidden: !Object.keys(layout).length, onclick: () => { histPush(); layout = {}; editing = false; editBtn.textContent = "✥ Modifier la disposition des tables"; editBtn.classList.remove("solid"); resetBtn.hidden = true; hint.textContent = ""; hint.hidden = true; applyLayout(); saveLayout(); } });
   applyLayout();
-  wrap.append(titled("h3", "cat", "Agneau couché", "Schéma des tables", 30), el("div", { class: "seat-tools" }, multiBtn, editBtn, resetBtn), hint, multiBar, pool, scroller);
+  wrap.append(titled("h3", "cat", "Agneau couché", "Schéma des tables", 30), el("div", { class: "seat-tools" }, multiBtn, editBtn, resetBtn, tip), hint, multiBar, pool, scroller);
   return wrap;
 }
 
@@ -602,7 +651,7 @@ function invitePanel(rows) {
     showToast(ok + " invitation(s) envoyée(s)"); renderOrg("guests");
   });
   box.append(
-    el("p", { class: "hint", text: "Renseignez l'e-mail de l'invité et choisissez « Lien » dans la colonne Invitation. Il reçoit le lien du site et un bouton pour confirmer sa présence, une seule fois." }),
+    infoTip("Renseignez l'e-mail de l'invité et choisissez « Lien » dans la colonne Invitation. Il reçoit le lien du site et un bouton pour confirmer sa présence, une seule fois."),
     el("div", { style: "display:flex;gap:10px;flex-wrap:wrap;align-items:center" }, keyIn, btn), status);
   return box;
 }
@@ -650,6 +699,12 @@ async function renderOrgInner(key) {
     gp.addEventListener("change", guestFilter); gq.addEventListener("input", guestFilter);
     bar.append(gp, gq);
   }
+  if (key === "seating") {
+    const un = el("button", { type: "button", class: "btn small", onclick: histUndo }), re = el("button", { type: "button", class: "btn small", onclick: histRedo });
+    seatHist.ui = () => { un.textContent = "↶ Annuler" + (seatHist.undo.length ? " (" + seatHist.undo.length + ")" : ""); re.textContent = "↷ Rétablir"; un.disabled = !seatHist.undo.length; re.disabled = !seatHist.redo.length; un.title = "Annuler la dernière modification (Ctrl+Z)"; re.title = "Rétablir (Ctrl+Y)"; };
+    seatHist.ui(); bar.append(un, re);
+    if (!rows.length) seatHist.live = { rows, rot: () => "{}", layout: () => "{}" };
+  }
   host.append(bar);
   if (key === "guests") host.append(invitePanel(rows));
 
@@ -687,11 +742,12 @@ async function renderOrgInner(key) {
       el("button", { class: "btn small", type: "button", text: "Tout replier", onclick: () => list.querySelectorAll("details.org-card").forEach(d => { d.open = false; }) }));
     host.append(bar2);
     let lastCat = null;
+    const payCls = (est, paid) => { est = Number(est) || 0; paid = Number(paid) || 0; return est <= 0 && paid <= 0 ? "" : paid >= est - 0.005 ? "pay-ok" : paid > 0 ? "pay-part" : "pay-no"; };
     const badge = st => { const c = RETAINED.includes(st) ? "ok" : st === "Refusé (NON)" ? "no" : /attente|donner/i.test(st || "") ? "wait" : ""; return el("span", { class: "st-badge " + c, text: st || "—" }); };
     const sumFor = r => {
       if (key === "vendors") return [el("b", { text: r.name }), badge(r.status), el("span", { class: "num", text: r.price != null ? eur(r.price) : "" }), el("span", { class: "sm", text: r.phone || r.email || r.contact || r.location || "" })];
       if (key === "deco") { const tot = (Number(r.unit) || 0) * (Number(r.qty) || 0), pd = Number(r.paid) || 0, sm = el("span", { class: "sm" }); if (isUrl(r.link)) sm.append(el("a", { class: "lnk", href: r.link, target: "_blank", rel: "noopener noreferrer", title: r.link, text: "Voir le lien ↗", onclick: e => e.stopPropagation() })); const st = tot > 0 && pd >= tot - 0.005 ? "Payé" : pd > 0 ? "Partiel" : "À payer"; return [el("b", { text: r.name }), sm, el("span", { class: "num", text: (r.qty || 0) + " × " + eur2(r.unit || 0) + " = " + eur2(tot) }), el("span", { class: "st-badge " + (st === "Payé" ? "ok" : st === "Partiel" ? "wait" : "no"), text: st === "Partiel" ? "Payé " + eur2(pd) : st })]; }
-      if (key === "budget") return [el("b", { text: r.item }), el("span", { class: "sm", text: r.family ? "famille " + eur(r.family) : "" }), el("span", { class: "num", text: "prévu " + eur(r.estimated || 0) }), el("span", { class: "num", text: "payé " + eur(r.paid || 0) })];
+      if (key === "budget") return [el("b", { text: r.item }), el("span", { class: "sm", text: r.family ? "famille " + eur(r.family) : "" }), el("span", { class: "num", text: "prévu " + eur(r.estimated || 0) }), el("span", { class: "num pay " + payCls(r.estimated, r.paid), text: "● payé " + eur(r.paid || 0) })];
       const g = guestsOf(r).length; return [el("b", { text: r.name }), el("span", { class: "sm", text: r.shape || "Ronde" }), el("span", { class: "num", text: g + " / " + (r.capacity || "?") }), el("span", { class: "sm", text: "" })];
     };
     shown.forEach((r, i) => {
@@ -830,7 +886,7 @@ async function renderPhotoAdmin() {
     try { await store.setSetting("photos_link", u || ""); lin.value = u || ""; linMsg.textContent = u ? "✓ Lien enregistré : les invités verront un bouton dans l'onglet Photos." : "✓ Lien retiré."; applyPostWedding(); } catch (e) { linMsg.textContent = "⚠ " + orgErr(e); }
   } });
   host.append(el("div", { class: "card", style: "margin-bottom:14px;padding:12px 14px" }, el("h3", { text: "Lien de l'album photo", style: "margin:0 0 4px" }),
-    el("p", { class: "hint", text: "Collez le lien partagé d'un album (Google Photos, Drive…). Les invités l'ouvrent depuis l'onglet Photos pour voir toutes les photos et y ajouter les leurs. Il s'affiche dès que la galerie est publiée." }),
+    infoTip("Collez le lien partagé d'un album (Google Photos, Drive…). Les invités l'ouvrent depuis l'onglet Photos pour voir toutes les photos et y ajouter les leurs. Il s'affiche dès que la galerie est publiée."),
     el("div", { style: "display:flex;gap:8px;flex-wrap:wrap;margin-top:8px" }, lin, linSave), linMsg));
   const drop = el("label", { class: "drop", for: "photo-input" }, el("b", { text: "Ajouter des photos" }), el("span", { text: "Cliquez ou glissez vos photos ici. Plusieurs à la fois. Elles sont allégées automatiquement." }));
   const input = el("input", { id: "photo-input", type: "file", accept: "image/*", multiple: true, hidden: true });
@@ -846,7 +902,7 @@ async function renderPhotoAdmin() {
   drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); go([...e.dataTransfer.files].filter(f => f.type.startsWith("image/"))); });
   host.append(drop, input, status);
   if (!photos.length) { host.append(el("p", { class: "empty", text: "Aucune photo pour l'instant." })); return; }
-  host.append(el("p", { class: "hint", text: photos.length + " photo(s). Les flèches changent l'ordre d'affichage." }));
+  host.append(el("p", { class: "hint", text: photos.length + " photo(s)." }), infoTip("Les flèches changent l'ordre d'affichage."));
   const grid = el("div", { class: "pg-admin" });
   photos.forEach((p, i) => {
     const cap = el("input", { type: "text", maxlength: "120", placeholder: "Légende (facultatif)", "aria-label": "Légende" }); cap.value = p.caption || "";

@@ -154,12 +154,14 @@
       filter = b.dataset.cv; document.querySelectorAll("[data-cv]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); renderList();
     }));
     const form = $("#cv-form"), msg = $("#cv-msg"), btns = document.querySelectorAll("[data-cvt]"), typeSel0 = form.querySelector("[name=type]");
-    const closeForm = () => { form.hidden = true; btns.forEach(x => x.setAttribute("aria-expanded", "false")); };
+    const mark = () => btns.forEach(x => { const on = !form.hidden && typeSel0.value === x.dataset.cvt; x.classList.toggle("solid", on); x.setAttribute("aria-expanded", String(on)); });
+    const closeForm = () => { form.hidden = true; mark(); };
+    typeSel0.addEventListener("change", mark);
     btns.forEach(b => b.addEventListener("click", () => {
       const same = !form.hidden && typeSel0.value === b.dataset.cvt;
       if (same) return closeForm();
       typeSel0.value = b.dataset.cvt; typeSel0.dispatchEvent(new Event("change"));
-      form.hidden = false; btns.forEach(x => x.setAttribute("aria-expanded", String(x === b)));
+      form.hidden = false; mark();
       form.scrollIntoView({ block: "nearest", behavior: "smooth" }); form.querySelector("[name=prenom]").focus({ preventScroll: true });
     }));
     form.addEventListener("submit", async e => {
