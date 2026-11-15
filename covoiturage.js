@@ -238,6 +238,7 @@
       if (jj || !arr.value || arr.value === auto.a) arr.value = d[1];
       auto = { d: d[0], a: d[1] };
       dep.closest("label").hidden = jj || rr; arr.closest("label").hidden = jj;
+      const hr = form.querySelector("[name=heure]"); if (hr) { hr.closest("label").hidden = jj || rr; if (jj || rr) hr.value = ""; }   // l'horaire est déjà connu : après la cérémonie / vers 4 h
       dep.required = !(jj || rr); arr.required = !(jj || rr);
       const ph = PH[sensSel.value]; dep.placeholder = "ex. " + ph[0]; arr.placeholder = "ex. " + ph[1];
     };
