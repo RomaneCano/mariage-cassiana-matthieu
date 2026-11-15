@@ -491,6 +491,8 @@ details.org-card>summary{position:relative}details.org-card>summary>.sel-box{pos
 .org-table.guests textarea[aria-label="Nom"],.org-table.guests textarea[aria-label="Prénom"]{min-width:130px}.org-table.guests textarea[aria-label="Adresse"]{min-width:230px}.org-table.guests textarea[aria-label="Allergie"]{min-width:190px}.org-table.guests textarea[aria-label="Notes"]{min-width:170px}
 .org-table.guests textarea.has-alg{background:#f6dcc0;border-color:#c0702f;font-weight:700;color:#7a4410}
 .org-table tr.to-check td{background:#fff1cf}
+.sheet-form{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}.sheet-form input{flex:1;min-width:260px;min-height:40px}
+.sheet-wrap{display:inline-flex;gap:6px;align-items:center}.sheet-wrap a.btn{text-decoration:none}
 .btn.sent-ok{background:#d8e7c4;border-color:#5a7a2a;color:#2f5a1a;font-weight:700}
 .sum-chip.c-all{background:#e3e0cf}
 .sum-chip.c-ok{background:#d8e7c4;color:#2f5a1a}.sum-chip.c-no{background:#f1d6cf;color:#7a2d20}.sum-chip.c-wait{background:#f6e8bd;color:#6b5210}
@@ -2331,7 +2333,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611150249"></script>
-<script src="covoiturage.js?v=202611150249"></script>
+<script src="organisation.js?v=202611150251"></script>
+<script src="covoiturage.js?v=202611150251"></script>
 </body>
 </html>

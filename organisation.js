@@ -823,6 +823,19 @@ async function renderOrgInner(key) {
     }
     tlProp = box; bar.after(box);
   } }));
+  let sheetForm = null;
+  if (key === "guests") {
+    let su = ""; try { su = ((await store.getSetting("sheet_url")) || "").trim(); } catch {}
+    if (tok !== orgTok) return;
+    const isSheet = u => /^https:\/\/docs\.google\.com\/spreadsheets\//i.test(u);
+    const form = el("form", { class: "sheet-form", hidden: true, novalidate: true }), inp = el("input", { type: "url", placeholder: "https://docs.google.com/spreadsheets/d/…", "aria-label": "Lien du Google Sheet", value: su });
+    form.append(inp, el("button", { type: "submit", class: "btn small solid", text: "Enregistrer" }), su ? el("button", { type: "button", class: "btn small danger", text: "Retirer", onclick: async () => { try { await store.setSetting("sheet_url", ""); showToast("Lien retiré"); renderOrg("guests"); } catch (e) { showToast(orgErr(e)); } } }) : "");
+    form.addEventListener("submit", async e => { e.preventDefault(); const u = inp.value.trim(); if (!isSheet(u)) return showToast("Collez le lien de votre Google Sheet (il commence par https://docs.google.com/spreadsheets/)."); try { await store.setSetting("sheet_url", u); showToast("Lien du Google Sheet enregistré"); renderOrg("guests"); } catch (err) { showToast(orgErr(err)); } });
+    bar.append(su && isSheet(su)
+      ? el("span", { class: "sheet-wrap" }, el("a", { class: "btn small", href: su, target: "_blank", rel: "noopener noreferrer", title: "Ouvre votre tableur Google. Chaque réponse envoyée depuis le site y est reportée automatiquement par le script (Apps Script).", text: "↗ Ouvrir le Google Sheet" }), el("button", { type: "button", class: "btn small", title: "Changer ou retirer le lien", "aria-label": "Modifier le lien du Google Sheet", text: "✎", onclick: () => { form.hidden = !form.hidden; if (!form.hidden) inp.focus(); } }))
+      : el("button", { type: "button", class: "btn small", text: "+ Lien du Google Sheet", title: "Collez ici le lien de votre Google Sheet pour l'ouvrir en un clic depuis cet onglet", onclick: () => { form.hidden = !form.hidden; if (!form.hidden) inp.focus(); } }));
+    sheetForm = form;
+  }
   if (rows.length) {
     let selMode = false, selBar = null;
     const delBtn = el("button", { type: "button", class: "btn small sel-toggle", text: "☑ Sélectionner pour supprimer" });
@@ -853,6 +866,7 @@ async function renderOrgInner(key) {
     bar.append(delBtn);
   }
   host.append(bar);
+  if (sheetForm) host.append(sheetForm);
   if (key === "timeline" && rows.length) host.append(timelinePanel(rows, tlGames));
   if (key === "games" && rows.length) host.append(gamesBoard(rows));
   if (key === "guests") host.append(invitePanel(rows));
