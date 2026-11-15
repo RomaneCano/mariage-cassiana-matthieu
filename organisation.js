@@ -367,15 +367,15 @@ function orgSummary(key, rows) {
   const chip = (label, value, cls) => box.append(el("div", { class: "sum-chip " + (cls || "") }, el("b", { text: value }), el("span", { text: label })));
   if (key === "tasks") {
     const done = rows.filter(r => r.done).length, late = rows.filter(r => !r.done && r.due && r.due < todayISO()).length;
-    chip("faites", done + " / " + rows.length); chip("en cours", String(rows.filter(r => statusOf(r) === "En cours").length)); chip("en attente de retour", String(rows.filter(r => statusOf(r) === "En attente de retour").length)); chip("en retard", String(late), late ? "warn" : "good"); chip("avant le mariage", Math.max(0, daysBetween(todayISO(), WEDDING_ISO)) + " j");
+    chip("faites", done + " / " + rows.length, "c-ok"); chip("en cours", String(rows.filter(r => statusOf(r) === "En cours").length), "c-wait"); chip("en attente de retour", String(rows.filter(r => statusOf(r) === "En attente de retour").length), "c-alg"); chip("en retard", String(late), late ? "warn" : "good"); chip("avant le mariage", Math.max(0, daysBetween(todayISO(), WEDDING_ISO)) + " j", "c-kid");
     if (rows.length) box.append(el("div", { class: "bar big" }, el("i", { style: "width:" + Math.round(done / rows.length * 100) + "%" })));
   } else if (key === "deco") {
     const articles = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0), total = rows.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0);
     const paidD = rows.reduce((a, r) => a + (Number(r.paid) || 0), 0);
-    chip("références", String(rows.length)); chip("articles au total", String(articles)); chip("prévu", eur2(total)); const resteD = total - paidD; chip("payé", eur2(paidD), total > 0 && resteD <= 0.005 ? "good" : paidD > 0 ? "" : ""); chip("reste à payer", eur2(Math.max(0, resteD)), resteD > 0.005 ? "warn" : "good");
+    chip("références", String(rows.length), "c-all"); chip("articles au total", String(articles), "c-kid"); chip("prévu", eur2(total), "c-link"); const resteD = total - paidD; chip("payé", eur2(paidD), total > 0 && resteD <= 0.005 ? "good" : "c-ok"); chip("reste à payer", eur2(Math.max(0, resteD)), resteD > 0.005 ? "warn" : "good");
   } else if (key === "budget") {
     const s = f => rows.reduce((a, r) => a + (Number(r[f]) || 0), 0), est = s("estimated"), paid = s("paid"), total = est;
-    const fam = s("family"); chip("prévu", eur(est)); chip("pris en charge par la famille", eur(fam)); chip("à notre charge", eur(Math.max(0, est - fam))); chip("payé", eur(paid), total > 0 && total - paid <= 0 ? "good" : ""); chip("reste à payer", eur(Math.max(0, total - paid)), total - paid > 0 ? "warn" : "good");
+    const fam = s("family"); chip("prévu", eur(est), "c-link"); chip("pris en charge par la famille", eur(fam), "c-hand"); chip("à notre charge", eur(Math.max(0, est - fam)), "c-post"); chip("payé", eur(paid), total > 0 && total - paid <= 0 ? "good" : "c-ok"); chip("reste à payer", eur(Math.max(0, total - paid)), total - paid > 0 ? "warn" : "good");
   } else if (key === "vendors") {
     const c = st => rows.filter(r => st.includes(r.status)).length;
     chip("à contacter", String(c(["À contacter"]))); chip("en attente", String(c(["En attente de devis", "En attente de réponse", "Réponse finale à donner", "Réponse négative à donner"]))); chip("retenus", String(c(RETAINED))); chip("refusés", String(c(["Refusé (NON)"])));
@@ -386,11 +386,11 @@ function orgSummary(key, rows) {
     chip("en attente", String(c(r => !r.presence || r.presence === "ATT")), "c-wait"); chip("allergies", String(c(r => r.allergie && r.allergie.trim())), "c-alg");
     chip("enfants (0 à 12 ans)", String(c(r => { const n = parseInt(String(r.age || "").replace(/[^\d]/g, ""), 10); return !isNaN(n) && n <= 12; })), "c-kid"); const prog = e => c(r => r.envoi === e && r.invite_sent_at) + " / " + c(r => r.envoi === e); chip("courriers envoyés", prog("Courrier"), "c-post"); chip("remises en main effectuées", prog("Remise en main"), "c-hand"); chip("liens envoyés", prog("Lien"), "c-link");
   } else if (key === "games") {
-    chip("idées", String(rows.length)); chip("retenues", String(rows.filter(r => r.chosen).length)); chip("coût des retenues", eur(rows.filter(r => r.chosen).reduce((a, r) => a + (Number(r.price) || 0), 0)));
+    chip("idées", String(rows.length), "c-all"); chip("retenues", String(rows.filter(r => r.chosen).length), "c-ok"); chip("coût des retenues", eur(rows.filter(r => r.chosen).reduce((a, r) => a + (Number(r.price) || 0), 0)), "c-alg");
   } else if (key === "seating") {
     const placed = rows.reduce((a, r) => a + String(r.guests || "").split("\n").filter(x => x.trim()).length, 0), cap = rows.reduce((a, r) => a + (Number(r.capacity) || 0), 0);
-    chip("tables", String(rows.length)); chip("invités placés", String(placed)); chip("places", String(cap), cap && placed > cap ? "warn" : "");
-  } else if (key === "timeline") chip("étapes", String(rows.length));
+    chip("tables", String(rows.length), "c-all"); chip("invités placés", String(placed), "c-ok"); chip("places", String(cap), cap && placed > cap ? "warn" : "c-link"); if (cap && placed <= cap) chip("places libres", String(cap - placed), "c-wait");
+  } else if (key === "timeline") chip("étapes", String(rows.length), "c-all"); const nPl = rows.filter(r => r.game).length; if (rows.length) chip("jeux placés", String(nPl), "c-alg");
   return box;
 }
 
