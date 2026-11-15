@@ -783,7 +783,7 @@ async function renderOrgInner(key) {
   } }));
   if (rows.length) {
     let selMode = false, selBar = null;
-    const delBtn = el("button", { type: "button", class: "btn small", text: "☑ Sélectionner pour supprimer" });
+    const delBtn = el("button", { type: "button", class: "btn small sel-toggle", text: "☑ Sélectionner pour supprimer" });
     const rowsEls = () => [...host.querySelectorAll("[data-rid]")];
     const picked = () => rowsEls().filter(x => !x.hidden && x.querySelector(".sel-box:checked")).map(x => x.dataset.rid);
     const refresh = () => { if (!selBar) return; const n = picked().length; selBar.go.disabled = !n; selBar.go.textContent = "Supprimer la sélection (" + n + ")"; };
