@@ -382,9 +382,9 @@ function orgSummary(key, rows) {
     chip("prix des retenus", eur(rows.filter(r => RETAINED.includes(r.status)).reduce((a, r) => a + (Number(r.price) || 0), 0)));
   } else if (key === "guests") {
     const c = f => rows.filter(f).length;
-    chip("invités", String(rows.length)); chip("présents", String(c(r => r.presence === "OUI")), ""); chip("absents", String(c(r => r.presence === "NON")));
-    chip("en attente", String(c(r => !r.presence || r.presence === "ATT"))); chip("allergies", String(c(r => r.allergie && r.allergie.trim())));
-    chip("enfants (0 à 12 ans)", String(c(r => { const n = parseInt(String(r.age || "").replace(/[^\d]/g, ""), 10); return !isNaN(n) && n <= 12; }))); chip("courrier", String(c(r => r.envoi === "Courrier"))); chip("lien", String(c(r => r.envoi === "Lien"))); chip("remise en main", String(c(r => r.envoi === "Remise en main"))); chip("e-mails renseignés", String(c(r => isMail(r.email)))); chip("liens envoyés", String(c(r => r.invite_sent_at)));
+    chip("invités", String(rows.length), "c-all"); chip("présents", String(c(r => r.presence === "OUI")), "c-ok"); chip("absents", String(c(r => r.presence === "NON")), "c-no");
+    chip("en attente", String(c(r => !r.presence || r.presence === "ATT")), "c-wait"); chip("allergies", String(c(r => r.allergie && r.allergie.trim())), "c-alg");
+    chip("enfants (0 à 12 ans)", String(c(r => { const n = parseInt(String(r.age || "").replace(/[^\d]/g, ""), 10); return !isNaN(n) && n <= 12; })), "c-kid"); chip("courrier", String(c(r => r.envoi === "Courrier")), "c-post"); chip("lien", String(c(r => r.envoi === "Lien")), "c-link"); chip("remise en main", String(c(r => r.envoi === "Remise en main")), "c-hand"); chip("liens envoyés", String(c(r => r.invite_sent_at)), "c-sent");
   } else if (key === "games") {
     chip("idées", String(rows.length)); chip("retenues", String(rows.filter(r => r.chosen).length)); chip("coût des retenues", eur(rows.filter(r => r.chosen).reduce((a, r) => a + (Number(r.price) || 0), 0)));
   } else if (key === "seating") {
@@ -836,6 +836,7 @@ async function renderOrgInner(key) {
   });
   const addBox = el("details", { class: "org-addbox" }, el("summary", {}, icon("Plus", 22), " Ajouter (" + M.label.toLowerCase() + ")"), form);
   host.append(addBox);
+  if (key === "seating") { const spw = host.querySelector(".seat-plan-wrap"); if (spw) spw.before(addBox); }   // le formulaire d'ajout passe au-dessus du plan
 
   // tableau modifiable
   let shown = rows;
@@ -930,13 +931,116 @@ async function renderOrgInner(key) {
   host.append(el("div", { class: "tbl org-wrap" }, table));
 }
 
-async function renderNotes(host, current) {
+async function renderNotesCommunes(host, current) {
   let v = ""; try { v = await store.getSetting("org_notes"); } catch {}
   if (current && !current()) return;
   const ta = el("textarea", { class: "org-notes", rows: "16", placeholder: "Idées, numéros utiles, mots de passe de réservation à ne pas écrire ici, questions à poser au prêtre, listes en vrac…", "aria-label": "Notes" }); ta.value = v || "";
   const st = el("p", { class: "hint", text: "Enregistrement automatique quand vous quittez le champ." });
   ta.addEventListener("blur", async () => { try { await store.setSetting("org_notes", ta.value); st.textContent = "✓ Enregistré à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }); } catch (e) { st.textContent = "⚠ " + orgErr(e); } });
-  host.append(titled("h3", "cat", "Rameau d'olivier", "Notes libres", 28), ta, st);
+  host.append(titled("h3", "cat", "Rameau d'olivier", "Notes communes", 28), ta, st);
+}
+
+/* ============ JOURNAL DE MARIAGE ============
+   Un espace par marié, protégé par un code vérifié côté serveur (fonctions journal_* de Supabase).
+   Tout est révélé automatiquement le 9 octobre 2027. */
+const JOURNAL = { who: { cassiana: "Cassiana", matthieu: "Matthieu" }, kinds: ["Pensée", "À faire", "Surprise", "Souvenir", "Lettre", "Mémo"],
+  hint: { "Pensée": "ce que je ressens", "À faire": "ma liste, à cocher", "Surprise": "pour l'autre, à révéler", "Souvenir": "ce qui s'est passé", "Lettre": "un mot pour le grand jour", "Mémo": "à ne pas oublier" } };
+const JKIND_COL = { "Pensée": "#7d6a9a", "À faire": "#c58a4a", "Surprise": "#c0605a", "Souvenir": "#4f5020", "Lettre": "#a3592f", "Mémo": "#8a9bb0" };
+const jState = { tab: "cassiana", codes: { cassiana: null, matthieu: null }, status: null, filter: "", old: false };
+const jUnlocked = () => todayISO() >= WEDDING_ISO;
+const jRpc = async (fn, args) => { const { data, error } = await remote.rpc(fn, args); if (error) throw error; return data; };
+const J_ERR = { code: "Code incorrect.", nocode: "Aucun code n'est encore défini.", court: "Le code doit contenir au moins 4 caractères.", vide: "Écrivez quelque chose avant d'enregistrer.", introuvable: "Cette entrée n'existe plus." };
+
+async function renderNotes(host, current) {
+  const alive = () => !current || current();
+  const tabs = el("div", { class: "admin-tabs j-tabs", role: "group", "aria-label": "Journal" });
+  const body = el("div", { class: "j-body" });
+  const draw = () => {
+    tabs.replaceChildren(...[["cassiana", "Cassiana"], ["matthieu", "Matthieu"], ["commun", "Notes communes"]].map(([k, l]) => el("button", { type: "button", "aria-pressed": String(jState.tab === k), text: l, onclick: () => { jState.tab = k; jState.filter = ""; draw(); } })));
+    body.replaceChildren();
+    if (jState.tab === "commun") renderNotesCommunes(body, alive); else journalSpace(body, jState.tab, alive);
+  };
+  const days = Math.max(0, daysBetween(todayISO(), WEDDING_ISO));
+  host.append(titled("h3", "cat", "Rameau d'olivier", "Journal de mariage", 28),
+    el("p", { class: "hint j-intro", text: jUnlocked() ? "Le grand jour est arrivé : les deux espaces sont ouverts, vous pouvez lire tout le journal." : "Chacun écrit dans son espace, protégé par son propre code. Tout sera révélé le 9 octobre 2027 (dans " + days + " jour" + (days > 1 ? "s" : "") + ")." }), tabs, body);
+  draw();
+}
+
+async function journalSpace(host, author, alive) {
+  const name = JOURNAL.who[author];
+  host.replaceChildren(el("p", { class: "hint", text: "Chargement…" }));
+  try { jState.status = await jRpc("journal_status", {}); } catch (e) { host.replaceChildren(el("p", { class: "msg err", text: "Le journal n'est pas encore installé dans Supabase. Exécutez supabase-tout-en-un.sql (ou supabase-migration-journal.sql) dans le SQL Editor." })); return; }
+  if (!alive()) return;
+  const unlocked = jState.status.unlocked || jUnlocked();
+  const code = () => jState.codes[author];
+  host.replaceChildren();
+  // 1. pas encore de code : on le crée
+  if (!jState.status[author]) {
+    const c1 = el("input", { type: "password", autocomplete: "new-password", minlength: "4", maxlength: "60", "aria-label": "Votre code" }), c2 = el("input", { type: "password", autocomplete: "new-password", maxlength: "60", "aria-label": "Confirmez votre code" }), msg = el("p", { class: "msg", hidden: true, role: "status" });
+    const f = el("form", { class: "card j-lock", novalidate: true }, el("h3", { text: "Espace de " + name }), el("p", { class: "hint", text: "Choisissez un code personnel (4 caractères minimum). Il protège votre espace : l'autre ne pourra rien lire avant le 9 octobre 2027. Notez-le bien, il ne peut pas être retrouvé (après la date, tout s'ouvre de toute façon)." }),
+      el("label", {}, el("span", { text: "Votre code" }), c1), el("label", {}, el("span", { text: "Confirmez le code" }), c2), el("button", { class: "btn solid", type: "submit", text: "Créer mon espace" }), msg);
+    f.addEventListener("submit", async e => { e.preventDefault(); if (c1.value !== c2.value) { msg.hidden = false; msg.className = "msg err"; msg.textContent = "Les deux codes ne sont pas identiques."; return; }
+      try { const r = await jRpc("journal_set_code", { p_author: author, p_new: c1.value, p_old: null }); if (!r.ok) { msg.hidden = false; msg.className = "msg err"; msg.textContent = J_ERR[r.error] || "Impossible de créer le code."; return; } jState.codes[author] = c1.value; showToast("Espace de " + name + " créé."); journalSpace(host, author, alive); } catch (err) { showToast(orgErr(err)); } });
+    host.append(f); return;
+  }
+  // 2. code demandé
+  if (!unlocked && !code()) {
+    const c = el("input", { type: "password", autocomplete: "current-password", maxlength: "60", "aria-label": "Code de " + name }), msg = el("p", { class: "msg", hidden: true, role: "status" });
+    const f = el("form", { class: "card j-lock", novalidate: true }, el("h3", { text: "Espace de " + name }), el("p", { class: "hint", text: "Entrez votre code pour ouvrir votre journal." }), el("label", {}, el("span", { text: "Code" }), c), el("button", { class: "btn solid", type: "submit", text: "Ouvrir" }), msg);
+    f.addEventListener("submit", async e => { e.preventDefault();
+      try { const r = await jRpc("journal_list", { p_author: author, p_code: c.value }); if (!r.ok) { msg.hidden = false; msg.className = "msg err"; msg.textContent = J_ERR[r.error] || "Accès refusé."; c.value = ""; return; } jState.codes[author] = c.value; journalSpace(host, author, alive); } catch (err) { showToast(orgErr(err)); } });
+    host.append(f); c.focus({ preventScroll: true }); return;
+  }
+  // 3. espace ouvert
+  let entries = [];
+  try { const r = await jRpc("journal_list", { p_author: author, p_code: code() }); if (!r.ok) { jState.codes[author] = null; return journalSpace(host, author, alive); } entries = r.entries || []; } catch (e) { host.append(el("p", { class: "msg err", text: orgErr(e) })); return; }
+  if (!alive()) return;
+  let editing = null;
+  const top = el("div", { class: "j-top" }, el("h3", { text: "Journal de " + name }),
+    el("div", { class: "j-top-btns" }, unlocked ? "" : el("button", { type: "button", class: "btn small", text: "🔒 Verrouiller", onclick: () => { jState.codes[author] = null; journalSpace(host, author, alive); } }), el("button", { type: "button", class: "btn small", text: "Changer le code", onclick: () => changeCode() })));
+  const cc = el("div", {});
+  const changeCode = () => {
+    const o = el("input", { type: "password", maxlength: "60", "aria-label": "Code actuel" }), n = el("input", { type: "password", maxlength: "60", "aria-label": "Nouveau code" }), m = el("p", { class: "msg", hidden: true });
+    const f = el("form", { class: "card j-lock", novalidate: true }, el("label", {}, el("span", { text: "Code actuel" }), o), el("label", {}, el("span", { text: "Nouveau code (4 caractères minimum)" }), n), el("div", { class: "j-act" }, el("button", { class: "btn solid small", type: "submit", text: "Changer le code" }), el("button", { class: "btn small", type: "button", text: "Annuler", onclick: () => cc.replaceChildren() })), m);
+    f.addEventListener("submit", async e => { e.preventDefault(); try { const r = await jRpc("journal_set_code", { p_author: author, p_new: n.value, p_old: o.value }); if (!r.ok) { m.hidden = false; m.className = "msg err"; m.textContent = J_ERR[r.error] || "Impossible."; return; } jState.codes[author] = n.value; cc.replaceChildren(); showToast("Code modifié."); } catch (err) { showToast(orgErr(err)); } });
+    cc.replaceChildren(f); o.focus();
+  };
+  // formulaire d'entrée
+  const dIn = el("input", { type: "date", "aria-label": "Date" }), kIn = el("select", { "aria-label": "Type" }, ...JOURNAL.kinds.map(k => el("option", { value: k, text: k + " — " + JOURNAL.hint[k] }))), tIn = el("input", { type: "text", maxlength: "120", placeholder: "Titre (facultatif)", "aria-label": "Titre" }), bIn = el("textarea", { rows: "5", maxlength: "8000", placeholder: "Écrivez ici : ce que vous pensez, ce que vous avez à faire, une surprise pour l'autre, ce qu'il s'est passé aujourd'hui…", "aria-label": "Texte" });
+  const goBtn = el("button", { class: "btn solid", type: "submit", text: "Ajouter au journal" }), cancelBtn = el("button", { class: "btn small", type: "button", text: "Annuler la modification", hidden: true });
+  const reset = () => { editing = null; dIn.value = todayISO(); kIn.value = "Pensée"; tIn.value = ""; bIn.value = ""; goBtn.textContent = "Ajouter au journal"; cancelBtn.hidden = true; };
+  reset(); cancelBtn.addEventListener("click", reset);
+  const form = el("form", { class: "card j-form", novalidate: true }, el("div", { class: "j-row" }, el("label", {}, el("span", { text: "Date" }), dIn), el("label", { class: "grow" }, el("span", { text: "Type" }), kIn)), tIn, bIn, el("div", { class: "j-act" }, goBtn, cancelBtn));
+  form.addEventListener("submit", async e => { e.preventDefault(); if (!bIn.value.trim()) return showToast(J_ERR.vide);
+    goBtn.disabled = true;
+    try { const r = await jRpc("journal_save", { p_author: author, p_code: code(), p_id: editing ? editing.id : null, p_date: dIn.value || todayISO(), p_kind: kIn.value, p_title: tIn.value, p_body: bIn.value, p_done: editing ? !!editing.done : false });
+      if (!r.ok) { showToast(J_ERR[r.error] || "Non enregistré."); goBtn.disabled = false; return; } showToast(editing ? "Entrée modifiée." : "Entrée ajoutée au journal."); journalSpace(host, author, alive);
+    } catch (err) { showToast(orgErr(err)); goBtn.disabled = false; } });
+  // liste
+  const list = el("div", { class: "j-list" });
+  const kindsUsed = JOURNAL.kinds.filter(k => entries.some(e => e.kind === k));
+  const pills = el("div", { class: "j-filter" }, ...[["", "Tout (" + entries.length + ")"], ...kindsUsed.map(k => [k, k + " (" + entries.filter(e => e.kind === k).length + ")"])].map(([k, l]) => el("button", { type: "button", "aria-pressed": String(jState.filter === k), text: l, onclick: () => { jState.filter = k; drawList(); pills.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.textContent === l))); } })),
+    entries.length > 1 ? el("button", { type: "button", class: "j-sort", text: jState.old ? "↑ Plus anciennes d'abord" : "↓ Plus récentes d'abord", onclick: e => { jState.old = !jState.old; e.target.textContent = jState.old ? "↑ Plus anciennes d'abord" : "↓ Plus récentes d'abord"; drawList(); } }) : "");
+  const save = async (en, patch) => { const r = await jRpc("journal_save", { p_author: author, p_code: code(), p_id: en.id, p_date: en.entry_date, p_kind: en.kind, p_title: en.title || "", p_body: en.body, p_done: en.done, ...patch }); if (!r.ok) throw { message: J_ERR[r.error] || "refusé" }; };
+  const drawList = () => {
+    list.replaceChildren();
+    let shown = entries.filter(e => !jState.filter || e.kind === jState.filter);
+    shown = shown.slice().sort((a, b) => (a.entry_date === b.entry_date ? String(a.created_at).localeCompare(String(b.created_at)) : String(a.entry_date).localeCompare(String(b.entry_date))) * (jState.old ? 1 : -1));
+    if (!shown.length) { list.append(el("p", { class: "empty", text: entries.length ? "Aucune entrée de ce type." : "Le journal est vide pour l'instant. Écrivez la première entrée ci-dessus." })); return; }
+    let day = null, ol = null;
+    shown.forEach(en => {
+      if (en.entry_date !== day) { day = en.entry_date; list.append(el("h4", { class: "j-day", text: new Date(day + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) })); }
+      const done = en.kind === "À faire" && en.done;
+      const cb = en.kind === "À faire" ? el("input", { type: "checkbox", class: "j-cb", "aria-label": "Fait", checked: !!en.done, onchange: async e => { try { await save(en, { p_done: e.target.checked }); en.done = e.target.checked; drawList(); } catch (err) { showToast(orgErr(err)); e.target.checked = !!en.done; } } }) : "";
+      list.append(el("article", { class: "j-entry" + (done ? " done" : ""), style: "--c:" + (JKIND_COL[en.kind] || "#8d8d80") },
+        el("div", { class: "j-eh" }, cb, el("span", { class: "j-kind", text: en.kind }), en.title ? el("b", { text: en.title }) : ""),
+        el("p", { class: "j-text", text: en.body }),
+        el("div", { class: "j-act" }, el("button", { type: "button", class: "btn small", text: "Modifier", onclick: () => { editing = en; dIn.value = en.entry_date; kIn.value = en.kind; tIn.value = en.title || ""; bIn.value = en.body; goBtn.textContent = "Enregistrer la modification"; cancelBtn.hidden = false; form.scrollIntoView({ behavior: "smooth", block: "center" }); bIn.focus({ preventScroll: true }); } }),
+          el("button", { type: "button", class: "btn small danger", text: "Supprimer", onclick: async () => { if (!window.confirm("Supprimer cette entrée ? Cette action est définitive.")) return; try { const r = await jRpc("journal_delete", { p_author: author, p_code: code(), p_id: en.id }); if (!r.ok) throw { message: J_ERR[r.error] || "refusé" }; showToast("Entrée supprimée."); journalSpace(host, author, alive); } catch (err) { showToast(orgErr(err)); } } }))));
+    });
+  };
+  drawList();
+  host.append(top, cc, form, entries.length ? pills : "", list);
 }
 
 /* ---------------------------------------------------------------------------
@@ -1159,7 +1263,7 @@ function buildAdminShell() {
   const today = el("section", { "data-main-sec": "today" }, el("div", { id: "today-body" }));
   const org = el("section", { "data-main-sec": "org", hidden: true },
     el("div", { class: "admin-tabs", role: "group", "aria-label": "Organisation" },
-      ...[["tasks", "Tâches"], ["guests", "Invités"], ["budget", "Budget"], ["deco", "Décoration et papeterie"], ["games", "Jeux"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["notes", "Notes"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
+      ...[["tasks", "Tâches"], ["guests", "Invités"], ["budget", "Budget"], ["deco", "Décoration et papeterie"], ["games", "Jeux"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["notes", "Journal"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
     el("div", { id: "org-body" }));
   const photos = el("section", { "data-main-sec": "photos", hidden: true }, titled("h3", "cat", "Rameau d'olivier", "Photos du mariage", 28), el("div", { id: "photos-admin" }));
   const pray = el("section", { "data-main-sec": "pray", hidden: true }, titled("h3", "cat", "Calice", "Prière du jour", 28), el("div", { id: "pray-body" }));

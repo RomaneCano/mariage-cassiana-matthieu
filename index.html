@@ -422,6 +422,17 @@ body.sorting .admin-main button,body.sorting .admin-tabs button{outline:1.5px da
 .org-table select[data-st="En attente de retour"]{background:#f8dfc9;border-color:#c0702f;color:#7a3f10}
 .org-table select[data-st="Terminé"]{background:#dde8cc;border-color:#5a7a2a;color:#34501b}
 .org-table input[aria-label="Étape"]{min-width:230px}.org-table input[aria-label="Lieu"]{min-width:150px}
+.j-tabs{margin:6px 0 14px}.j-intro{margin:0 0 6px}
+.j-lock{display:grid;gap:12px;max-width:460px;margin:10px 0}.j-lock label{display:grid;gap:4px;font-weight:700;font-size:.88rem}
+.j-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0}.j-top h3{margin:0}.j-top-btns{display:flex;gap:8px;flex-wrap:wrap}
+.j-form{display:grid;gap:10px;margin:8px 0 16px}.j-row{display:flex;gap:10px;flex-wrap:wrap}.j-row label{display:grid;gap:4px;font-weight:700;font-size:.82rem}.j-row .grow{flex:1;min-width:200px}
+.j-form textarea{min-height:120px;resize:vertical}.j-act{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.j-filter{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 10px}.j-filter button{border:1.5px solid var(--olive-soft);background:transparent;color:var(--olive);border-radius:999px;padding:5px 14px;font:inherit;font-size:.84rem;cursor:pointer}
+.j-filter button[aria-pressed="true"]{background:var(--olive);color:var(--paper);border-color:var(--olive)}.j-filter .j-sort{margin-left:auto;border-style:dashed}
+.j-day{margin:18px 0 6px;font-family:"Parisienne",cursive;font-weight:400;font-size:1.5rem;color:var(--olive);text-transform:capitalize}
+.j-entry{background:var(--paper-2);border-left:5px solid var(--c);border-radius:12px;padding:12px 16px;margin:0 0 10px;display:grid;gap:6px}
+.j-eh{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.j-kind{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;background:var(--c);color:#fff;border-radius:999px;padding:1px 10px}
+.j-cb{width:20px;height:20px;accent-color:var(--olive)}.j-text{margin:0;white-space:pre-wrap;line-height:1.55}.j-entry.done .j-text,.j-entry.done b{text-decoration:line-through;opacity:.6}
 .tl-prop{margin-bottom:14px}.tl-prop-list{display:grid;gap:2px;max-height:380px;overflow:auto;margin:8px 0 12px;border-top:1px solid var(--olive-soft)}
 .tl-prop-row{display:grid;grid-template-columns:auto 150px 1fr;gap:10px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--olive-soft);cursor:pointer}
 .tl-prop-t{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}.tl-prop-n{display:grid;min-width:0}.tl-prop-n small{opacity:.75}
@@ -448,6 +459,10 @@ details.org-card>summary{position:relative}details.org-card>summary>.sel-box{pos
 .rs-person{border:1px solid var(--olive-soft);border-radius:14px;padding:12px 14px;margin:0 0 12px;display:grid;gap:10px;background:var(--paper)}
 .rs-ph{display:flex;justify-content:space-between;align-items:center}
 .rs-rm{border:0;background:transparent;color:#8c3a2a;text-decoration:underline;cursor:pointer;font:inherit;font-size:.85rem}
+.sum-chip.c-all{background:#e3e0cf}
+.sum-chip.c-ok{background:#d8e7c4;color:#2f5a1a}.sum-chip.c-no{background:#f1d6cf;color:#7a2d20}.sum-chip.c-wait{background:#f6e8bd;color:#6b5210}
+.sum-chip.c-alg{background:#f6dcc0;color:#7a4410}.sum-chip.c-kid{background:#d9e4ee;color:#2f4a63}
+.sum-chip.c-post{background:#ebe0cd;color:#5e4a2c}.sum-chip.c-link{background:#d6e6e2;color:#2c5a52}.sum-chip.c-hand{background:#e6dcec;color:#54386a}.sum-chip.c-sent{background:#cfe2c0;color:#2f5a1a}
 .sum-chip.good{background:#dde8cc;color:#34501b}
 .org-sum-row .num.pay{font-weight:700}.num.pay-ok{color:#2f6b1f}.num.pay-part{color:#8a6310}.num.pay-no{color:#a3392a}
 .info-wrap{position:relative;display:inline-flex;align-items:center}
@@ -2197,7 +2212,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611150110"></script>
-<script src="covoiturage.js?v=202611150110"></script>
+<script src="organisation.js?v=202611150114"></script>
+<script src="covoiturage.js?v=202611150114"></script>
 </body>
 </html>
