@@ -490,6 +490,7 @@ details.org-card>summary{position:relative}details.org-card>summary>.sel-box{pos
 .org-table.guests textarea{min-height:42px;resize:vertical;line-height:1.35}
 .org-table.guests textarea[aria-label="Nom"],.org-table.guests textarea[aria-label="Prénom"]{min-width:130px}.org-table.guests textarea[aria-label="Adresse"]{min-width:230px}.org-table.guests textarea[aria-label="Allergie"]{min-width:190px}.org-table.guests textarea[aria-label="Notes"]{min-width:170px}
 .org-table.guests textarea.has-alg{background:#f6dcc0;border-color:#c0702f;font-weight:700;color:#7a4410}
+.org-table tr.to-check td{background:#fff1cf}
 .btn.sent-ok{background:#d8e7c4;border-color:#5a7a2a;color:#2f5a1a;font-weight:700}
 .sum-chip.c-all{background:#e3e0cf}
 .sum-chip.c-ok{background:#d8e7c4;color:#2f5a1a}.sum-chip.c-no{background:#f1d6cf;color:#7a2d20}.sum-chip.c-wait{background:#f6e8bd;color:#6b5210}
@@ -1728,7 +1729,7 @@ function bindRsvpForm(){
       const matches = []; for (const rec of all) matches.push(await store.addResponse(rec));
       const match = matches.find(m => m === "inconnu" || m === "ambigu") || matches[0];
       form.reset(); more.replaceChildren(); sync();
-      const lost = match === "inconnu" || match === "ambigu";
+      const lost = ["inconnu", "ambigu", "ajoute", "ajoute_ambigu"].includes(match);
       showMsg(msg, (all.length > 1 ? "Merci, les " + all.length + " réponses sont bien enregistrées." + (all.some(r => r.presence === "oui") ? " Nous avons hâte de vous voir !" : "") : presence === "oui" ? "Merci, votre présence est bien enregistrée. Nous avons hâte de vous voir !" : "Merci de nous avoir prévenus. Vous nous manquerez.") + (lost ? " Nous n'avons pas pu retrouver votre ligne automatiquement dans la liste des invités : pas d'inquiétude, votre réponse est conservée et les mariés feront le lien." : ""), "ok");
     } catch { showMsg(msg, "L'envoi n'a pas fonctionné. Vérifiez votre connexion et réessayez, ou écrivez-nous par e-mail.", "err"); }
     submit.disabled = false;
@@ -2330,7 +2331,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611150231"></script>
-<script src="covoiturage.js?v=202611150231"></script>
+<script src="organisation.js?v=202611150243"></script>
+<script src="covoiturage.js?v=202611150243"></script>
 </body>
 </html>

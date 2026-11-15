@@ -323,6 +323,23 @@ $$;
 
 -- Appelée par le formulaire du site : retrouve l'invité (nom + prénom) et met à jour sa présence et ses allergies.
 -- Renvoie 'ok', 'ambigu' (plusieurs personnes possibles) ou 'inconnu'. Ne révèle jamais la liste.
+alter table public.org_guests add column if not exists a_verifier boolean not null default false;
+-- Une réponse d'une personne absente de la liste (ou dont le nom est ambigu) est ajoutée aux invités, marquée « à vérifier ».
+create or replace function public.rsvp_add_unknown(p_nom text, p_prenom text, p_pres text, p_al text, p_result text) returns text
+language plpgsql security definer set search_path = public as $$
+declare gid uuid;
+begin
+  select id into gid from public.org_guests
+   where a_verifier and public.norm_letters(nom) = public.norm_letters(p_nom) and public.norm_words(prenom) = public.norm_words(p_prenom) limit 1;
+  if gid is not null then
+    update public.org_guests set presence = p_pres, responded_at = now(), allergie = nullif(p_al, '') where id = gid;
+  else
+    insert into public.org_guests (nom, prenom, presence, allergie, a_verifier, notes, responded_at)
+    values (left(trim(coalesce(p_nom,'')), 80), left(trim(coalesce(p_prenom,'')), 80), p_pres, nullif(p_al, ''), true,
+            case when p_result = 'ajoute_ambigu' then 'Réponse du site : plusieurs invités portent ce nom, à rapprocher à la main' else 'Réponse du site : personne absente de la liste d''invités' end, now());
+  end if;
+  return p_result;
+end $$;
 create or replace function public.rsvp_guest(p_nom text, p_prenom text, p_presence text, p_allergies text)
 returns text language plpgsql security definer set search_path = public as $$
 declare
@@ -336,7 +353,7 @@ begin
   if pw = '' or n = '' then return 'inconnu'; end if;
   -- 1) nom et prénom identiques
   select array_agg(id) into ids from public.org_guests where public.norm_letters(nom) = n and public.norm_words(prenom) = pw;
-  if coalesce(array_length(ids,1),0) > 1 then return 'ambigu'; end if;
+  if coalesce(array_length(ids,1),0) > 1 then return public.rsvp_add_unknown(p_nom, p_prenom, pres, al, 'ajoute_ambigu'); end if;
   -- 2) prénom contenu dans la ligne (« Papy Robert », « Tata Lydie »…) avec le même nom (ou sans nom de famille)
   if coalesce(array_length(ids,1),0) = 0 then
     select array_agg(id) into ids from public.org_guests
@@ -345,9 +362,9 @@ begin
     if coalesce(array_length(ids,1),0) > 1 then
       select array_agg(id) into ids from public.org_guests where public.norm_words(prenom) = pw and (public.norm_letters(nom) = n or coalesce(nom,'') = '');
     end if;
-    if coalesce(array_length(ids,1),0) > 1 then return 'ambigu'; end if;
+    if coalesce(array_length(ids,1),0) > 1 then return public.rsvp_add_unknown(p_nom, p_prenom, pres, al, 'ajoute_ambigu'); end if;
   end if;
-  if coalesce(array_length(ids,1),0) = 0 then return 'inconnu'; end if;
+  if coalesce(array_length(ids,1),0) = 0 then return public.rsvp_add_unknown(p_nom, p_prenom, pres, al, 'ajoute'); end if;
   gid := ids[1];
   update public.org_guests set
     presence = pres,

@@ -115,7 +115,7 @@ const ORG = {
     { k: "nom", l: "Nom", t: "long" }, { k: "prenom", l: "Prénom", t: "long", req: true }, { k: "tel", l: "Téléphone", t: "text" }, { k: "email", l: "E-mail", t: "text" },
     { k: "presence", l: "Présence", t: "select", o: ["ATT", "OUI", "NON"], labels: { ATT: "En attente", OUI: "Présent(e)", NON: "Absent(e)" } },
     { k: "allergie", l: "Allergie", t: "long" }, { k: "adresse", l: "Adresse", t: "long" },
-    { k: "envoi", l: "Invitation", t: "select", o: ["Courrier", "Lien", "Remise en main"] }, { k: "age", l: "Âge", t: "text" }, { k: "notes", l: "Notes", t: "long" }] },
+    { k: "envoi", l: "Invitation", t: "select", o: ["Courrier", "Lien", "Remise en main"] }, { k: "age", l: "Âge", t: "text" }, { k: "notes", l: "Notes", t: "long" }, { k: "a_verifier", l: "À vérifier", t: "check" }] },
   games: { table: "org_games", label: "Jeux", order: "created_at", defaults: { chosen: false, ready: false }, fields: [
     { k: "chosen", l: "Retenu", t: "check" }, { k: "name", l: "Jeu / animation", t: "text", req: true, wide: true },
     { k: "moment", l: "Moment de la journée", t: "select", o: MOMENTS_GAME }, { k: "start_time", l: "Heure prévue", t: "time" }, { k: "duration", l: "Durée (min)", t: "number" },
@@ -393,7 +393,7 @@ function orgSummary(key, rows, deco) {
     chip("prix des retenus", eur(rows.filter(r => RETAINED.includes(r.status)).reduce((a, r) => a + (Number(r.price) || 0), 0)));
   } else if (key === "guests") {
     const c = f => rows.filter(f).length;
-    chip("invités", String(rows.length), "c-all"); chip("présents", String(c(r => r.presence === "OUI")), "c-ok"); chip("absents", String(c(r => r.presence === "NON")), "c-no");
+    chip("invités", String(rows.length), "c-all"); if (c(r => r.a_verifier)) chip("à vérifier (réponses du site)", String(c(r => r.a_verifier)), "warn"); chip("présents", String(c(r => r.presence === "OUI")), "c-ok"); chip("absents", String(c(r => r.presence === "NON")), "c-no");
     chip("en attente", String(c(r => !r.presence || r.presence === "ATT")), "c-wait"); chip("allergies", String(c(r => r.allergie && r.allergie.trim())), "c-alg");
     chip("enfants (0 à 12 ans)", String(c(r => { const n = parseInt(String(r.age || "").replace(/[^\d]/g, ""), 10); return !isNaN(n) && n <= 12; })), "c-kid"); const prog = e => c(r => r.envoi === e && r.invite_sent_at) + " / " + c(r => r.envoi === e); chip("courriers envoyés", prog("Courrier"), "c-post"); chip("remises en main effectuées", prog("Remise en main"), "c-hand"); chip("liens envoyés", prog("Lien"), "c-link");
   } else if (key === "games") {
@@ -777,9 +777,9 @@ async function renderOrgInner(key) {
   }
   let guestFilter = () => {};
   if (key === "guests") {
-    const gp = el("select", { "aria-label": "Présence" }, ...[["", "Tous les invités"], ["ATT", "En attente"], ["OUI", "Présents"], ["NON", "Absents"], ["ALL", "Avec allergie"]].map(([v, t]) => el("option", { value: v, text: t }))); gp.value = orgState.filter.gp;
+    const gp = el("select", { "aria-label": "Présence" }, ...[["", "Tous les invités"], ["ATT", "En attente"], ["OUI", "Présents"], ["NON", "Absents"], ["ALL", "Avec allergie"], ["CHK", "À vérifier (réponses du site)"]].map(([v, t]) => el("option", { value: v, text: t }))); gp.value = orgState.filter.gp;
     const gq = el("input", { type: "search", placeholder: "Rechercher un invité…", "aria-label": "Rechercher un invité", style: "max-width:260px;min-height:38px;padding:4px 10px;font-size:var(--fs-small)" }); gq.value = orgState.filter.gq;
-    guestFilter = () => { orgState.filter.gp = gp.value; orgState.filter.gq = gq.value; const q = norm(gq.value); document.querySelectorAll("#org-body tr[data-q]").forEach(tr => { const okP = !gp.value || (gp.value === "ALL" ? tr.dataset.a === "1" : tr.dataset.p === gp.value), okQ = !q || tr.dataset.q.includes(q); tr.hidden = !(okP && okQ); }); };
+    guestFilter = () => { orgState.filter.gp = gp.value; orgState.filter.gq = gq.value; const q = norm(gq.value); document.querySelectorAll("#org-body tr[data-q]").forEach(tr => { const okP = !gp.value || (gp.value === "ALL" ? tr.dataset.a === "1" : gp.value === "CHK" ? tr.dataset.c === "1" : tr.dataset.p === gp.value), okQ = !q || tr.dataset.q.includes(q); tr.hidden = !(okP && okQ); }); };
     gp.addEventListener("change", guestFilter); gq.addEventListener("input", guestFilter);
     bar.append(gp, gq);
   }
@@ -946,8 +946,8 @@ async function renderOrgInner(key) {
       tb.append(el("tr", { class: "grp" }, el("td", { colspan: String(M.fields.length + 1), text: r.cat + " · " + eur(sub) })));
     }
     const late = key === "tasks" && !r.done && r.due && r.due < todayISO();
-    const tr = el("tr", { "data-rid": r.id, class: (late ? "late " : "") + (key === "tasks" && r.done ? "done" : "") + (key === "guests" ? " p-" + (r.presence || "ATT") : "") });
-    if (key === "guests") { tr.dataset.q = norm((r.nom || "") + " " + (r.prenom || "")); tr.dataset.p = r.presence || "ATT"; tr.dataset.a = r.allergie && r.allergie.trim() ? "1" : "0"; }
+    const tr = el("tr", { "data-rid": r.id, class: (late ? "late " : "") + (key === "tasks" && r.done ? "done" : "") + (key === "guests" ? " p-" + (r.presence || "ATT") + (r.a_verifier ? " to-check" : "") : "") });
+    if (key === "guests") { tr.dataset.q = norm((r.nom || "") + " " + (r.prenom || "")); tr.dataset.p = r.presence || "ATT"; tr.dataset.a = r.allergie && r.allergie.trim() ? "1" : "0"; tr.dataset.c = r.a_verifier ? "1" : "0"; }
     M.fields.forEach(f => {
       const inp = fieldInput(f, f.k === "status" && key === "tasks" ? statusOf(r) : r[f.k]);
       if (key === "tasks" && f.k === "status") inp.dataset.st = statusOf(r);
