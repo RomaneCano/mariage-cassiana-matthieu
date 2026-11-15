@@ -864,7 +864,7 @@ async function renderOrgInner(key) {
   const form = el("form", { class: "card org-add", novalidate: true });
   const inputs = {};
   const grid = el("div", { class: "org-grid" });
-  M.fields.filter(f => f.t !== "check").forEach(f => { const inp = fieldInput(f, M.defaults[f.k]); inputs[f.k] = inp; grid.append(el("label", { class: f.wide ? "wide" : "" }, el("span", { text: f.l }), inp)); });
+  M.fields.filter(f => f.t !== "check").forEach(f => { const inp = fieldInput(f, M.defaults[f.k]); inputs[f.k] = inp; grid.append(el("label", { class: (f.wide ? "wide" : "") + (f.t === "long" && f.k !== "guests" ? " full" : "") }, el("span", { text: f.l }), inp)); });
   const msg = el("p", { class: "msg", role: "status", hidden: true });
   form.append(el("h3", { text: "Ajouter" }), grid, el("button", { class: "btn solid small", type: "submit", text: "Ajouter" }), msg);
   form.addEventListener("submit", async ev => {
@@ -917,7 +917,7 @@ async function renderOrgInner(key) {
           if (f.k === "link") { const u = cleanUrl(v); if (u === false) { showToast("Ce lien n'est pas valide : collez l'adresse complète de la page."); inp.value = r.link || ""; return; } v = u; inp.value = u || ""; }
           try { await orgStore.update(M.table, r.id, { [f.k]: v }); r[f.k] = v; fill(); setTimeout(() => { if (!card.contains(document.activeElement)) renderOrg(key); }, 200); } catch (e) { showToast(orgErr(e)); }
         });
-        g.append(el("label", { class: f.wide ? "wide" : "" }, el("span", { text: f.l }), inp));
+        g.append(el("label", { class: (f.wide ? "wide" : "") + (f.t === "long" && f.k !== "guests" ? " full" : "") }, el("span", { text: f.l }), inp));
       });
       const acts = el("div", { class: "org-card-actions" });
       if (key === "seating") {

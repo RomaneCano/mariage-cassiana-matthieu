@@ -363,6 +363,20 @@ details[open]>.org-sum-row::before{transform:translateY(-50%) rotate(90deg)}
 .org-add{padding:10px 12px}.org-add h3{display:none}
 .org-add .org-grid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:5px 8px}
 .org-add .org-grid label{font-size:.72rem}.org-add .org-grid input,.org-add .org-grid select,.org-add .org-grid textarea{min-height:30px;padding:3px 7px;font-size:.82rem;border-radius:7px}
+
+/* formulaires des fiches (budget, jeux, décoration, prestataires…) : grille aérée, libellés lisibles, champs qui se répartissent la largeur */
+.org-card-body{padding:14px 16px 12px;gap:12px}
+.org-card .org-grid,.org-add .org-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:14px 16px}
+.org-card .org-grid label,.org-add .org-grid label{grid-column:span 2}
+.org-card .org-grid label,.org-add .org-grid label{font-size:.8rem;font-weight:700;gap:5px;color:var(--olive)}
+.org-card .org-grid input,.org-card .org-grid select,.org-card .org-grid textarea,.org-add .org-grid input,.org-add .org-grid select,.org-add .org-grid textarea{min-height:40px;padding:6px 10px;font-size:.92rem;font-weight:400;border-radius:9px}
+.org-card .org-grid label.wide,.org-add .org-grid label.wide{grid-column:span 4}
+.org-card .org-grid label.full,.org-add .org-grid label.full,.org-card .org-grid label:has(.guest-ed),.org-add .org-grid label:has(.guest-ed){grid-column:1/-1}
+@media(max-width:900px){.org-card .org-grid,.org-add .org-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.org-card .org-grid label,.org-add .org-grid label{grid-column:span 1}.org-card .org-grid label.wide,.org-add .org-grid label.wide,.org-card .org-grid label.full,.org-add .org-grid label.full{grid-column:1/-1}}
+.org-card .org-grid label:has(input[type=checkbox]),.org-add .org-grid label:has(input[type=checkbox]){flex-direction:row;display:flex;align-items:center;gap:10px;align-self:end;min-height:40px}
+.org-card .org-grid input[type=checkbox]{width:22px;height:22px;min-height:0;accent-color:var(--olive)}
+.org-card .org-grid label:has(textarea[aria-label="Notes"]),.org-add .org-grid label:has(textarea[aria-label="Notes"]){grid-column:1/-1}
+.org-card-actions{border-top:1px solid var(--line);padding-top:10px}
 .org-add .btn.solid{min-height:34px;padding:3px 18px;width:auto;justify-self:start}
 .guest-ed{display:grid;gap:6px}
 .guest-ed .slots{display:flex;flex-wrap:wrap;gap:5px}
@@ -481,7 +495,7 @@ details.org-card>summary{position:relative}details.org-card>summary>.sel-box{pos
 .sum-chip.c-ok{background:#d8e7c4;color:#2f5a1a}.sum-chip.c-no{background:#f1d6cf;color:#7a2d20}.sum-chip.c-wait{background:#f6e8bd;color:#6b5210}
 .sum-chip.c-alg{background:#f6dcc0;color:#7a4410}.sum-chip.c-kid{background:#d9e4ee;color:#2f4a63}
 .sum-chip.c-post{background:#ebe0cd;color:#5e4a2c}.sum-chip.c-link{background:#d6e6e2;color:#2c5a52}.sum-chip.c-hand{background:#e6dcec;color:#54386a}.sum-chip.c-sent{background:#cfe2c0;color:#2f5a1a}
-.org-card-body textarea{min-height:110px;resize:vertical;line-height:1.45;padding:10px 12px}
+.org-card-body textarea{min-height:96px;resize:vertical;line-height:1.45;padding:10px 12px}
 .org-card-body textarea[aria-label="Notes"],.org-card-body textarea[aria-label="Règles / déroulé"]{min-height:130px}
 .org-add textarea{min-height:90px;resize:vertical}
 .gb{margin:0 0 14px}.gb-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:8px}
@@ -2315,7 +2329,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611150220"></script>
-<script src="covoiturage.js?v=202611150220"></script>
+<script src="organisation.js?v=202611150224"></script>
+<script src="covoiturage.js?v=202611150224"></script>
 </body>
 </html>
