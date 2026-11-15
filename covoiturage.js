@@ -114,9 +114,8 @@
     const rt = route(r);
     return el("article", { class: "cv-item" + (full ? " full" : "") + (r.type === "demande" ? " ask" : "") },
       el("div", { class: "cv-top" }, el("span", { class: "cv-who" }, el("b", { text: r.prenom }), el("span", { class: "cv-kind", text: r.type === "demande" ? "cherche une place" : "propose" })), el("span", { class: "cv-badge", text: kind })),
-      el("dl", { class: "cv-route" }, el("dt", { text: "Départ" }), el("dd", { text: rt.from }), el("span", { class: "ar", "aria-hidden": "true", text: "↓" }), el("dt", { text: "Arrivée" }), el("dd", { text: rt.to })),
-      r.heure ? el("p", { class: "cv-line", text: "Vers " + r.heure }) : "",
-      r.note ? el("p", { class: "cv-note", text: r.note }) : "",
+      el("div", { class: "cv-route", role: "text", "aria-label": "Départ : " + rt.from + ". Arrivée : " + rt.to }, el("b", { text: rt.from }), el("span", { class: "ar", "aria-hidden": "true", text: "→" }), el("b", { text: rt.to })),
+      r.heure || r.note ? el("p", { class: "cv-line" }, r.heure ? "Vers " + r.heure : "", r.heure && r.note ? " · " : "", r.note ? el("i", { text: r.note }) : "") : "",
       el("p", { class: "cv-contact", text: "Contact : " + ct }),
       actions, extra, own);
   }
