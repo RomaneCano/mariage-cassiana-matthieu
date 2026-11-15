@@ -352,14 +352,19 @@ const setSheetStatus = t => { if (sheetStatusEl && sheetStatusEl.isConnected) sh
 /* Recopie la liste d'invités dans le Google Sheet (présence, allergies, nouveaux invités) via le script Google */
 async function syncSheet(silent) {
   const url = (typeof CONFIG !== "undefined" && CONFIG.APPS_SCRIPT_URL) || ""; if (!url) return;
-  let key = ""; try { key = sessionStorage.getItem(INVITE_KEY_LS) || ""; } catch {}
-  if (!key) { if (silent) return; key = (window.prompt("Mot de passe d'envoi (le même que pour les invitations par e-mail) :") || "").trim(); if (!key) return; try { sessionStorage.setItem(INVITE_KEY_LS, key); } catch {} }
+  let key = ""; try { key = sessionStorage.getItem(INVITE_KEY_LS) || localStorage.getItem(INVITE_KEY_LS + ":keep") || ""; } catch {}
+  if (!key) {
+    if (silent) return;
+    key = (window.prompt("Mot de passe d'envoi (le même que pour les invitations par e-mail) :") || "").trim(); if (!key) return;
+    try { sessionStorage.setItem(INVITE_KEY_LS, key); } catch {}
+    if (window.confirm("Mémoriser ce mot de passe sur cet appareil pour que le Google Sheet se mette à jour tout seul, à chaque modification et à chaque ouverture de l'onglet Invités ?\n\n(À faire seulement sur votre ordinateur personnel.)")) { try { localStorage.setItem(INVITE_KEY_LS + ":keep", key); } catch {} }
+  }
   setSheetStatus("Synchronisation…");
   try {
     const guests = (await orgStore.list("org_guests")).map(r => ({ nom: r.nom || "", prenom: r.prenom || "", tel: r.tel || "", presence: r.presence || "ATT", allergie: r.allergie || "", adresse: r.adresse || "", age: r.age || "" }));
     const r = await fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "sync", key, guests }) });
     const j = await r.json();
-    if (!j.ok) { setSheetStatus("Échec : " + (j.error || "refusé")); if (!silent) showToast(j.error || "Synchronisation refusée."); if (/incorrect/i.test(j.error || "")) { try { sessionStorage.removeItem(INVITE_KEY_LS); } catch {} } return; }
+    if (!j.ok) { setSheetStatus("Échec : " + (j.error || "refusé")); if (!silent) showToast(j.error || "Synchronisation refusée."); if (/incorrect/i.test(j.error || "")) { try { sessionStorage.removeItem(INVITE_KEY_LS); localStorage.removeItem(INVITE_KEY_LS + ":keep"); } catch {} } return; }
     const hm = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
     setSheetStatus("Synchronisé à " + hm + (j.updated || j.added ? " (" + j.updated + " mise(s) à jour, " + j.added + " ajout(s))" : ""));
     if (!silent) showToast("Google Sheet synchronisé : " + j.updated + " mise(s) à jour, " + j.added + " ajout(s).");
@@ -846,8 +851,10 @@ async function renderOrgInner(key) {
   let sheetForm = null;
   if (key === "guests") {
     sheetStatusEl = el("small", { class: "sheet-status", text: "" });
+    let kept = false; try { kept = !!localStorage.getItem(INVITE_KEY_LS + ":keep"); } catch {}
+    if (kept) { sheetStatusEl.textContent = "Synchronisation automatique activée"; if (!window.__sheetOpenSynced) { window.__sheetOpenSynced = true; setTimeout(() => syncSheet(true), 800); } }
     bar.append(el("a", { class: "btn small", href: SHEET_URL, target: "_blank", rel: "noopener noreferrer", title: "Ouvre votre tableur Google.", text: "↗ Ouvrir le Google Sheet" }),
-      el("button", { type: "button", class: "btn small", title: "Sens unique, du site vers le tableur : le site fait foi. Recopie présences, allergies (et téléphone, adresse, âge s'ils sont renseignés) et ajoute les invités manquants. Le tableur ne modifie jamais le site, et aucune ligne n'est supprimée. Se fait aussi automatiquement après chaque modification (une fois le mot de passe d'envoi saisi).", text: "↻ Synchroniser le Google Sheet", onclick: () => syncSheet(false) }), sheetStatusEl);
+      el("button", { type: "button", class: "btn small", title: "Sens unique, du site vers le tableur : le site fait foi. Recopie présences, allergies (et téléphone, adresse, âge s'ils sont renseignés) et ajoute les invités manquants. Le tableur ne modifie jamais le site, et aucune ligne n'est supprimée. Se fait aussi automatiquement après chaque modification (une fois le mot de passe d'envoi saisi).", text: "↻ Synchroniser le Google Sheet", onclick: () => syncSheet(false) }), sheetStatusEl, kept ? el("button", { type: "button", class: "link", text: "Désactiver l'automatique", title: "Oublier le mot de passe sur cet appareil", onclick: () => { try { localStorage.removeItem(INVITE_KEY_LS + ":keep"); sessionStorage.removeItem(INVITE_KEY_LS); } catch {} showToast("Synchronisation automatique désactivée sur cet appareil."); renderOrg("guests"); } }) : "");
   }
   if (rows.length) {
     let selMode = false, selBar = null;
