@@ -199,3 +199,7 @@ revoke all on public.org_deco from anon;
 -- ============================================================
 alter table public.org_deco add column if not exists paid numeric;
 alter table public.org_tasks add column if not exists status text;
+alter table public.org_timeline add column if not exists end_time text;
+alter table public.org_timeline add column if not exists kind text;
+alter table public.org_timeline add column if not exists place text;
+alter table public.org_timeline add column if not exists game text;

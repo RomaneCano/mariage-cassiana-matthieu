@@ -88,6 +88,8 @@ const STATUS = ["À contacter", "En attente de devis", "En attente de réponse",
 const RETAINED = ["Retenu (OUI)", "Réservé", "Acompte versé", "Soldé"];
 const WHO = ["Cassiana", "Matthieu", "Les deux", "Autre"];
 
+const KINDS_TL = ["Préparatifs", "Photos", "Cérémonie", "Trajet", "Cocktail", "Repas", "Discours", "Jeu / animation", "Danse", "Logistique", "Autre"];
+const KIND_COL = { "Préparatifs": "#b9a77a", "Photos": "#8a9bb0", "Cérémonie": "#4f5020", "Trajet": "#9a8f80", "Cocktail": "#c58a4a", "Repas": "#a3592f", "Discours": "#7d6a9a", "Jeu / animation": "#c0605a", "Danse": "#d08aa0", "Logistique": "#7a8a6a", "Autre": "#8d8d80" };
 const STATUS_TASK = ["À faire", "En cours", "En attente de retour", "Terminé"];
 const ORG = {
   tasks: { table: "org_tasks", label: "Tâches", order: "due", defaults: { done: false, status: STATUS_TASK[0], cat: CATS_TASK[0], who: "Les deux" }, fields: [
@@ -120,7 +122,8 @@ const ORG = {
     { k: "name", l: "Nom de la table", t: "text", req: true, ph: "ex. Table 1, Famille Martin, Amis…" }, { k: "shape", l: "Forme", t: "select", o: ["Ronde", "Rectangulaire"] }, { k: "capacity", l: "Nombre de places", t: "number" },
     { k: "guests", l: "Invités", t: "long", wide: true }, { k: "notes", l: "Notes", t: "text" }] },
   timeline: { table: "org_timeline", label: "Jour J", order: "time", defaults: {}, fields: [
-    { k: "time", l: "Heure", t: "time", req: true }, { k: "title", l: "Étape", t: "text", req: true, wide: true },
+    { k: "time", l: "Début", t: "time", req: true }, { k: "end_time", l: "Fin", t: "time" }, { k: "title", l: "Étape", t: "text", req: true, wide: true },
+    { k: "kind", l: "Type", t: "select", o: KINDS_TL }, { k: "place", l: "Lieu", t: "text", ph: "ex. Église, salle, jardin…" }, { k: "game", l: "Jeu / activité prévu", t: "select", o: [] },
     { k: "who", l: "Qui", t: "text" }, { k: "notes", l: "Notes", t: "text" }] }
 };
 
@@ -202,11 +205,20 @@ const TPL = {
     ["Jeu des pinces à linge à accrocher sur les autres", "Illimité", "Pinces à linge + corbeille", 20]
   ].map(([name, people, material, price]) => ({ name, people, material: material || null, price, chosen: false })),
   seating: () => ["Table d'honneur", ...Array.from({ length: 10 }, (_, i) => "Table " + (i + 1))].map((name, i) => ({ name, capacity: 10, guests: "", position: i })),
-  timeline: () => [
-    ["08:30", "Petit-déjeuner et début des préparatifs"], ["10:00", "Coiffure et maquillage de la mariée"], ["12:30", "Habillage et photos de préparation"],
-    ["13:00", "Arrivée à l'église, accueil des invités"], ["13:30", "Cérémonie religieuse à Notre-Dame des Ardents"], ["15:00", "Sortie de l'église et photos de groupe (heure indicative)"],
-    ["16:30", "Trajet vers le Clos du Colombier (environ 40 minutes)"], ["17:30", "Cocktail"], ["19:30", "Dîner"], ["23:00", "Gâteau et ouverture de bal (à préciser)"], ["04:00", "Fin de la soirée"]
-  ].map(([time, title]) => ({ time, title }))
+  timeline: () => {
+    const EG = "Église Notre-Dame des Ardents, Lagny-sur-Marne", DOM = "Le Clos du Colombier, Fontenay-Trésigny";
+    return [
+      ["08:30", "", "Petit-déjeuner et début des préparatifs", "Préparatifs", ""], ["10:00", "12:00", "Coiffure et maquillage de la mariée", "Préparatifs", ""],
+      ["12:30", "13:00", "Habillage et photos de préparation", "Photos", ""], ["13:00", "13:30", "Arrivée à l'église, accueil des invités", "Cérémonie", EG],
+      ["13:30", "15:00", "Cérémonie religieuse à Notre-Dame des Ardents", "Cérémonie", EG], ["15:00", "16:30", "Sortie de l'église et photos de groupe (heure indicative)", "Photos", EG],
+      ["16:30", "17:15", "Trajet vers le Clos du Colombier (environ 40 minutes)", "Trajet", "Lagny-sur-Marne → Fontenay-Trésigny"], ["17:30", "19:30", "Cocktail", "Cocktail", DOM],
+      ["18:30", "19:00", "Animation du cocktail (jeu ou activité à choisir)", "Jeu / animation", DOM], ["19:30", "", "Entrée dans la salle, mot de bienvenue", "Discours", DOM],
+      ["19:45", "22:30", "Dîner", "Repas", DOM], ["21:00", "21:30", "Discours et surprises des proches", "Discours", DOM],
+      ["22:30", "23:00", "Gâteau et pièce montée", "Repas", DOM], ["23:00", "", "Ouverture de bal (à préciser)", "Danse", DOM],
+      ["00:30", "01:00", "Jeu ou animation de soirée (à choisir)", "Jeu / animation", DOM], ["03:30", "04:00", "Dernière danse", "Danse", DOM],
+      ["04:00", "", "Fin de la soirée, départs et covoiturages", "Logistique", DOM]
+    ].map(([time, end_time, title, kind, place]) => ({ time, end_time: end_time || null, title, kind, place: place || null }));
+  }
 };
 
 function infoTip(text) {
@@ -670,6 +682,31 @@ async function renderOrg(key) {
   return r;
 }
 async function decoTotal() { try { return (await orgStore.list("org_deco")).reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0); } catch { return null; } }
+function timelinePanel(rows, games) {
+  const mins = t => { if (!t) return null; const [h, m] = String(t).split(":").map(Number); return (h < 6 ? h + 24 : h) * 60 + (m || 0); };
+  const hm = t => { const [h, m] = String(t).split(":"); return Number(h) + "h" + (m && m !== "00" ? m : ""); };
+  const dur = d => d <= 0 ? "" : (d >= 60 ? Math.floor(d / 60) + " h" + (d % 60 ? " " + String(d % 60).padStart(2, "0") : "") : d + " min");
+  const box = el("section", { class: "card tl-panel" }, el("h3", { text: "Frise du jour" }));
+  const ol = el("ol", { class: "tl" });
+  rows.forEach((r, i) => {
+    const a = mins(r.time), nxt = rows[i + 1] ? mins(rows[i + 1].time) : "", b = r.end_time ? mins(r.end_time) : "";
+    const d = a != null ? (b != null ? b - a : "") : "", gap = d == null && a != null && nxt != null ? nxt - a : "";
+    const col = KIND_COL[r.kind] || KIND_COL["Autre"];
+    const li = el("li", { class: "tl-item", style: "--c:" + col },
+      el("div", { class: "tl-time" }, el("b", { text: r.time ? hm(r.time) : "—" }), r.end_time ? el("span", { text: "→ " + hm(r.end_time) }) : ""),
+      el("div", { class: "tl-body" },
+        el("div", { class: "tl-title" }, el("b", { text: r.title }), r.kind ? el("span", { class: "tl-kind", text: r.kind }) : "", d > 0 ? el("span", { class: "tl-dur", text: dur(d) }) : gap > 0 ? el("span", { class: "tl-dur soft", text: "≈ " + dur(gap) }) : ""),
+        r.place ? el("div", { class: "tl-meta", text: "Lieu : " + r.place }) : "",
+        r.game ? el("div", { class: "tl-game", text: "Jeu / activité : " + r.game }) : "",
+        r.who || r.notes ? el("div", { class: "tl-meta", text: [r.who ? "Qui : " + r.who : "", r.notes || ""].filter(Boolean).join(" · ") }) : ""));
+    ol.append(li);
+  });
+  box.append(ol);
+  const used = new Set(rows.map(r => r.game).filter(Boolean)), left = games.filter(g => g.chosen && g.name && !used.has(g.name));
+  if (left.length) box.append(el("p", { class: "hint", text: "Jeux retenus pas encore placés : " + left.map(g => g.name).join(", ") + ". Choisissez-les dans la colonne « Jeu / activité prévu » d'une étape." }));
+  else if (!games.some(g => g.chosen)) box.append(el("p", { class: "hint", text: "Cochez « Retenu » dans l'onglet Jeux pour les voir ici, puis placez-les dans une étape." }));
+  return box;
+}
 async function renderOrgInner(key) {
   const tok = ++orgTok;
   orgState.key = key;
@@ -682,6 +719,8 @@ async function renderOrgInner(key) {
   rows = sortRows(key, rows);
   if (key === "guests") rows.filter(r => r.envoi === "QR code").forEach(r => { r.envoi = "Lien"; orgStore.update(M.table, r.id, { envoi: "Lien" }).catch(() => {}); });   // ancien libellé
   M.fields.filter(f => f.t === "select").forEach(f => rows.forEach(r => { if (r[f.k] && !f.o.includes(r[f.k])) f.o.push(r[f.k]); }));
+  let tlGames = [];
+  if (key === "timeline") { try { tlGames = await orgStore.list("org_games"); } catch {} if (tok !== orgTok) return; const gf = M.fields.find(f => f.k === "game"); gf.o.length = 0; tlGames.forEach(g => { if (g.name && !gf.o.includes(g.name)) gf.o.push(g.name); }); }
   const sumBox = orgSummary(key, rows); host.append(sumBox);
   if (key === "budget") decoTotal().then(t => { if (t != null && t > 0 && tok === orgTok) sumBox.append(el("div", { class: "sum-chip" }, el("b", { text: eur2(t) }), el("span", { text: "décoration et papeterie (en plus)" }))); });
 
@@ -707,7 +746,19 @@ async function renderOrgInner(key) {
     seatHist.ui(); bar.append(un, re);
     if (!rows.length) seatHist.live = { rows, rot: () => "{}", layout: () => "{}" };
   }
+  if (key === "timeline") bar.append(el("button", { type: "button", class: "btn small", text: "✦ Proposer un déroulé type", title: "Ajoute les étapes manquantes (lieux, types, jeux à placer) sans toucher aux vôtres", onclick: async () => {
+    try {
+      let added = 0, filled = 0; const byTime = new Map(rows.map(r => [r.time, r]));
+      for (const t of TPL.timeline()) {
+        const ex = byTime.get(t.time);
+        if (!ex) { await orgStore.insert("org_timeline", t); added++; }
+        else { const patch = {}; ["end_time", "kind", "place"].forEach(k => { if (!ex[k] && t[k]) patch[k] = t[k]; }); if (Object.keys(patch).length) { await orgStore.update("org_timeline", ex.id, patch); filled++; } }
+      }
+      showToast(added || filled ? added + " étape(s) ajoutée(s), " + filled + " complétée(s)." : "Votre déroulé contient déjà toutes les étapes proposées."); renderOrg("timeline");
+    } catch (e) { showToast(orgErr(e)); }
+  } }));
   host.append(bar);
+  if (key === "timeline" && rows.length) host.append(timelinePanel(rows, tlGames));
   if (key === "guests") host.append(invitePanel(rows));
 
   if (key === "seating" && rows.length) { const sp = await seatPlan(rows); if (tok !== orgTok) return; host.append(sp); }
@@ -798,7 +849,7 @@ async function renderOrgInner(key) {
       if (key === "tasks" && f.k === "status") inp.dataset.st = statusOf(r);
       inp.addEventListener("change", async () => {
         const v = readInput(f, inp);
-        try { const patch = { [f.k]: v }; if (key === "tasks" && f.k === "done") patch.status = v ? "Terminé" : (statusOf(r) === "Terminé" ? "À faire" : statusOf(r)); if (key === "tasks" && f.k === "status") patch.done = v === "Terminé"; await orgStore.update(M.table, r.id, patch); Object.assign(r, patch); if (key === "tasks" || key === "budget" || key === "seating" || (key === "guests" && (f.k === "presence" || f.k === "allergie" || f.k === "envoi" || f.k === "age"))) renderOrg(key); else showToast("Enregistré"); }
+        try { const patch = { [f.k]: v }; if (key === "tasks" && f.k === "done") patch.status = v ? "Terminé" : (statusOf(r) === "Terminé" ? "À faire" : statusOf(r)); if (key === "tasks" && f.k === "status") patch.done = v === "Terminé"; await orgStore.update(M.table, r.id, patch); Object.assign(r, patch); if (key === "tasks" || key === "budget" || key === "seating" || key === "timeline" || (key === "guests" && (f.k === "presence" || f.k === "allergie" || f.k === "envoi" || f.k === "age"))) renderOrg(key); else showToast("Enregistré"); }
         catch (e) { showToast(orgErr(e)); }
       });
       tr.append(el("td", { "data-label": f.l }, inp));
