@@ -343,9 +343,11 @@ const initials = n => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].t
 const colorOf = n => { let h = 0; for (const c of n) h = (h * 31 + c.charCodeAt(0)) >>> 0; return PALETTE[h % PALETTE.length]; };
 const rawSeats = r => { const a = String(r.guests || "").split("\n").map(x => x.trim()); while (a.length && !a[a.length - 1]) a.pop(); return a; };
 async function seatPlan(rows) {
-  const M = ORG.seating; let sel = null;
+  const M = ORG.seating; let sel = null, selMany = [], multiMode = false;
+  let rotMap = {}; try { rotMap = JSON.parse((await store.getSetting("seat_rot")) || "{}") || {}; } catch {}
+  const saveRot = async () => { try { await store.setSetting("seat_rot", JSON.stringify(rotMap)); } catch (e) { showToast(orgErr(e)); } };
   const wrap = el("section", { class: "seat-plan-wrap" });
-  const HINT = "Glissez un invité sur une place (libre ou occupée : ils échangent) ou sur une autre table. Touchez un « + » pour ajouter un invité sans glisser. Sur téléphone : touchez l'invité, puis la place. Déposez-le dans « À placer » pour le retirer.";
+  const HINT = "Glissez un invité sur une place (libre ou occupée : ils échangent) ou sur une autre table. Touchez un « + » pour ajouter un ou plusieurs invités sans glisser, ou utilisez « Sélection multiple » (Ctrl/Maj + clic). Sur téléphone : touchez l'invité, puis la place. Déposez-le dans « À placer » pour le retirer.";
   const hint = el("p", { class: "hint", text: HINT });
   const plan = el("div", { class: "seat-plan" });
   const pool = el("div", { class: "seat-pool", "data-pool": "1" }, el("b", { text: "À placer" }));
@@ -375,12 +377,48 @@ async function seatPlan(rows) {
       renderOrg("seating");
     } catch (e) { showToast(orgErr(e)); }
   }
+  // placement de plusieurs invités d'un coup : à partir de la place indiquée, dans les places libres
+  async function placeMany(items, toId, toIdx) {
+    if (!items.length) return;
+    try {
+      const touched = new Map(), arr = r => { if (!touched.has(r.id)) touched.set(r.id, rawSeats(r)); return touched.get(r.id); };
+      items.forEach(it => { const src = byId(it.from); if (src) { const a = arr(src); const i = (it.idx != null && a[it.idx] === it.name) ? it.idx : a.indexOf(it.name); if (i >= 0) a[i] = ""; } });
+      const dst = byId(toId);
+      if (dst) {
+        const b = arr(dst), cap = Number(dst.capacity) || 0; let k = toIdx != null ? toIdx : 0;
+        items.forEach(it => {
+          let at = -1; const lim = Math.max(b.length, cap);
+          for (let j = k; j < lim; j++) if (!b[j]) { at = j; break; }
+          if (at < 0 && toIdx != null) for (let j = 0; j < lim; j++) if (!b[j]) { at = j; break; }
+          if (at < 0) at = b.length;
+          while (b.length <= at) b.push("");
+          b[at] = it.name; k = at + 1;
+        });
+      }
+      for (const [id, a] of touched) await save(byId(id), a);
+      selMany = []; renderOrg("seating");
+    } catch (e) { showToast(orgErr(e)); }
+  }
+  const multiBar = el("p", { class: "hint multi-bar", hidden: true });
+  const refreshMulti = () => {
+    document.querySelectorAll(".av").forEach(x => x.classList.toggle("sel", selMany.some(m => m.key === x.dataset.key)));
+    multiBar.hidden = !selMany.length && !multiMode;
+    multiBar.replaceChildren(selMany.length ? selMany.length + " invité" + (selMany.length > 1 ? "s" : "") + " sélectionné" + (selMany.length > 1 ? "s" : "") + " : touchez une table, un « + » ou une place libre pour les y placer. " : "Sélection multiple activée : touchez plusieurs invités. ",
+      el("button", { type: "button", class: "link", text: "Tout désélectionner", onclick: () => { selMany = []; refreshMulti(); } }));
+  };
   const avatar = (name, fromId, over, idx) => {
     const a = el("button", { type: "button", class: "av" + (over ? " over" : ""), draggable: "true", title: name, "aria-label": name + (fromId ? " (cliquer pour déplacer)" : " (à placer)") },
       el("i", { text: initials(name), style: "background:" + colorOf(name) }), el("span", { text: name.split(/\s+/)[0] }));
-    a.addEventListener("dragstart", e => { e.dataTransfer.setData("text/plain", JSON.stringify({ from: fromId, idx, name })); e.dataTransfer.effectAllowed = "move"; });
+    a.dataset.key = (fromId || "pool") + "|" + name;
+    a.addEventListener("dragstart", e => { const mine = selMany.some(m => m.key === a.dataset.key); e.dataTransfer.setData("text/plain", JSON.stringify(mine && selMany.length > 1 ? { multi: selMany } : { from: fromId, idx, name })); e.dataTransfer.effectAllowed = "move"; });
     a.addEventListener("click", e => {
       e.stopPropagation();
+      if (multiMode || e.ctrlKey || e.metaKey || e.shiftKey) {                       // sélection multiple
+        sel = null; const key = a.dataset.key, i = selMany.findIndex(m => m.key === key);
+        if (i >= 0) selMany.splice(i, 1); else selMany.push({ key, from: fromId, idx, name });
+        refreshMulti(); return;
+      }
+      if (selMany.length) { selMany = []; refreshMulti(); }
       if (sel && !(sel.name === name && sel.from === fromId)) { const s0 = sel; sel = null; if (fromId) place(s0.from, s0.idx, s0.name, fromId, idx); return; }   // 2e clic sur un invité : échange de places
       sel = sel && sel.name === name && sel.from === fromId ? null : { from: fromId, idx, name };
       document.querySelectorAll(".av.sel").forEach(x => x.classList.remove("sel")); if (sel) a.classList.add("sel");
@@ -391,29 +429,53 @@ async function seatPlan(rows) {
   const zone = (node, toId, toIdx) => {
     node.addEventListener("dragover", e => { e.preventDefault(); e.stopPropagation(); node.classList.add("drop"); });
     node.addEventListener("dragleave", () => node.classList.remove("drop"));
-    node.addEventListener("drop", e => { e.preventDefault(); e.stopPropagation(); node.classList.remove("drop"); try { const d = JSON.parse(e.dataTransfer.getData("text/plain")); place(d.from, d.idx, d.name, toId, toIdx); } catch {} });
-    node.addEventListener("click", e => { e.stopPropagation(); if (sel) { const s0 = sel; sel = null; place(s0.from, s0.idx, s0.name, toId, toIdx); } });
+    node.addEventListener("drop", e => { e.preventDefault(); e.stopPropagation(); node.classList.remove("drop"); try { const d = JSON.parse(e.dataTransfer.getData("text/plain")); if (d.multi) placeMany(d.multi, toId, toIdx); else place(d.from, d.idx, d.name, toId, toIdx); } catch {} });
+    node.addEventListener("click", e => { e.stopPropagation(); if (selMany.length) { placeMany(selMany.slice(), toId, toIdx); return; } if (sel) { const s0 = sel; sel = null; place(s0.from, s0.idx, s0.name, toId, toIdx); } });
   };
   let left = [];
   const closePicker = () => { const o = $("#seat-picker"); if (o) o.remove(); document.removeEventListener("keydown", pickerKey); };
   const pickerKey = e => { if (e.key === "Escape") closePicker(); };
   function openPicker(tableId, idx) {
     closePicker(); const r = byId(tableId); if (!r) return;
-    const pick = name => { closePicker(); place(null, null, name, tableId, idx); };
+    const chosen = new Set(), custom = [];
     const grid = el("div", { class: "pick-grid" }), q = el("input", { type: "search", placeholder: "Rechercher un invité…", "aria-label": "Rechercher un invité" });
-    const free = el("input", { type: "text", maxlength: "60", placeholder: "ou saisissez un autre nom", "aria-label": "Autre nom" });
-    const draw = () => { const t = norm(q.value); grid.replaceChildren(...left.filter(n => !t || norm(n).includes(t)).map(n => el("button", { type: "button", class: "pick-chip", onclick: () => pick(n) }, el("i", { text: initials(n), style: "background:" + colorOf(n) }), el("span", { text: n })))); if (!grid.children.length) grid.append(el("p", { class: "hint", text: left.length ? "Aucun invité ne correspond." : "Tous les invités sont déjà placés." })); };
-    q.addEventListener("input", draw); draw();
-    const addFree = () => { const v = free.value.trim(); if (v) pick(v); };
+    const free = el("input", { type: "text", maxlength: "120", placeholder: "ou saisissez d'autres noms (séparés par des virgules)", "aria-label": "Autres noms" });
+    const go = el("button", { type: "button", class: "btn solid", text: "Placer" });
+    const chip = n => el("button", { type: "button", class: "pick-chip" + (chosen.has(n) ? " on" : ""), "aria-pressed": String(chosen.has(n)), onclick: () => { chosen.has(n) ? chosen.delete(n) : chosen.add(n); draw(); } }, el("i", { text: chosen.has(n) ? "✓" : initials(n), style: "background:" + (chosen.has(n) ? "var(--olive)" : colorOf(n)) }), el("span", { text: n }));
+    const draw = () => {
+      const t = norm(q.value), pool2 = [...custom.filter(n => !left.includes(n)), ...left];
+      grid.replaceChildren(...pool2.filter(n => !t || norm(n).includes(t) || chosen.has(n)).map(chip));
+      if (!grid.children.length) grid.append(el("p", { class: "hint", text: left.length ? "Aucun invité ne correspond." : "Tous les invités sont déjà placés." }));
+      go.textContent = chosen.size ? "Placer " + chosen.size + " invité" + (chosen.size > 1 ? "s" : "") : "Placer"; go.disabled = !chosen.size;
+    };
+    const run = () => { const names = [...chosen]; if (!names.length) return; closePicker(); placeMany(names.map(n => ({ from: null, name: n })), tableId, idx); };
+    go.addEventListener("click", run);
+    q.addEventListener("input", draw);
+    q.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); if (!chosen.size) { const m = left.filter(n => !norm(q.value) || norm(n).includes(norm(q.value))); if (m.length === 1) chosen.add(m[0]); } run(); } });
+    const addFree = () => { free.value.split(/[,;]/).map(x => x.trim()).filter(Boolean).forEach(n => { if (!left.includes(n) && !custom.includes(n)) custom.push(n); chosen.add(n); }); free.value = ""; draw(); };
     free.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addFree(); } });
-    const ov = el("div", { id: "seat-picker", class: "picker-ov", role: "dialog", "aria-modal": "true", "aria-label": "Ajouter un invité à " + r.name, onclick: e => { if (e.target === ov) closePicker(); } },
+    draw();
+    const tools = el("div", { class: "pick-tools" },
+      el("button", { type: "button", class: "link", text: "Tout cocher (liste affichée)", onclick: () => { const t = norm(q.value); left.filter(n => !t || norm(n).includes(t)).forEach(n => chosen.add(n)); draw(); } }),
+      el("button", { type: "button", class: "link", text: "Tout décocher", onclick: () => { chosen.clear(); draw(); } }));
+    const ov = el("div", { id: "seat-picker", class: "picker-ov", role: "dialog", "aria-modal": "true", "aria-label": "Ajouter des invités à " + r.name, onclick: e => { if (e.target === ov) closePicker(); } },
       el("div", { class: "picker" },
-        el("div", { class: "pick-head" }, el("h3", { text: "Ajouter à « " + r.name + " »" + (idx != null ? " · place " + (idx + 1) : "") }), el("button", { type: "button", class: "pick-x", "aria-label": "Fermer", text: "×", onclick: closePicker })),
-        q, grid, el("div", { class: "pick-free" }, free, el("button", { type: "button", class: "btn small", text: "Ajouter", onclick: addFree }))));
+        el("div", { class: "pick-head" }, el("h3", { text: "Ajouter à « " + r.name + " »" + (idx != null ? " · à partir de la place " + (idx + 1) : "") }), el("button", { type: "button", class: "pick-x", "aria-label": "Fermer", text: "×", onclick: closePicker })),
+        el("div", { class: "pick-top" }, q, tools), grid,
+        el("div", { class: "pick-free" }, free, el("button", { type: "button", class: "btn small", text: "Ajouter à la sélection", onclick: addFree })),
+        el("div", { class: "pick-go" }, go)));
     document.body.append(ov); document.addEventListener("keydown", pickerKey); setTimeout(() => q.focus(), 30);
   }
-  const addBadge = (r) => el("button", { type: "button", class: "t-add", "aria-label": "Ajouter un invité à " + r.name, title: "Ajouter un invité", text: "+", onclick: e => { e.stopPropagation(); openPicker(r.id, null); } });
-  const emptySeat = (r, i) => el("button", { type: "button", class: "empty-seat", "aria-label": "Place libre " + (i + 1) + " : ajouter un invité", text: "+", onclick: e => { e.stopPropagation(); if (sel) { const s0 = sel; sel = null; place(s0.from, s0.idx, s0.name, r.id, i); } else openPicker(r.id, i); } });
+  const addBadge = (r, honneur) => {
+    const plus = el("button", { type: "button", class: "t-add", "aria-label": "Ajouter des invités à " + r.name, title: "Ajouter des invités", text: "+", onclick: e => { e.stopPropagation(); if (selMany.length) placeMany(selMany.slice(), r.id, null); else openPicker(r.id, null); } });
+    if (honneur) return plus;
+    const rect = r.shape === "Rectangulaire";
+    const btns = [plus];
+    if (rect) btns.push(el("button", { type: "button", class: "t-add t-tool", "aria-label": "Faire pivoter la table " + r.name, title: "Faire pivoter de 90°", text: "⟳", onclick: async e => { e.stopPropagation(); rotMap[r.id] = ((Number(rotMap[r.id]) || 0) + 90) % 360; await saveRot(); renderOrg("seating"); } }));
+    btns.push(el("button", { type: "button", class: "t-add t-tool", "aria-label": "Passer la table " + r.name + (rect ? " en ronde" : " en rectangulaire"), title: rect ? "Passer en table ronde (les invités sont conservés)" : "Passer en table rectangulaire (les invités sont conservés)", text: rect ? "◯" : "▭", onclick: async e => { e.stopPropagation(); try { await orgStore.update(M.table, r.id, { shape: rect ? "Ronde" : "Rectangulaire" }); r.shape = rect ? "Ronde" : "Rectangulaire"; renderOrg("seating"); } catch (er) { showToast(orgErr(er)); } } }));
+    return el("div", { class: "t-btns" }, ...btns);
+  };
+  const emptySeat = (r, i) => el("button", { type: "button", class: "empty-seat", "aria-label": "Place libre " + (i + 1) + " : ajouter un invité", text: "+", onclick: e => { e.stopPropagation(); if (selMany.length) placeMany(selMany.slice(), r.id, i); else if (sel) { const s0 = sel; sel = null; place(s0.from, s0.idx, s0.name, r.id, i); } else openPicker(r.id, i); } });
   const tabs = [];
   const placed = new Set();
   rows.forEach(r => {
@@ -421,7 +483,7 @@ async function seatPlan(rows) {
       const g = rawSeats(r), count = g.filter(Boolean).length, cap = Math.max(Number(r.capacity) || 0, 2), slots = Math.max(cap - 2, g.length), m = slots + 2, sp = 60, W = Math.max(320, m * sp + 40), H = 180;
       g.filter(Boolean).forEach(x => placed.add(norm(x)));
       const Lc = Math.ceil(slots / 2), x0 = W / 2 - (m - 1) * sp / 2, X = pos => x0 + pos * sp, posOfSlot = k => (k % 2 === 0 ? Lc - 1 - k / 2 : Lc + 2 + (k - 1) / 2);
-      const t = el("div", { class: "seat-table honneur" + (count + 2 > cap ? " full" : ""), style: "width:" + W + "px;height:" + H + "px" }, el("div", { class: "t-disc" }, el("b", { text: r.name }), el("span", { text: (count + 2) + " / " + cap }), addBadge(r)));
+      const t = el("div", { class: "seat-table honneur" + (count + 2 > cap ? " full" : ""), style: "width:" + W + "px;height:" + H + "px" }, el("div", { class: "t-disc" }, el("b", { text: r.name }), el("span", { text: (count + 2) + " / " + cap }), addBadge(r, true)));
       [["Cassiana", Lc], ["Matthieu", Lc + 1]].forEach(([nm, pos]) => t.append(el("div", { class: "seat marie", style: "left:" + X(pos) + "px;top:42px" }, el("div", { class: "av marie", title: nm }, el("i", { text: nm[0] }), el("span", { text: nm })))));
       for (let k = 0; k < slots; k++) {
         const seat = el("div", { class: "seat", style: "left:" + X(posOfSlot(k)) + "px;top:42px" });
@@ -430,15 +492,16 @@ async function seatPlan(rows) {
       }
       zone(t, r.id, null); plan.append(t); tabs.push({ r, t, W, H }); return;
     }
-    const g = rawSeats(r), cap = Number(r.capacity) || 0, n = Math.max(cap, g.length), R = 96, rect = r.shape === "Rectangulaire", W = rect ? 336 : 280, H = rect ? 232 : 280, count = g.filter(Boolean).length;
+    const g = rawSeats(r), cap = Number(r.capacity) || 0, n = Math.max(cap, g.length), R = 96, rect = r.shape === "Rectangulaire", rot = rect ? ((Number(rotMap[r.id]) || 0) % 360 + 360) % 360 : 0, vert = rot % 180 === 90, W0 = rect ? 336 : 280, H0 = rect ? 232 : 280, W = vert ? H0 : W0, H = vert ? W0 : H0, count = g.filter(Boolean).length;
     g.filter(Boolean).forEach(x => placed.add(norm(x)));
-    const t = el("div", { class: "seat-table" + (rect ? " rect" : "") + (count > cap && cap ? " full" : ""), style: "width:" + W + "px;height:" + H + "px" },
+    const t = el("div", { class: "seat-table" + (rect ? " rect" : "") + (vert ? " vert" : "") + (count > cap && cap ? " full" : ""), style: "width:" + W + "px;height:" + H + "px" },
       el("div", { class: "t-disc" }, el("b", { text: r.name }), el("span", { text: count + " / " + (cap || "?") }), addBadge(r)));
     for (let i = 0; i < n; i++) {
       let x, y, topRow = false;
       if (rect) {
-        const top = Math.ceil(n / 2), bot = n - top, onTop = i < top, k = onTop ? i : i - top, cnt = onTop ? top : bot, sp = Math.min(60, (W - 70) / Math.max(1, cnt));
-        x = W / 2 + (onTop ? (k - (cnt - 1) / 2) : ((cnt - 1) / 2 - k)) * sp; y = H / 2 + (onTop ? -62 : 62); topRow = onTop;
+        const top = Math.ceil(n / 2), bot = n - top, onTop = i < top, k = onTop ? i : i - top, cnt = onTop ? top : bot, sp = Math.min(60, (W0 - 70) / Math.max(1, cnt));
+        const dx = (onTop ? (k - (cnt - 1) / 2) : ((cnt - 1) / 2 - k)) * sp, dy = onTop ? -62 : 62, th = rot * Math.PI / 180;
+        x = W / 2 + dx * Math.cos(th) - dy * Math.sin(th); y = H / 2 + dx * Math.sin(th) + dy * Math.cos(th); topRow = rot === 0 ? onTop : rot === 180 ? !onTop : false;
       } else { const ang = -Math.PI / 2 + i * 2 * Math.PI / n; x = W / 2 + R * Math.cos(ang); y = H / 2 + R * Math.sin(ang); }
       const seat = el("div", { class: "seat" + (topRow ? " top" : ""), style: "left:" + x + "px;top:" + y + "px" });
       if (g[i]) seat.append(avatar(g[i], r.id, cap && i >= cap, i)); else seat.append(emptySeat(r, i));
@@ -482,6 +545,7 @@ async function seatPlan(rows) {
       t.addEventListener("pointermove", move); t.addEventListener("pointerup", up); t.addEventListener("pointercancel", up);
     });
   });
+  const multiBtn = el("button", { type: "button", class: "btn small", text: "☑ Sélection multiple", onclick: () => { multiMode = !multiMode; sel = null; if (!multiMode) selMany = []; multiBtn.classList.toggle("solid", multiMode); multiBtn.textContent = multiMode ? "✓ Terminer la sélection multiple" : "☑ Sélection multiple"; refreshMulti(); } });
   const editBtn = el("button", { type: "button", class: "btn small", text: "✥ Modifier la disposition des tables", onclick: () => {
     editing = !editing; if (editing && !Object.keys(layout).length) { layout = autoPos(); saveLayout(); }
     editBtn.textContent = editing ? "✓ Terminer la disposition" : "✥ Modifier la disposition des tables"; editBtn.classList.toggle("solid", editing);
@@ -489,7 +553,7 @@ async function seatPlan(rows) {
   } });
   const resetBtn = el("button", { type: "button", class: "btn small", text: "Remettre en grille", hidden: !Object.keys(layout).length, onclick: () => { layout = {}; editing = false; editBtn.textContent = "✥ Modifier la disposition des tables"; editBtn.classList.remove("solid"); resetBtn.hidden = true; hint.textContent = HINT; applyLayout(); saveLayout(); } });
   applyLayout();
-  wrap.append(titled("h3", "cat", "Agneau couché", "Schéma des tables", 30), el("div", { class: "seat-tools" }, editBtn, resetBtn), hint, pool, scroller);
+  wrap.append(titled("h3", "cat", "Agneau couché", "Schéma des tables", 30), el("div", { class: "seat-tools" }, multiBtn, editBtn, resetBtn), hint, multiBar, pool, scroller);
   return wrap;
 }
 
