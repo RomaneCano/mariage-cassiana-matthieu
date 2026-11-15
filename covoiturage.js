@@ -4,8 +4,8 @@
 (function () {
   const LS_MINE = "mariage:covoit-mine";
   const LS_LOCAL = "mariage:covoit";
-  const SENS = { aller: "De l'église au domaine", retour: "Du domaine à l'hébergement" };
-  const SUBS = { aller: "Après la cérémonie, environ 40 min", retour: "Après la soirée, vers 4 h" };
+  const SENS = { aller: "De l'église au domaine", retour: "Du domaine à l'hébergement", venir: "Venir au mariage", rentrer: "Repartir après le mariage" };
+  const SUBS = { aller: "Après la cérémonie, environ 40 min", retour: "Après la soirée, vers 4 h", venir: "Depuis une autre ville, vers Lagny-sur-Marne", rentrer: "Depuis Lagny ou le domaine, vers une autre ville" };
   let list = [], filter = "all", isAdm = false, panelBuilt = false;
 
   const mine = () => { try { return JSON.parse(localStorage.getItem(LS_MINE) || "{}"); } catch { return {}; } };
@@ -59,16 +59,17 @@
   const isPhone = s => /^(\+?\d[\d .-]{7,17}\d)$/.test(String(s).trim());
   const isMail = s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s).trim());
 
-  const DEF = { aller: ["L'église", "Le domaine"], retour: ["Le domaine", "Mon hébergement"] };
+  const DEF = { aller: ["L'église", "Le domaine"], retour: ["Le domaine", ""], venir: ["", "Lagny-sur-Marne"], rentrer: ["Lagny-sur-Marne", ""] };
+  const LEG = { aller: ["L'église", "Le domaine"], retour: ["Le domaine", "Mon hébergement"] };
   function route(r) {
     const parts = String(r.lieu || "").split(" → ");
     if (parts.length === 2 && parts[0] && parts[1]) return { from: parts[0], to: parts[1] };
-    const d = DEF[r.sens === "retour" ? "retour" : "aller"];      // anciennes annonces : un seul lieu
+    const d = LEG[r.sens === "retour" ? "retour" : "aller"];      // anciennes annonces : un seul lieu
     return r.type === "demande" ? { from: r.lieu, to: d[1] } : { from: d[0], to: r.lieu };
   }
   function card(r) {
     const m = mine()[r.id]; const full = r.type === "offre" && Number(r.places) <= 0;
-    const kind = r.type === "demande" ? "Cherche une place" : full ? "Complet" : r.places + " place" + (r.places > 1 ? "s" : "") + " disponible" + (r.places > 1 ? "s" : "");
+    const kind = r.type === "demande" ? "Recherche" : full ? "Complet" : r.places + " place" + (r.places > 1 ? "s" : "") + " disponible" + (r.places > 1 ? "s" : "");
     const ct = String(r.contact || ""); const wa = isPhone(ct) ? waLink(ct) : "";
     const actions = el("div", { class: "cv-actions" });
     if (isPhone(ct)) actions.append(el("a", { class: "btn small solid", href: "tel:" + digits(ct), text: "Appeler" }));
@@ -124,16 +125,21 @@
   const isFull = r => r.type === "offre" && Number(r.places) <= 0;
   function renderList() {
     const host = $("#cv-list"); if (!host) return; host.replaceChildren();
-    const shown = list.filter(r => filter === "all" || r.sens === filter || r.sens === "both");
+    const shown = list.filter(r => filter === "all" || r.sens === filter || (r.sens === "both" && (filter === "aller" || filter === "retour")));
     const open = shown.filter(r => !isFull(r)), full = shown.filter(isFull);
-    const cols = el("div", { class: "cv-cols" + (filter === "all" ? "" : " one") }); host.append(cols);
-    ["aller", "retour"].forEach(s => {
-      if (filter !== "all" && filter !== s) return;
-      const rows = open.filter(r => r.sens === s || r.sens === "both");
-      const col = el("div", { class: "cv-col" }, el("h3", { class: "cat", text: SENS[s] }), el("p", { class: "cv-sub", text: SUBS[s] }));
-      if (!rows.length) col.append(el("p", { class: "hint cv-empty", text: "Aucune annonce pour l'instant. Soyez le premier à vous proposer !" }));
-      else col.append(el("div", { class: "cv-grid" }, ...rows.map(card)));
-      cols.append(col);
+    const groups = [["aller", "retour"], ["venir", "rentrer"]];
+    groups.forEach((g, gi) => {
+      if (filter !== "all" && !g.includes(filter)) return;
+      if (gi === 1) host.append(el("div", { class: "cv-section" }, el("h3", { class: "cat", text: "Depuis ou vers d'autres villes" }), el("p", { text: "Pour venir au mariage, ou repartir après, quand on habite plus loin." })));
+      const cols = el("div", { class: "cv-cols" + (filter === "all" ? "" : " one") }); host.append(cols);
+      g.forEach(sv => {
+        if (filter !== "all" && filter !== sv) return;
+        const rows = open.filter(r => r.sens === sv || r.sens === "both" && gi === 0);
+        const col = el("div", { class: "cv-col" }, el("h3", { class: "cat", text: SENS[sv] }), el("p", { class: "cv-sub", text: SUBS[sv] }));
+        if (!rows.length) col.append(el("p", { class: "hint cv-empty", text: "Aucune annonce pour l'instant. Soyez le premier à vous proposer !" }));
+        else col.append(el("div", { class: "cv-grid" }, ...rows.map(card)));
+        cols.append(col);
+      });
     });
     if (full.length) host.append(el("details", { class: "cv-archive" }, el("summary", { text: "Trajets complets (" + full.length + ")" }), el("div", { class: "cv-grid" }, ...full.map(card))));
   }
@@ -181,12 +187,13 @@
     const typeSel = form.querySelector("[name=type]"), placesLbl = $("#cv-places-l");
     const dep = form.querySelector("[name=depart]"), arr = form.querySelector("[name=arrivee]"), sensSel = form.querySelector("[name=sens]");
     let auto = { d: "", a: "" };
+    const PH = { aller: ["l'église", "le domaine"], retour: ["le domaine", "mon hôtel, Meaux, Paris 12e…"], venir: ["Paris, Toulouse, Lyon…", "Lagny-sur-Marne"], rentrer: ["Lagny-sur-Marne", "Paris, Toulouse, Lyon…"] };
     const syncSens = () => {
       const d = DEF[sensSel.value]; if (!d) return;
       if (!dep.value || dep.value === auto.d) dep.value = d[0];
-      if (!arr.value || arr.value === auto.a) arr.value = sensSel.value === "retour" ? "" : d[1];
-      auto = { d: d[0], a: sensSel.value === "retour" ? "" : d[1] };
-      arr.placeholder = sensSel.value === "retour" ? "ex. mon hôtel, Meaux, Paris 12e…" : "ex. le domaine";
+      if (!arr.value || arr.value === auto.a) arr.value = d[1];
+      auto = { d: d[0], a: d[1] };
+      const ph = PH[sensSel.value]; dep.placeholder = "ex. " + ph[0]; arr.placeholder = "ex. " + ph[1];
     };
     sensSel.addEventListener("change", syncSens);
     const syncType = () => { const offre = typeSel.value === "offre"; placesLbl.hidden = !offre; syncSens(); };

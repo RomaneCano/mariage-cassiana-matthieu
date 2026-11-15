@@ -392,3 +392,9 @@ revoke all on public.org_deco from anon;
 -- 19. DÉCORATION ET PAPETERIE : montant payé
 -- ============================================================
 alter table public.org_deco add column if not exists paid numeric;
+
+-- ============================================================
+-- 20. COVOITURAGE : trajets depuis / vers d'autres villes
+-- ============================================================
+alter table public.covoiturage drop constraint if exists covoiturage_sens_check;
+alter table public.covoiturage add constraint covoiturage_sens_check check (sens in ('aller','retour','both','venir','rentrer'));

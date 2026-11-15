@@ -73,3 +73,9 @@ begin
 end $$;
 grant execute on function public.covoit_prendre(uuid, text, text) to anon, authenticated;
 grant execute on function public.covoit_passagers(uuid, text) to anon, authenticated;
+
+-- ============================================================
+-- 20. COVOITURAGE : trajets depuis / vers d'autres villes
+-- ============================================================
+alter table public.covoiturage drop constraint if exists covoiturage_sens_check;
+alter table public.covoiturage add constraint covoiturage_sens_check check (sens in ('aller','retour','both','venir','rentrer'));
