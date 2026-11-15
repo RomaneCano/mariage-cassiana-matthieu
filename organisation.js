@@ -618,10 +618,10 @@ async function seatPlan(rows) {
       t.addEventListener("pointermove", move); t.addEventListener("pointerup", up); t.addEventListener("pointercancel", up);
     });
   });
-  const multiBtn = el("button", { type: "button", class: "btn small", text: "☑ Sélection multiple", onclick: () => { multiMode = !multiMode; sel = null; if (!multiMode) selMany = []; multiBtn.classList.toggle("solid", multiMode); multiBtn.textContent = multiMode ? "✓ Terminer la sélection multiple" : "☑ Sélection multiple"; refreshMulti(); } });
+  const multiBtn = el("button", { type: "button", class: "btn small", text: "☑ Sélection multiple", onclick: () => { multiMode = !multiMode; sel = null; if (!multiMode) selMany = []; multiBtn.classList.toggle("solid", multiMode); multiBtn.textContent = multiMode ? "✓ Terminer la sélection multiple" : "☑ Sélection multiple"; if (!multiMode) { seatHist.undo.length = 0; seatHist.redo.length = 0; histRefresh(); } refreshMulti(); } });
   const editBtn = el("button", { type: "button", class: "btn small", text: "✥ Modifier la disposition des tables", onclick: () => {
     editing = !editing; if (editing && !Object.keys(layout).length) { histPush(); layout = autoPos(); saveLayout(); }
-    editBtn.textContent = editing ? "✓ Terminer la disposition" : "✥ Modifier la disposition des tables"; editBtn.classList.toggle("solid", editing);
+    editBtn.textContent = editing ? "✓ Terminer la disposition" : "✥ Modifier la disposition des tables"; if (!editing) { seatHist.undo.length = 0; seatHist.redo.length = 0; histRefresh(); showToast("Disposition enregistrée"); } editBtn.classList.toggle("solid", editing);
     resetBtn.hidden = !editing && !Object.keys(layout).length; hint.textContent = editing ? "Glissez chaque table à l'endroit voulu. Les invités ne se déplacent pas pendant ce mode." : ""; hint.hidden = !editing; applyLayout();
   } });
   const resetBtn = el("button", { type: "button", class: "btn small", text: "Remettre en grille", hidden: !Object.keys(layout).length, onclick: () => { histPush(); layout = {}; editing = false; editBtn.textContent = "✥ Modifier la disposition des tables"; editBtn.classList.remove("solid"); resetBtn.hidden = true; hint.textContent = ""; hint.hidden = true; applyLayout(); saveLayout(); } });
