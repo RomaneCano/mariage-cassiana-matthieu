@@ -414,13 +414,15 @@ create table if not exists public.journal_codes (
 );
 create table if not exists public.org_journal (
   id uuid primary key default gen_random_uuid(), created_at timestamptz not null default now(),
-  author text not null check (author in ('cassiana','matthieu')),
+  author text not null,
   entry_date date not null default current_date,
   kind text not null default 'Pensée' check (kind in ('Pensée','À faire','Surprise','Souvenir','Lettre','Mémo')),
   title text check (title is null or char_length(title) <= 120),
   body text not null check (char_length(body) between 1 and 8000),
   done boolean not null default false
 );
+alter table public.org_journal drop constraint if exists org_journal_author_check;
+alter table public.org_journal add constraint org_journal_author_check check (author in ('cassiana','matthieu','commun'));
 alter table public.journal_codes enable row level security;
 alter table public.org_journal enable row level security;
 revoke all on public.journal_codes from anon, authenticated;
@@ -436,8 +438,8 @@ language plpgsql security definer set search_path = public as $$
 declare c public.journal_codes%rowtype;
 begin
   if not is_admin() then raise exception 'accès refusé'; end if;
-  if p_author not in ('cassiana','matthieu') then raise exception 'auteur invalide'; end if;
-  if journal_unlocked() then return null; end if;
+  if p_author not in ('cassiana','matthieu','commun') then raise exception 'auteur invalide'; end if;
+  if p_author = 'commun' or journal_unlocked() then return null; end if;   -- les notes communes n'ont pas de code
   select * into c from public.journal_codes where author = p_author;
   if not found then return 'nocode'; end if;
   if c.code_hash = encode(sha256(convert_to(c.salt || coalesce(p_code, ''), 'UTF8')), 'hex') then return null; end if;

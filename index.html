@@ -436,7 +436,8 @@ body.sorting .admin-main button,body.sorting .admin-tabs button{outline:1.5px da
 .j-day{margin:18px 0 6px;font-family:"Parisienne",cursive;font-weight:400;font-size:1.5rem;color:var(--olive);text-transform:capitalize}
 .j-entry{background:var(--paper-2);border-left:5px solid var(--c);border-radius:12px;padding:12px 16px;margin:0 0 10px;display:grid;gap:6px}
 .j-eh{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.j-kind{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;background:var(--c);color:#fff;border-radius:999px;padding:1px 10px}
-.j-cb{width:20px;height:20px;accent-color:var(--olive)}.j-text{margin:0;white-space:pre-wrap;line-height:1.55}.j-entry.done .j-text,.j-entry.done b{text-decoration:line-through;opacity:.6}
+.j-cb{width:20px;height:20px;accent-color:var(--olive)}.j-time{font-size:.74rem;opacity:.65;margin-left:auto}.j-legacy{margin:10px 0;display:grid;gap:8px}.j-legacy .j-text{max-height:160px;overflow:auto;opacity:.85}
+.j-text{margin:0;white-space:pre-wrap;line-height:1.55}.j-entry.done .j-text,.j-entry.done b{text-decoration:line-through;opacity:.6}
 .tl-prop{margin-bottom:14px}.tl-prop-list{display:grid;gap:2px;max-height:380px;overflow:auto;margin:8px 0 12px;border-top:1px solid var(--olive-soft)}
 .tl-prop-row{display:grid;grid-template-columns:auto 150px 1fr;gap:10px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--olive-soft);cursor:pointer}
 .tl-prop-t{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}.tl-prop-n{display:grid;min-width:0}.tl-prop-n small{opacity:.75}
@@ -2222,7 +2223,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611150120"></script>
-<script src="covoiturage.js?v=202611150120"></script>
+<script src="organisation.js?v=202611150123"></script>
+<script src="covoiturage.js?v=202611150123"></script>
 </body>
 </html>

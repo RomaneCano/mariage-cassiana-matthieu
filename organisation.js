@@ -390,7 +390,9 @@ function orgSummary(key, rows) {
   } else if (key === "seating") {
     const placed = rows.reduce((a, r) => a + String(r.guests || "").split("\n").filter(x => x.trim()).length, 0), cap = rows.reduce((a, r) => a + (Number(r.capacity) || 0), 0);
     chip("tables", String(rows.length), "c-all"); chip("invités placés", String(placed), "c-ok"); chip("places", String(cap), cap && placed > cap ? "warn" : "c-link"); if (cap && placed <= cap) chip("places libres", String(cap - placed), "c-wait");
-  } else if (key === "timeline") chip("étapes", String(rows.length), "c-all"); const nPl = rows.filter(r => r.game).length; if (rows.length) chip("jeux placés", String(nPl), "c-alg");
+  } else if (key === "timeline") {
+    chip("étapes", String(rows.length), "c-all"); const nPl = rows.filter(r => r.game).length; if (rows.length) chip("jeux placés", String(nPl), "c-alg");
+  }
   return box;
 }
 
@@ -936,14 +938,6 @@ async function renderOrgInner(key) {
   host.append(el("div", { class: "tbl org-wrap" }, table));
 }
 
-async function renderNotesCommunes(host, current) {
-  let v = ""; try { v = await store.getSetting("org_notes"); } catch {}
-  if (current && !current()) return;
-  const ta = el("textarea", { class: "org-notes", rows: "16", placeholder: "Idées, numéros utiles, mots de passe de réservation à ne pas écrire ici, questions à poser au prêtre, listes en vrac…", "aria-label": "Notes" }); ta.value = v || "";
-  const st = el("p", { class: "hint", text: "Enregistrement automatique quand vous quittez le champ." });
-  ta.addEventListener("blur", async () => { try { await store.setSetting("org_notes", ta.value); st.textContent = "✓ Enregistré à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }); } catch (e) { st.textContent = "⚠ " + orgErr(e); } });
-  host.append(titled("h3", "cat", "Rameau d'olivier", "Notes communes", 28), ta, st);
-}
 
 /* ============ JOURNAL DE MARIAGE ============
    Un espace par marié, protégé par un code vérifié côté serveur (fonctions journal_* de Supabase).
@@ -963,24 +957,24 @@ async function renderNotes(host, current) {
   const draw = () => {
     tabs.replaceChildren(...[["cassiana", "Cassiana"], ["matthieu", "Matthieu"], ["commun", "Notes communes"]].map(([k, l]) => el("button", { type: "button", "aria-pressed": String(jState.tab === k), text: l, onclick: () => { jState.tab = k; jState.filter = ""; draw(); } })));
     body.replaceChildren();
-    if (jState.tab === "commun") renderNotesCommunes(body, alive); else journalSpace(body, jState.tab, alive);
+    if (jState.tab === "commun") journalSpace(body, "commun", alive); else journalSpace(body, jState.tab, alive);
   };
   const days = Math.max(0, daysBetween(todayISO(), WEDDING_ISO));
   host.append(titled("h3", "cat", "Rameau d'olivier", "Journal de mariage", 28),
-    el("p", { class: "hint j-intro", text: jUnlocked() ? "Le grand jour est arrivé : les deux espaces sont ouverts, vous pouvez lire tout le journal." : "Chacun écrit dans son espace, protégé par son propre code. Tout sera révélé le 9 octobre 2027 (dans " + days + " jour" + (days > 1 ? "s" : "") + ")." }), tabs, body);
+    el("p", { class: "hint j-intro", text: jUnlocked() ? "Le grand jour est arrivé : les deux espaces sont ouverts, vous pouvez lire tout le journal." : "Chacun écrit dans son espace, protégé par son propre code. Tout sera révélé le 9 octobre 2027 (dans " + days + " jour" + (days > 1 ? "s" : "") + "). Les notes communes, sans code, sont à vous deux." }), tabs, body);
   draw();
 }
 
 async function journalSpace(host, author, alive) {
-  const name = JOURNAL.who[author];
+  const name = JOURNAL.who[author] || "Notes communes", shared = author === "commun";
   host.replaceChildren(el("p", { class: "hint", text: "Chargement…" }));
   try { jState.status = await jRpc("journal_status", {}); } catch (e) { host.replaceChildren(el("p", { class: "msg err", text: "Le journal n'est pas encore installé dans Supabase. Exécutez supabase-tout-en-un.sql (ou supabase-migration-journal.sql) dans le SQL Editor." })); return; }
   if (!alive()) return;
-  const unlocked = jState.status.unlocked || jUnlocked();
+  const unlocked = shared || jState.status.unlocked || jUnlocked();
   const code = () => jState.codes[author];
   host.replaceChildren();
   // 1. pas encore de code : on le crée
-  if (!jState.status[author]) {
+  if (!shared && !jState.status[author]) {
     const c1 = el("input", { type: "password", autocomplete: "new-password", minlength: "4", maxlength: "60", "aria-label": "Votre code" }), c2 = el("input", { type: "password", autocomplete: "new-password", maxlength: "60", "aria-label": "Confirmez votre code" }), msg = el("p", { class: "msg", hidden: true, role: "status" });
     const f = el("form", { class: "card j-lock", novalidate: true }, el("h3", { text: "Espace de " + name }), el("p", { class: "hint", text: "Choisissez un code personnel (4 caractères minimum). Il protège votre espace : l'autre ne pourra rien lire avant le 9 octobre 2027. Notez-le bien, il ne peut pas être retrouvé (après la date, tout s'ouvre de toute façon)." }),
       el("label", {}, el("span", { text: "Votre code" }), c1), el("label", {}, el("span", { text: "Confirmez le code" }), c2), el("button", { class: "btn solid", type: "submit", text: "Créer mon espace" }), msg);
@@ -1001,8 +995,8 @@ async function journalSpace(host, author, alive) {
   try { const r = await jRpc("journal_list", { p_author: author, p_code: code() }); if (!r.ok) { jState.codes[author] = null; return journalSpace(host, author, alive); } entries = r.entries || []; } catch (e) { host.append(el("p", { class: "msg err", text: orgErr(e) })); return; }
   if (!alive()) return;
   let editing = null;
-  const top = el("div", { class: "j-top" }, el("h3", { text: "Journal de " + name }),
-    el("div", { class: "j-top-btns" }, unlocked ? "" : el("button", { type: "button", class: "btn small", text: "🔒 Verrouiller", onclick: () => { jState.codes[author] = null; journalSpace(host, author, alive); } }), el("button", { type: "button", class: "btn small", text: "Changer le code", onclick: () => changeCode() })));
+  const top = el("div", { class: "j-top" }, el("h3", { text: shared ? "Notes communes" : "Journal de " + name }),
+    el("div", { class: "j-top-btns" }, shared ? "" : unlocked ? "" : el("button", { type: "button", class: "btn small", text: "🔒 Verrouiller", onclick: () => { jState.codes[author] = null; journalSpace(host, author, alive); } }), shared ? "" : el("button", { type: "button", class: "btn small", text: "Changer le code", onclick: () => changeCode() })));
   const cc = el("div", {});
   const changeCode = () => {
     const o = el("input", { type: "password", maxlength: "60", "aria-label": "Code actuel" }), n = el("input", { type: "password", maxlength: "60", "aria-label": "Nouveau code" }), m = el("p", { class: "msg", hidden: true });
@@ -1013,7 +1007,7 @@ async function journalSpace(host, author, alive) {
   // formulaire d'entrée
   const dIn = el("input", { type: "date", "aria-label": "Date" }), kIn = el("select", { "aria-label": "Type" }, ...JOURNAL.kinds.map(k => el("option", { value: k, text: k + " — " + JOURNAL.hint[k] }))), tIn = el("input", { type: "text", maxlength: "120", placeholder: "Titre (facultatif)", "aria-label": "Titre" }), bIn = el("textarea", { rows: "5", maxlength: "8000", placeholder: "Écrivez ici : ce que vous pensez, ce que vous avez à faire, une surprise pour l'autre, ce qu'il s'est passé aujourd'hui…", "aria-label": "Texte" });
   const goBtn = el("button", { class: "btn solid", type: "submit", text: "Ajouter au journal" }), cancelBtn = el("button", { class: "btn small", type: "button", text: "Annuler la modification", hidden: true });
-  const reset = () => { editing = null; dIn.value = todayISO(); kIn.value = "Pensée"; tIn.value = ""; bIn.value = ""; goBtn.textContent = "Ajouter au journal"; cancelBtn.hidden = true; };
+  const reset = () => { editing = null; dIn.value = todayISO(); kIn.value = shared ? "Mémo" : "Pensée"; tIn.value = ""; bIn.value = ""; goBtn.textContent = "Ajouter au journal"; cancelBtn.hidden = true; };
   reset(); cancelBtn.addEventListener("click", reset);
   const form = el("form", { class: "card j-form", novalidate: true }, el("div", { class: "j-row" }, el("label", {}, el("span", { text: "Date" }), dIn), el("label", { class: "grow" }, el("span", { text: "Type" }), kIn)), tIn, bIn, el("div", { class: "j-act" }, goBtn, cancelBtn));
   form.addEventListener("submit", async e => { e.preventDefault(); if (!bIn.value.trim()) return showToast(J_ERR.vide);
@@ -1038,14 +1032,24 @@ async function journalSpace(host, author, alive) {
       const done = en.kind === "À faire" && en.done;
       const cb = en.kind === "À faire" ? el("input", { type: "checkbox", class: "j-cb", "aria-label": "Fait", checked: !!en.done, onchange: async e => { try { await save(en, { p_done: e.target.checked }); en.done = e.target.checked; drawList(); } catch (err) { showToast(orgErr(err)); e.target.checked = !!en.done; } } }) : "";
       list.append(el("article", { class: "j-entry" + (done ? " done" : ""), style: "--c:" + (JKIND_COL[en.kind] || "#8d8d80") },
-        el("div", { class: "j-eh" }, cb, el("span", { class: "j-kind", text: en.kind }), en.title ? el("b", { text: en.title }) : ""),
+        el("div", { class: "j-eh" }, cb, el("span", { class: "j-kind", text: en.kind }), en.title ? el("b", { text: en.title }) : "", el("span", { class: "j-time", title: "Enregistré le " + new Date(en.created_at).toLocaleString("fr-FR"), text: "enregistré à " + new Date(en.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) })),
         el("p", { class: "j-text", text: en.body }),
         el("div", { class: "j-act" }, el("button", { type: "button", class: "btn small", text: "Modifier", onclick: () => { editing = en; dIn.value = en.entry_date; kIn.value = en.kind; tIn.value = en.title || ""; bIn.value = en.body; goBtn.textContent = "Enregistrer la modification"; cancelBtn.hidden = false; form.scrollIntoView({ behavior: "smooth", block: "center" }); bIn.focus({ preventScroll: true }); } }),
           el("button", { type: "button", class: "btn small danger", text: "Supprimer", onclick: async () => { if (!window.confirm("Supprimer cette entrée ? Cette action est définitive.")) return; try { const r = await jRpc("journal_delete", { p_author: author, p_code: code(), p_id: en.id }); if (!r.ok) throw { message: J_ERR[r.error] || "refusé" }; showToast("Entrée supprimée."); journalSpace(host, author, alive); } catch (err) { showToast(orgErr(err)); } } }))));
     });
   };
   drawList();
-  host.append(top, cc, form, entries.length ? pills : "", list);
+  const legacy = el("div", {});
+  if (shared) {
+    try {
+      const old = ((await store.getSetting("org_notes")) || "").trim(), done = await store.getSetting("org_notes_imported");
+      if (old && done !== "1") legacy.append(el("div", { class: "card j-legacy" }, el("b", { text: "Vos anciennes notes" }), el("p", { class: "j-text", text: old }),
+        el("div", { class: "j-act" }, el("button", { type: "button", class: "btn small solid", text: "Les ajouter au journal comme première entrée", onclick: async e => {
+          e.target.disabled = true;
+          try { const r = await jRpc("journal_save", { p_author: "commun", p_code: null, p_id: null, p_date: todayISO(), p_kind: "Mémo", p_title: "Anciennes notes", p_body: old, p_done: false }); if (!r.ok) throw { message: J_ERR[r.error] || "refusé" }; await store.setSetting("org_notes_imported", "1"); showToast("Anciennes notes ajoutées au journal."); journalSpace(host, author, alive); } catch (err) { showToast(orgErr(err)); e.target.disabled = false; } } }))));
+    } catch {}
+  }
+  host.append(top, cc, legacy, form, entries.length ? pills : "", list);
 }
 
 /* ---------------------------------------------------------------------------
