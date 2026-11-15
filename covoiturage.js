@@ -115,9 +115,13 @@
       extra.append(det);
     }
     const rt = route(r);
+    // trajet déjà indiqué par le titre de la colonne (« De l'église au domaine » / « Du domaine à l'hébergement ») : inutile de le répéter
+    const nzr = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+    const f0 = nzr(rt.from), t0 = nzr(rt.to);
+    const generic = (r.sens === "aller" && f0 === "l'eglise" && t0 === "le domaine") || (r.sens === "retour" && f0 === "le domaine" && ["", "mon hebergement", "l'hebergement", "hebergement", "mon logement"].includes(t0));
     return el("article", { class: "cv-item" + (full ? " full" : "") + (r.type === "demande" ? " ask" : "") },
       el("div", { class: "cv-top" }, el("span", { class: "cv-who" }, el("b", { text: r.prenom }), el("span", { class: "cv-kind", text: r.type === "demande" ? "cherche une place" : "propose" })), el("span", { class: "cv-badge", text: kind })),
-      el("div", { class: "cv-route", role: "text", "aria-label": "Départ : " + rt.from + ". Arrivée : " + rt.to }, el("b", { text: rt.from }), el("span", { class: "ar", "aria-hidden": "true", text: "→" }), el("b", { text: rt.to })),
+      generic ? "" : el("div", { class: "cv-route", role: "text", "aria-label": "Départ : " + rt.from + ". Arrivée : " + rt.to }, el("b", { text: rt.from }), el("span", { class: "ar", "aria-hidden": "true", text: "→" }), el("b", { text: rt.to })),
       r.heure || r.note ? el("p", { class: "cv-line" }, r.heure ? "Vers " + r.heure : "", r.heure && r.note ? " · " : "", r.note ? el("i", { text: r.note }) : "") : "",
       el("p", { class: "cv-contact", text: "Contact : " + ct }),
       actions, extra, own);
