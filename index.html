@@ -626,6 +626,19 @@ body.on-conn #edit-fab{display:none}
 .cv-filter .btn[aria-pressed="true"]{background:var(--olive);color:var(--paper)}
 .cv-col .cat{margin:.2rem 0 .1rem;text-align:center}
 .cv-col .cv-empty{text-align:center;margin:14px auto 0;max-width:20em;line-height:1.6;opacity:.85}
+.cv-filter{align-items:center;gap:8px 10px}
+.cv-fg{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;padding:3px 8px 3px 12px;border-radius:20px;border:1.5px solid var(--olive-soft)}
+.cv-fg i{font-size:var(--fs-label);letter-spacing:.12em;text-transform:uppercase;opacity:.75;font-style:normal;margin-right:4px}
+.cv-fg.g1{border-style:dashed;border-color:#b07a4a}.cv-fg.g1 .btn[aria-pressed="true"]{background:#9a5f2e;color:#fff}
+.cv-block{margin:0 0 22px;padding:16px clamp(12px,2.5vw,26px) 12px;border-radius:18px;border:1.5px solid var(--olive-soft);background:var(--paper-2);text-align:center}
+.cv-block.b1{background:#f3e9dc;border:1.5px dashed #b07a4a}
+.cv-eyebrow{margin:0;font-size:var(--fs-label);letter-spacing:.2em;text-transform:uppercase;font-weight:700;color:var(--olive)}
+.cv-block.b1 .cv-eyebrow{color:#8a5324}
+.cv-btitle{margin:.2rem 0 0;font-family:"Parisienne",cursive;font-weight:400;font-size:1.9rem;color:var(--olive)}
+.cv-block.b1 .cv-btitle{color:#8a5324}
+.cv-bsub{margin:0 0 12px;font-size:var(--fs-small);opacity:.8}
+.cv-block .cv-col .cat{font-size:1.3rem}
+.cv-block .cv-col+.cv-col{position:relative}
 .cv-section{margin:26px 0 4px;text-align:center}.cv-section h3{margin:0}.cv-section p{margin:2px 0 0;font-size:var(--fs-small);opacity:.8}
 .cv-col .cv-sub{margin:0 0 10px;text-align:center;font-size:var(--fs-label);letter-spacing:.14em;text-transform:uppercase;opacity:.75}
 @media(max-width:600px){
@@ -949,10 +962,12 @@ details[open] > :not(summary){animation:unfold .45s ease-out backwards}
       </form>
       <div class="cv-filter" role="group" aria-label="Filtrer les annonces par trajet">
         <button class="btn small" type="button" data-cv="all" aria-pressed="true">Tous les trajets</button>
-        <button class="btn small" type="button" data-cv="aller" aria-pressed="false">De l'église au domaine</button>
-        <button class="btn small" type="button" data-cv="retour" aria-pressed="false">Du domaine à l'hébergement</button>
-        <button class="btn small" type="button" data-cv="venir" aria-pressed="false">Se rendre au mariage</button>
-        <button class="btn small" type="button" data-cv="rentrer" aria-pressed="false">Rentrer chez soi</button>
+        <span class="cv-fg g0"><i>Jour J</i>
+          <button class="btn small" type="button" data-cv="aller" aria-pressed="false">De l'église au domaine</button>
+          <button class="btn small" type="button" data-cv="retour" aria-pressed="false">Du domaine à l'hébergement</button></span>
+        <span class="cv-fg g1"><i>Depuis chez vous</i>
+          <button class="btn small" type="button" data-cv="venir" aria-pressed="false">Se rendre au mariage</button>
+          <button class="btn small" type="button" data-cv="rentrer" aria-pressed="false">Rentrer chez soi</button></span>
       </div>
       <div id="cv-list"></div>
     </section>
@@ -2137,7 +2152,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611150042"></script>
-<script src="covoiturage.js?v=202611150042"></script>
+<script src="organisation.js?v=202611150048"></script>
+<script src="covoiturage.js?v=202611150048"></script>
 </body>
 </html>

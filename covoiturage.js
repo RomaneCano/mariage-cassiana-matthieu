@@ -128,10 +128,12 @@
     const shown = list.filter(r => filter === "all" || r.sens === filter || (r.sens === "both" && (filter === "aller" || filter === "retour")));
     const open = shown.filter(r => !isFull(r)), full = shown.filter(isFull);
     const groups = [["aller", "retour"], ["venir", "rentrer"]];
+    const HEAD = [["Le jour J, sur place", "Entre l'église, le domaine et l'hébergement", "Les petits trajets de la journée et de la fin de soirée."], ["Depuis chez vous", "Pour se rendre au mariage et rentrer chez soi", "Les trajets entre chez vous et le mariage, à l'aller comme au retour."]];
     groups.forEach((g, gi) => {
       if (filter !== "all" && !g.includes(filter)) return;
-      if (gi === 1) host.append(el("div", { class: "cv-section" }, el("h3", { class: "cat", text: "Pour se rendre au mariage et rentrer chez soi" }), el("p", { text: "Les trajets entre chez vous et le mariage, à l'aller comme au retour (en plus des trajets du jour J ci-dessus)." })));
-      const cols = el("div", { class: "cv-cols" + (filter === "all" ? "" : " one") }); host.append(cols);
+      const blk = el("section", { class: "cv-block b" + gi }, el("p", { class: "cv-eyebrow", text: HEAD[gi][0] }), el("h3", { class: "cv-btitle", text: HEAD[gi][1] }), el("p", { class: "cv-bsub", text: HEAD[gi][2] }));
+      host.append(blk);
+      const cols = el("div", { class: "cv-cols" + (filter === "all" ? "" : " one") }); blk.append(cols);
       g.forEach(sv => {
         if (filter !== "all" && filter !== sv) return;
         const rows = open.filter(r => r.sens === sv || r.sens === "both" && gi === 0);
