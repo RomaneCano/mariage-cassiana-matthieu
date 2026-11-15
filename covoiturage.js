@@ -4,8 +4,8 @@
 (function () {
   const LS_MINE = "mariage:covoit-mine";
   const LS_LOCAL = "mariage:covoit";
-  const SENS = { aller: "De l'église au domaine", retour: "Du domaine à l'hébergement", venir: "Venir au mariage", rentrer: "Repartir après le mariage" };
-  const SUBS = { aller: "Après la cérémonie, environ 40 min", retour: "Après la soirée, vers 4 h", venir: "Depuis une autre ville, vers Lagny-sur-Marne", rentrer: "Depuis Lagny ou le domaine, vers une autre ville" };
+  const SENS = { aller: "De l'église au domaine", retour: "Du domaine à l'hébergement", venir: "Pour se rendre au mariage", rentrer: "Pour rentrer chez soi" };
+  const SUBS = { aller: "Après la cérémonie, environ 40 min", retour: "Après la soirée, vers 4 h", venir: "De chez vous jusqu'au mariage", rentrer: "Du mariage jusqu'à chez vous" };
   let list = [], filter = "all", isAdm = false, panelBuilt = false;
 
   const mine = () => { try { return JSON.parse(localStorage.getItem(LS_MINE) || "{}"); } catch { return {}; } };
@@ -59,7 +59,7 @@
   const isPhone = s => /^(\+?\d[\d .-]{7,17}\d)$/.test(String(s).trim());
   const isMail = s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s).trim());
 
-  const DEF = { aller: ["L'église", "Le domaine"], retour: ["Le domaine", ""], venir: ["", "Lagny-sur-Marne"], rentrer: ["Lagny-sur-Marne", ""] };
+  const DEF = { aller: ["L'église", "Le domaine"], retour: ["Le domaine", ""], venir: ["", "Le mariage (Lagny-sur-Marne)"], rentrer: ["Le mariage (Lagny-sur-Marne)", ""] };
   const LEG = { aller: ["L'église", "Le domaine"], retour: ["Le domaine", "Mon hébergement"] };
   function route(r) {
     const parts = String(r.lieu || "").split(" → ");
@@ -130,7 +130,7 @@
     const groups = [["aller", "retour"], ["venir", "rentrer"]];
     groups.forEach((g, gi) => {
       if (filter !== "all" && !g.includes(filter)) return;
-      if (gi === 1) host.append(el("div", { class: "cv-section" }, el("h3", { class: "cat", text: "Depuis ou vers d'autres villes" }), el("p", { text: "Pour venir au mariage, ou repartir après, quand on habite plus loin." })));
+      if (gi === 1) host.append(el("div", { class: "cv-section" }, el("h3", { class: "cat", text: "Pour se rendre au mariage et rentrer chez soi" }), el("p", { text: "Les trajets entre chez vous et le mariage, à l'aller comme au retour (en plus des trajets du jour J ci-dessus)." })));
       const cols = el("div", { class: "cv-cols" + (filter === "all" ? "" : " one") }); host.append(cols);
       g.forEach(sv => {
         if (filter !== "all" && filter !== sv) return;
@@ -187,7 +187,7 @@
     const typeSel = form.querySelector("[name=type]"), placesLbl = $("#cv-places-l");
     const dep = form.querySelector("[name=depart]"), arr = form.querySelector("[name=arrivee]"), sensSel = form.querySelector("[name=sens]");
     let auto = { d: "", a: "" };
-    const PH = { aller: ["l'église", "le domaine"], retour: ["le domaine", "mon hôtel, Meaux, Paris 12e…"], venir: ["Paris, Toulouse, Lyon…", "Lagny-sur-Marne"], rentrer: ["Lagny-sur-Marne", "Paris, Toulouse, Lyon…"] };
+    const PH = { aller: ["l'église", "le domaine"], retour: ["le domaine", "mon hôtel, Meaux, Paris 12e…"], venir: ["chez moi, Paris, Toulouse…", "le mariage"], rentrer: ["le mariage", "chez moi, Paris, Toulouse…"] };
     const syncSens = () => {
       const d = DEF[sensSel.value]; if (!d) return;
       if (!dep.value || dep.value === auto.d) dep.value = d[0];

@@ -901,7 +901,7 @@ details[open] > :not(summary){animation:unfold .45s ease-out backwards}
       </div>
       <form class="card cv-form" id="cv-form" hidden novalidate>
         <label>Je…<select name="type"><option value="offre">propose des places</option><option value="demande">cherche une place</option></select></label>
-        <label>Trajet<select name="sens"><option value="aller">De l'église au domaine</option><option value="retour">Du domaine à l'hébergement (après la soirée, vers 4 h)</option><option value="both">Les deux trajets</option><option value="venir">Venir au mariage depuis une autre ville</option><option value="rentrer">Repartir vers une autre ville après le mariage</option></select></label>
+        <label>Trajet<select name="sens"><option value="aller">De l'église au domaine</option><option value="retour">Du domaine à l'hébergement (après la soirée, vers 4 h)</option><option value="both">Les deux trajets</option><option value="venir">Me rendre au mariage (depuis chez moi)</option><option value="rentrer">Rentrer chez moi après le mariage</option></select></label>
         <label>Prénom<input name="prenom" maxlength="40" autocomplete="given-name" required></label>
         <label>Je pars de<input name="depart" maxlength="38" placeholder="ex. l'église, Paris 12e, mon hôtel…" required></label>
         <label>Je vais vers<input name="arrivee" maxlength="38" placeholder="ex. le domaine, Meaux, mon hébergement…" required></label>
@@ -918,8 +918,8 @@ details[open] > :not(summary){animation:unfold .45s ease-out backwards}
         <button class="btn small" type="button" data-cv="all" aria-pressed="true">Tous les trajets</button>
         <button class="btn small" type="button" data-cv="aller" aria-pressed="false">De l'église au domaine</button>
         <button class="btn small" type="button" data-cv="retour" aria-pressed="false">Du domaine à l'hébergement</button>
-        <button class="btn small" type="button" data-cv="venir" aria-pressed="false">Venir d'une autre ville</button>
-        <button class="btn small" type="button" data-cv="rentrer" aria-pressed="false">Repartir vers une autre ville</button>
+        <button class="btn small" type="button" data-cv="venir" aria-pressed="false">Se rendre au mariage</button>
+        <button class="btn small" type="button" data-cv="rentrer" aria-pressed="false">Rentrer chez soi</button>
       </div>
       <div id="cv-list"></div>
     </section>
