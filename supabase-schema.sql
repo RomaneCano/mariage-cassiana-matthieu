@@ -73,7 +73,9 @@ insert into songs(position, moment, title, author, audio_url)
 -- Réglages (lien de la cagnotte) : lecture publique, modification par les mariés.
 create table if not exists settings (key text primary key, value text not null default '');
 alter table settings enable row level security;
-create policy settings_read  on settings for select to anon, authenticated using (true);
+-- le public ne lit que les réglages d'affichage ; tout le reste (notes, budget, liens privés…) est réservé aux mariés connectés
+create policy settings_read on settings for select to anon, authenticated
+  using (key in ('photos_public','photos_link','faq_order','faq_edits','cagnotte_url') or is_admin());
 create policy settings_admin on settings for all to authenticated using (is_admin()) with check (is_admin());
 
 -- Droits d'accès
