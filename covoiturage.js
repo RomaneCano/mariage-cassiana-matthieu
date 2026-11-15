@@ -125,17 +125,18 @@
   const isFull = r => r.type === "offre" && Number(r.places) <= 0;
   function renderList() {
     const host = $("#cv-list"); if (!host) return; host.replaceChildren();
-    const shown = list.filter(r => filter === "all" || r.sens === filter || (r.sens === "both" && (filter === "aller" || filter === "retour")));
+    const GRP = { j: ["aller", "retour"], h: ["venir", "rentrer"] }, inG = sv => filter === "all" || filter === sv || (GRP[filter] || []).includes(sv);
+    const shown = list.filter(r => inG(r.sens) || (r.sens === "both" && (inG("aller") || inG("retour"))));
     const open = shown.filter(r => !isFull(r)), full = shown.filter(isFull);
     const groups = [["aller", "retour"], ["venir", "rentrer"]];
     const HEAD = [["Le jour J, sur place", "Entre l'église, le domaine et l'hébergement", "Les petits trajets de la journée et de la fin de soirée."], ["Depuis chez vous", "Pour se rendre au mariage et rentrer chez soi", "Les trajets entre chez vous et le mariage, à l'aller comme au retour."]];
     groups.forEach((g, gi) => {
-      if (filter !== "all" && !g.includes(filter)) return;
+      if (!g.some(inG)) return;
       const blk = el("section", { class: "cv-block b" + gi }, el("p", { class: "cv-eyebrow", text: HEAD[gi][0] }), el("h3", { class: "cv-btitle", text: HEAD[gi][1] }), el("p", { class: "cv-bsub", text: HEAD[gi][2] }));
       host.append(blk);
-      const cols = el("div", { class: "cv-cols" + (filter === "all" ? "" : " one") }); blk.append(cols);
+      const cols = el("div", { class: "cv-cols" + (g.filter(inG).length > 1 ? "" : " one") }); blk.append(cols);
       g.forEach(sv => {
-        if (filter !== "all" && filter !== sv) return;
+        if (!inG(sv)) return;
         const rows = open.filter(r => r.sens === sv || r.sens === "both" && gi === 0);
         const col = el("div", { class: "cv-col" }, el("h3", { class: "cat", text: SENS[sv] }), el("p", { class: "cv-sub", text: SUBS[sv] }));
         if (!rows.length) col.append(el("p", { class: "hint cv-empty", text: "Aucune annonce pour l'instant. Soyez le premier à vous proposer !" }));
@@ -152,9 +153,16 @@
 
   function build() {
     if (panelBuilt) return; panelBuilt = true;
-    document.querySelectorAll("[data-cv]").forEach(b => b.addEventListener("click", () => {
-      filter = b.dataset.cv; document.querySelectorAll("[data-cv]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); renderList();
-    }));
+    const fbox = $("#cv-filter"), sub = $("#cv-sub2");
+    const SUBL = { j: [["j", "Les deux trajets"], ["aller", "De l'église au domaine"], ["retour", "Du domaine à l'hébergement"]], h: [["h", "Les deux trajets"], ["venir", "Se rendre au mariage"], ["rentrer", "Rentrer chez soi"]] };
+    const refreshF = () => {
+      const top = filter === "all" ? "all" : (filter === "j" || filter === "aller" || filter === "retour") ? "j" : "h";
+      fbox.querySelectorAll(".cv-seg [data-cv]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.cv === top)));
+      sub.replaceChildren(); sub.hidden = top === "all";
+      if (top !== "all") SUBL[top].forEach(([v, l]) => sub.append(el("button", { type: "button", "data-cv": v, class: "cv-chip", "aria-pressed": String(v === filter), text: l })));
+    };
+    fbox.addEventListener("click", e => { const b = e.target.closest("[data-cv]"); if (!b) return; filter = b.dataset.cv; refreshF(); renderList(); });
+    refreshF();
     const form = $("#cv-form"), msg = $("#cv-msg"), btns = document.querySelectorAll("[data-cvt]"), typeSel0 = form.querySelector("[name=type]");
     const mark = () => btns.forEach(x => { const on = !form.hidden && typeSel0.value === x.dataset.cvt; x.classList.toggle("solid", on); x.setAttribute("aria-expanded", String(on)); });
     const closeForm = () => { form.hidden = true; mark(); };
