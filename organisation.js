@@ -1318,7 +1318,7 @@ function buildAdminShell() {
     ...[["today", "Aujourd'hui"], ["site", "Le site"], ["org", "Organisation"], ["photos", "Photos"], ["pray", "Prière"]].map(([k, l]) => el("button", { type: "button", "data-main": k, "aria-pressed": "false", text: l, onclick: () => showMain(k) })));
   const sortBtn = el("button", { type: "button", class: "link", id: "tab-sort", "aria-pressed": "false", title: "Changer l'ordre des onglets", text: "⇄ Réorganiser les onglets", onclick: () => { const on = !document.body.classList.contains("sorting"); document.body.classList.toggle("sorting", on); sortBtn.setAttribute("aria-pressed", String(on)); sortBtn.textContent = on ? "✓ Terminer" : "⇄ Réorganiser les onglets"; sortHint.hidden = !on; } });
   const sortHint = el("p", { class: "hint sort-hint", hidden: true, text: "Glissez un onglet à sa nouvelle place, ou utilisez ‹ › sur chaque onglet. L'ordre est enregistré." });
-  const top = el("div", { class: "admin-bar2" }, nav, el("div", { class: "admin-bar-right" }, sortBtn, logout));
+  const top = el("div", { class: "admin-bar2" }, nav, el("div", { class: "admin-bar-right" }, makePrintMenu(), sortBtn, logout));
   const today = el("section", { "data-main-sec": "today" }, el("div", { id: "today-body" }));
   const org = el("section", { "data-main-sec": "org", hidden: true },
     el("div", { class: "admin-tabs", role: "group", "aria-label": "Organisation" },
@@ -1475,24 +1475,19 @@ async function exportXLSX(d) {
     XLSX.writeFile(wb, "mariage-" + d.name + "-" + stamp() + ".xlsx");
   } catch { showToast("Export Excel indisponible (connexion ?). Fichier CSV téléchargé à la place, il s'ouvre aussi dans Excel."); exportCSV(d); }
 }
-function addPrintButtons() {
-  document.querySelectorAll("#panel-connexion").forEach(panel => {   // uniquement l'espace des mariés (affiché seulement dans Organisation, voir le CSS)
-    if (panel.querySelector(":scope > .print-wrap")) return;
-    const menu = el("div", { class: "print-menu", role: "menu", hidden: true });
-    const btn = el("button", { type: "button", class: "print-btn", "aria-label": "Imprimer ou exporter cette page", title: "Imprimer ou exporter", "aria-haspopup": "true" }, icon("Imprimer", 18));
-    const close = () => { menu.hidden = true; };
-    const item = (text, fn) => el("button", { type: "button", role: "menuitem", text, onclick: () => { close(); fn(); } });
-    btn.addEventListener("click", e => {
-      e.stopPropagation(); const open = menu.hidden; document.querySelectorAll(".print-menu").forEach(m => m.hidden = true); if (!open) return;
-      const d = currentExport();
-      menu.replaceChildren(item("🖨  Imprimer ou enregistrer en PDF", () => setTimeout(() => window.print(), 50)), ...(d && d.rows.length ? [el("hr"), item("Exporter en Excel (.xlsx)", () => exportXLSX(d)), item("Exporter en CSV", () => exportCSV(d))] : []));
-      menu.hidden = false;
-    });
-    panel.prepend(el("div", { class: "print-wrap" }, btn, menu));
+function makePrintMenu() {
+  const menu = el("div", { class: "print-menu", role: "menu", hidden: true });
+  const btn = el("button", { type: "button", class: "print-btn", "aria-label": "Imprimer ou exporter cette page", title: "Imprimer ou exporter", "aria-haspopup": "true" }, icon("Imprimer", 18));
+  const item = (text, fn) => el("button", { type: "button", role: "menuitem", text, onclick: () => { menu.hidden = true; fn(); } });
+  btn.addEventListener("click", e => {
+    e.stopPropagation(); const open = menu.hidden; document.querySelectorAll(".print-menu").forEach(m => m.hidden = true); if (!open) return;
+    const d = currentExport();
+    menu.replaceChildren(item("🖨  Imprimer ou enregistrer en PDF", () => setTimeout(() => window.print(), 50)), ...(d && d.rows.length ? [el("hr"), item("Exporter en Excel (.xlsx)", () => exportXLSX(d)), item("Exporter en CSV", () => exportCSV(d))] : []));
+    menu.hidden = false;
   });
+  return el("div", { class: "print-wrap" }, btn, menu);
 }
 document.addEventListener("click", e => { if (!e.target.closest(".print-wrap")) document.querySelectorAll(".print-menu").forEach(m => m.hidden = true); });
-addPrintButtons();
 
 /* avant impression : ouvrir les blocs repliables de la page et remplacer les champs des tableaux par leur texte (tout reste lisible, rien n'est coupé) */
 let _opened = [], _pv = [];
