@@ -7,6 +7,8 @@
 "use strict";
 
 const WEDDING_ISO = "2027-10-09";
+/* version du site affichée dans l'espace des mariés (déduite du numéro ?v= du script) : permet de vérifier qu'on a bien la dernière mise à jour */
+const BUILD_LABEL = (() => { try { const m = /v=(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})/.exec((document.currentScript && document.currentScript.src) || ""); return m ? "Version du " + m[3] + "/" + m[2] + " à " + m[4] + "h" + m[5] : ""; } catch { return ""; } })();
 const dayMs = 86400000;
 const isoOf = d => d.toISOString().slice(0, 10);
 const addDays = (iso, n) => isoOf(new Date(Date.parse(iso + "T12:00:00Z") + n * dayMs));
@@ -1402,7 +1404,7 @@ function buildAdminShell() {
     ...[["today", "Aujourd'hui"], ["site", "Le site"], ["org", "Organisation"], ["photos", "Photos"], ["pray", "Prière"]].map(([k, l]) => el("button", { type: "button", "data-main": k, "aria-pressed": "false", text: l, onclick: () => showMain(k) })));
   const sortBtn = el("button", { type: "button", class: "link", id: "tab-sort", "aria-pressed": "false", title: "Changer l'ordre des onglets", text: "⇄ Réorganiser les onglets", onclick: () => { const on = !document.body.classList.contains("sorting"); document.body.classList.toggle("sorting", on); sortBtn.setAttribute("aria-pressed", String(on)); sortBtn.textContent = on ? "✓ Terminer" : "⇄ Réorganiser les onglets"; sortHint.hidden = !on; } });
   const sortHint = el("p", { class: "hint sort-hint", hidden: true, text: "Glissez un onglet à sa nouvelle place, ou utilisez ‹ › sur chaque onglet. L'ordre est enregistré." });
-  const top = el("div", { class: "admin-bar2" }, nav, el("div", { class: "admin-bar-right" }, makePrintMenu(), sortBtn, logout));
+  const top = el("div", { class: "admin-bar2" }, nav, el("div", { class: "admin-bar-right" }, BUILD_LABEL ? el("small", { class: "build-label", title: "Si ce numéro ne change pas après une mise à jour, faites Ctrl+F5 pour recharger la page", text: BUILD_LABEL }) : "", makePrintMenu(), sortBtn, logout));
   const today = el("section", { "data-main-sec": "today" }, el("div", { id: "today-body" }));
   const org = el("section", { "data-main-sec": "org", hidden: true },
     el("div", { class: "admin-tabs", role: "group", "aria-label": "Organisation" },
