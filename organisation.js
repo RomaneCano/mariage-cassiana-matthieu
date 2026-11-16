@@ -303,6 +303,21 @@ const orgErr = e => "Non enregistré : " + explainErr(e) + (/table|relation|sche
 
 const orgOpen = new Set();
 const statusOf = r => r.status || (r.done ? "Terminé" : "À faire");
+/* Nom affiché d'un invité (celui qu'on retrouve dans le plan de tables) */
+const guestDisplay = r => ((r.prenom || "") + " " + (r.nom || "")).trim();
+/* Quand on corrige le nom ou le prénom d'un invité, la personne déjà placée dans le plan de tables est renommée (au lieu de réapparaître « à placer » sous son nouveau nom) */
+async function renameSeated(oldName, newName, othersWithSame) {
+  if (!oldName || !newName || norm(oldName) === norm(newName)) return 0;
+  const tabs = await orgStore.list("org_tables"), key0 = norm(oldName), lines = t => String(t.guests || "").split("\n");
+  let toRename = tabs.reduce((n, t) => n + lines(t).filter(x => norm(x.trim()) === key0).length, 0) - (othersWithSame || 0), renamed = 0;
+  for (const t of tabs) {
+    if (toRename <= 0) break;
+    const arr = lines(t); let changed = false;
+    for (let i = 0; i < arr.length && toRename > 0; i++) if (norm(arr[i].trim()) === key0) { arr[i] = newName; toRename--; renamed++; changed = true; }
+    if (changed) await orgStore.update("org_tables", t.id, { guests: arr.join("\n") });
+  }
+  return renamed;
+}
 const orgState = { key: "tasks", filter: { status: "todo", cat: "", gp: "", gq: "", gsort: "list", envoi: "" } };
 
 function sortRows(key, rows) {
@@ -1288,7 +1303,9 @@ async function renderOrgInner(key) {
       if (key === "guests" && f.k === "allergie") { const mark = () => inp.classList.toggle("has-alg", !!inp.value.trim()); mark(); inp.addEventListener("input", mark); }
       inp.addEventListener("change", async () => {
         const v = readInput(f, inp);
-        try { const patch = { [f.k]: v }; if (key === "tasks" && f.k === "done") patch.status = v ? "Terminé" : (statusOf(r) === "Terminé" ? "À faire" : statusOf(r)); if (key === "tasks" && f.k === "status") patch.done = v === "Terminé"; await orgStore.update(M.table, r.id, patch); Object.assign(r, patch); if (key === "tasks" || key === "budget" || key === "seating" || key === "timeline" || (key === "guests" && (f.k === "presence" || f.k === "allergie" || f.k === "envoi" || f.k === "age"))) renderOrg(key); else showToast("Enregistré"); }
+        try { const patch = { [f.k]: v }; if (key === "tasks" && f.k === "done") patch.status = v ? "Terminé" : (statusOf(r) === "Terminé" ? "À faire" : statusOf(r)); if (key === "tasks" && f.k === "status") patch.done = v === "Terminé"; const oldGuestName = key === "guests" ? guestDisplay(r) : "";
+          await orgStore.update(M.table, r.id, patch); Object.assign(r, patch);
+          if (key === "guests" && (f.k === "nom" || f.k === "prenom")) { const nb = await renameSeated(oldGuestName, guestDisplay(r), rows.filter(x => x.id !== r.id && guestDisplay(x) === oldGuestName).length); if (nb) showToast("Nom mis à jour aussi dans le plan de tables"); } if (key === "tasks" || key === "budget" || key === "seating" || key === "timeline" || (key === "guests" && (f.k === "presence" || f.k === "allergie" || f.k === "envoi" || f.k === "age"))) renderOrg(key); else showToast("Enregistré"); }
         catch (e) { showToast(orgErr(e)); }
       });
       tr.append(el("td", { "data-label": f.l }, inp));
