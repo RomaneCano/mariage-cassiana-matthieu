@@ -137,9 +137,9 @@ begin
   if gid is not null then
     update public.org_guests set presence = p_pres, responded_at = now(), allergie = nullif(p_al, '') where id = gid;
   else
-    insert into public.org_guests (nom, prenom, presence, allergie, a_verifier, notes, responded_at)
+    insert into public.org_guests (nom, prenom, presence, allergie, a_verifier, notes, responded_at, position)
     values (left(trim(coalesce(p_nom,'')), 80), left(trim(coalesce(p_prenom,'')), 80), p_pres, nullif(p_al, ''), true,
-            case when p_result = 'ajoute_ambigu' then 'Réponse du site : plusieurs invités portent ce nom, à rapprocher à la main' else 'Réponse du site : personne absente de la liste d''invités' end, now());
+            case when p_result = 'ajoute_ambigu' then 'Réponse du site : plusieurs invités portent ce nom, à rapprocher à la main' else 'Réponse du site : personne absente de la liste d''invités' end, now(), (select coalesce(max(position), 0) + 1 from public.org_guests));
   end if;
   return p_result;
 end $$;
@@ -216,6 +216,14 @@ revoke all on public.org_deco from anon;
 -- ============================================================
 alter table public.org_deco add column if not exists paid numeric;
 alter table public.org_tasks add column if not exists status text;
+alter table public.org_tables add column if not exists ends int not null default 0;
+alter table public.org_guests add column if not exists famille text;
+alter table public.org_guests add column if not exists enfant_de text;
+alter table public.org_deco add column if not exists for_sale boolean not null default false;
+alter table public.org_deco add column if not exists sale_price numeric;
+alter table public.org_deco add column if not exists sold boolean not null default false;
+alter table public.org_deco add column if not exists sold_price numeric;
+alter table public.org_deco add column if not exists sold_to text;
 alter table public.org_games add column if not exists moment text;
 alter table public.org_games add column if not exists start_time text;
 alter table public.org_games add column if not exists duration int;

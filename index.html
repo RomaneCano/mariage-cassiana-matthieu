@@ -325,6 +325,8 @@ h3.cat .ico{vertical-align:-6px;margin-right:2px}
 .av.marie i{background:linear-gradient(135deg,#caa94f,#8a6a1f);box-shadow:0 0 0 2px #e4d08c,0 0 0 4px rgba(217,194,122,.35)}
 .av.marie span{font-weight:700;color:var(--olive)}
 .seat-table.rect .t-disc{width:calc(100% - 64px);height:96px;border-radius:16px}
+.seat-table.rect.ends .t-disc{width:calc(100% - 204px)}
+.seat-table.vert.ends .t-disc{width:118px;height:calc(100% - 204px)}
 .seat-table.vert .t-disc{width:118px;height:calc(100% - 64px);padding:6px}
 .seat.top .av span{order:-1}
 .t-disc b{font-size:.95rem}.seat-table.full .t-disc{border-color:var(--alert)}
@@ -502,6 +504,12 @@ details.org-card>summary{position:relative}details.org-card>summary>.sel-box{pos
 .org-card-body textarea{min-height:96px;resize:vertical;line-height:1.45;padding:10px 12px}
 .org-card-body textarea[aria-label="Notes"],.org-card-body textarea[aria-label="Règles / déroulé"]{min-height:130px}
 .org-add textarea{min-height:90px;resize:vertical}
+.sale-board{margin:0 0 14px}.sale-sum{margin:6px 0 4px;font-size:1rem}
+.sale-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto auto;gap:6px 14px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--olive-soft)}
+.sale-row small{opacity:.75}.sale-in{display:grid;gap:2px;font-size:.74rem;font-weight:700}.sale-in input{min-height:36px;max-width:160px}
+.sale-act{display:flex;gap:6px;flex-wrap:wrap}.sale-sold{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 0}.sale-sold input{min-height:38px;min-width:160px}
+.sale-row.sold{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto auto}
+@media(max-width:700px){.sale-row,.sale-row.sold{grid-template-columns:1fr}}
 .gb{margin:0 0 14px}.gb-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:8px}
 .gb-col{background:var(--paper-2);border-radius:12px;padding:10px 12px;display:grid;gap:8px;align-content:start}
 .gb-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-bottom:1px solid var(--olive-soft);padding-bottom:6px}.gb-head small{opacity:.7}
@@ -512,6 +520,13 @@ details.org-card>summary{position:relative}details.org-card>summary>.sel-box{pos
 .gb-star{border:0;background:transparent;font-size:1.15rem;line-height:1;color:var(--olive);cursor:pointer;padding:2px 4px;min-height:0}.gb-star.on{color:#c58a1a}.gb-star:hover{transform:scale(1.15)}
 .gb-sub{margin:14px 0 6px;font-size:.95rem}.gb-ideas{display:flex;flex-wrap:wrap;gap:6px}
 .gb-idea{display:inline-flex;align-items:center;gap:2px;background:var(--paper-2);border:1px dashed var(--olive-soft);border-radius:999px;padding:2px 12px 2px 4px;font-size:.9rem}
+/* mode d'envoi des invitations : mêmes couleurs que les puces du haut */
+.org-table.guests select[data-envoi="Courrier"],.org-table.guests td.sendcell[data-envoi="Courrier"]{background:#ebe0cd;color:#5e4a2c;border-color:#b79b6e}
+.org-table.guests select[data-envoi="Lien"],.org-table.guests td.sendcell[data-envoi="Lien"]{background:#d6e6e2;color:#2c5a52;border-color:#6fa399}
+.org-table.guests select[data-envoi="Remise en main"],.org-table.guests td.sendcell[data-envoi="Remise en main"]{background:#e6dcec;color:#54386a;border-color:#a58bb8}
+.org-table.guests select[data-envoi]{font-weight:700}
+.org-table.guests td.sendcell[data-envoi]{border-bottom-color:transparent}
+.sum-chip.clickable{cursor:pointer;transition:transform .12s}.sum-chip.clickable:hover{transform:translateY(-2px)}.sum-chip.clickable.on{outline:3px solid var(--olive)}
 .sum-chip .sum-sub{display:block;font-size:.72rem;opacity:.85;margin-top:2px;font-weight:400}
 .deco-env{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 12px;padding:10px 14px}.deco-env-in{display:inline-flex;align-items:center;gap:6px}.deco-env-in input{width:140px;min-height:40px}
 .deco-link{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 12px;padding:10px 14px;border-style:dashed}.deco-link .sm{opacity:.75;font-size:.8rem}.deco-link .btn{margin-left:auto}
@@ -2338,7 +2353,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611150313"></script>
-<script src="covoiturage.js?v=202611150313"></script>
+<script src="organisation.js?v=202611161219"></script>
+<script src="covoiturage.js?v=202611161219"></script>
 </body>
 </html>

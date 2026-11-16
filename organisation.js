@@ -104,6 +104,8 @@ const ORG = {
     { k: "name", l: "Article", t: "text", req: true, wide: true, ph: "ex. miroirs, bougies, menus…" },
     { k: "link", l: "Lien", t: "text", wide: true, ph: "https://… (page du produit)" },
     { k: "unit", l: "Prix à l'unité (€)", t: "number" }, { k: "qty", l: "Nombre total", t: "number" }, { k: "paid", l: "Payé (€)", t: "number" },
+    { k: "for_sale", l: "À revendre après le mariage", t: "check" }, { k: "sale_price", l: "Prix de revente souhaité, au total (€)", t: "number" },
+    { k: "sold", l: "Vendu", t: "check" }, { k: "sold_price", l: "Vendu pour (€)", t: "number" }, { k: "sold_to", l: "Vendu à / où", t: "text", ph: "ex. Leboncoin, Vinted, une amie…" },
     { k: "notes", l: "Notes", t: "text" }] },
   vendors: { table: "org_vendors", label: "Prestataires", order: "role", defaults: { status: "À contacter", role: "Autre" }, fields: [
     { k: "name", l: "Prestataire", t: "text", req: true, wide: true }, { k: "role", l: "Catégorie", t: "select", o: ROLES, newable: true },
@@ -112,7 +114,7 @@ const ORG = {
     { k: "contact", l: "Contact", t: "text" }, { k: "phone", l: "Téléphone", t: "text" }, { k: "email", l: "E-mail", t: "text" },
     { k: "availability", l: "Disponibilité", t: "text" }, { k: "deposit", l: "Acompte (€)", t: "number" }, { k: "notes", l: "Notes", t: "long", wide: true }] },
   guests: { table: "org_guests", label: "Invités", order: "position", defaults: { presence: "ATT" }, fields: [
-    { k: "nom", l: "Nom", t: "long" }, { k: "prenom", l: "Prénom", t: "long", req: true }, { k: "tel", l: "Téléphone", t: "text" }, { k: "email", l: "E-mail", t: "text" },
+    { k: "nom", l: "Nom de famille", t: "long" }, { k: "prenom", l: "Prénom", t: "long", req: true }, { k: "famille", l: "Famille / groupe", t: "text", ph: "ex. Famille Cano, amis de Matthieu" }, { k: "enfant_de", l: "Enfant de", t: "text", ph: "ex. fils de Julie et Paul" }, { k: "tel", l: "Téléphone", t: "text" }, { k: "email", l: "E-mail", t: "text" },
     { k: "presence", l: "Présence", t: "select", o: ["ATT", "OUI", "NON"], labels: { ATT: "En attente", OUI: "Présent(e)", NON: "Absent(e)" } },
     { k: "allergie", l: "Allergie", t: "long" }, { k: "adresse", l: "Adresse", t: "long" },
     { k: "envoi", l: "Invitation", t: "select", o: ["Courrier", "Lien", "Remise en main"] }, { k: "age", l: "Âge", t: "text" }, { k: "notes", l: "Notes", t: "long" }, { k: "a_verifier", l: "À vérifier", t: "check" }] },
@@ -123,7 +125,7 @@ const ORG = {
     { k: "material", l: "Matériel", t: "text", wide: true }, { k: "ready", l: "Matériel prêt", t: "check" }, { k: "price", l: "Prix (€)", t: "number" },
     { k: "prize", l: "Lots à gagner", t: "text" }, { k: "rules", l: "Règles / déroulé", t: "long", wide: true }, { k: "notes", l: "Notes", t: "long", wide: true }] },
   seating: { table: "org_tables", label: "Plan de tables", order: "position", defaults: { capacity: 10, shape: "Ronde" }, fields: [
-    { k: "name", l: "Nom de la table", t: "text", req: true, ph: "ex. Table 1, Famille Martin, Amis…" }, { k: "shape", l: "Forme", t: "select", o: ["Ronde", "Rectangulaire"] }, { k: "capacity", l: "Nombre de places", t: "number" },
+    { k: "name", l: "Nom de la table", t: "text", req: true, ph: "ex. Table 1, Famille Martin, Amis…" }, { k: "shape", l: "Forme", t: "select", o: ["Ronde", "Rectangulaire"] }, { k: "capacity", l: "Nombre de places", t: "number" }, { k: "ends", l: "Places en bout de table (rectangulaire)", t: "select", o: ["0", "1", "2"], labels: { "0": "Aucune", "1": "Un bout", "2": "Les deux bouts" } },
     { k: "guests", l: "Invités", t: "long", wide: true }, { k: "notes", l: "Notes", t: "text" }] },
   timeline: { table: "org_timeline", label: "Jour J", order: "time", defaults: {}, fields: [
     { k: "time", l: "Début", t: "time", req: true }, { k: "end_time", l: "Fin", t: "time" }, { k: "title", l: "Étape", t: "text", req: true, wide: true },
@@ -282,11 +284,15 @@ const orgErr = e => "Non enregistré : " + explainErr(e) + (/table|relation|sche
 
 const orgOpen = new Set();
 const statusOf = r => r.status || (r.done ? "Terminé" : "À faire");
-const orgState = { key: "tasks", filter: { status: "todo", cat: "", gp: "", gq: "" } };
+const orgState = { key: "tasks", filter: { status: "todo", cat: "", gp: "", gq: "", gsort: "list", envoi: "" } };
 
 function sortRows(key, rows) {
   const by = (f) => rows.slice().sort(f);
-  if (key === "guests") { const k = r => String(r.nom || r.prenom || "").trim(), cmp = (x, y) => String(x).localeCompare(String(y), "fr", { sensitivity: "base", numeric: true }); return by((a, b) => cmp(k(a), k(b)) || cmp(a.prenom || "", b.prenom || "")); }
+  if (key === "guests") {
+    const k = r => String(r.nom || r.prenom || "").trim(), cmp = (x, y) => String(x).localeCompare(String(y), "fr", { sensitivity: "base", numeric: true });
+    if (orgState.filter.gsort === "az") return by((a, b) => cmp(k(a), k(b)) || cmp(a.prenom || "", b.prenom || ""));
+    return by((a, b) => (Number(a.position) || 0) - (Number(b.position) || 0) || String(a.created_at || "").localeCompare(String(b.created_at || "")));   // ordre de la liste d'origine
+  }
   if (key === "tasks") return by((a, b) => (a.done - b.done) || String(a.due || "9999").localeCompare(String(b.due || "9999")) || String(a.title).localeCompare(String(b.title)));
   if (key === "budget") return by((a, b) => CATS_BUDGET.indexOf(a.cat) - CATS_BUDGET.indexOf(b.cat) || String(a.item).localeCompare(String(b.item)));
   if (key === "vendors") return by((a, b) => { const ia = ROLES.indexOf(a.role), ib = ROLES.indexOf(b.role); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || String(a.created_at || "").localeCompare(String(b.created_at || "")); });
@@ -404,6 +410,8 @@ function orgSummary(key, rows, deco) {
     const paidD = rows.reduce((a, r) => a + (Number(r.paid) || 0), 0), resteD = total - paidD;
     if (env > 0) { chip("budget global déco + papeterie", eur2(env), "c-link"); chip(env - total >= 0 ? "encore disponible" : "dépassement", eur2(Math.abs(env - total)), env - total >= 0 ? "good" : "warn"); }
     chip("références", String(rows.length), "c-all"); chip("articles au total", String(articles), "c-kid"); chip("dépenses prévues", eur2(total), "c-alg");
+    const fs = rows.filter(r => r.for_sale && !r.sold), sd = rows.filter(r => r.sold);
+    if (fs.length || sd.length) { chip("à revendre", fs.length + " · espéré " + eur2(fs.reduce((a, r) => a + (Number(r.sale_price) || 0), 0)), "c-hand"); if (sd.length) chip("déjà vendu", eur2(sd.reduce((a, r) => a + (Number(r.sold_price) || 0), 0)), "good"); }
     chip("payé", eur2(paidD), total > 0 && resteD <= 0.005 ? "good" : "c-ok"); if (paidD > 0) chip("reste à payer", eur2(Math.max(0, resteD)), resteD > 0.005 ? "warn" : "good");   // masqué tant que rien n'est payé (il répéterait « dépenses prévues »)
   } else if (key === "budget") {
     const s = f => rows.reduce((a, r) => a + (Number(r[f]) || 0), 0), dT = deco ? deco.total : 0, dP = deco ? deco.paid : 0;
@@ -419,7 +427,9 @@ function orgSummary(key, rows, deco) {
     const c = f => rows.filter(f).length;
     chip("invités", String(rows.length), "c-all"); if (c(r => r.a_verifier)) chip("à vérifier (réponses du site)", String(c(r => r.a_verifier)), "warn"); chip("présents", String(c(r => r.presence === "OUI")), "c-ok"); chip("absents", String(c(r => r.presence === "NON")), "c-no");
     chip("en attente", String(c(r => !r.presence || r.presence === "ATT")), "c-wait"); chip("allergies", String(c(r => r.allergie && r.allergie.trim())), "c-alg");
-    chip("enfants (0 à 12 ans)", String(c(r => { const n = parseInt(String(r.age || "").replace(/[^\d]/g, ""), 10); return !isNaN(n) && n <= 12; })), "c-kid"); const prog = e => c(r => r.envoi === e && r.invite_sent_at) + " / " + c(r => r.envoi === e); chip("courriers envoyés", prog("Courrier"), "c-post"); chip("remises en main effectuées", prog("Remise en main"), "c-hand"); chip("liens envoyés", prog("Lien"), "c-link");
+    chip("enfants (0 à 12 ans)", String(c(r => { const n = parseInt(String(r.age || "").replace(/[^\d]/g, ""), 10); return !isNaN(n) && n <= 12; })), "c-kid"); const prog = e => c(r => r.envoi === e && r.invite_sent_at) + " / " + c(r => r.envoi === e);
+    const envChip = (label, mode, cls) => { chip(label, prog(mode), cls + " clickable" + (orgState.filter.envoi === mode ? " on" : "")); const el0 = box.lastChild; el0.title = "Cliquer pour n'afficher que ces invités (re-cliquer pour tout voir)"; el0.addEventListener("click", () => { orgState.filter.envoi = orgState.filter.envoi === mode ? "" : mode; renderOrg("guests"); }); };
+    envChip("courriers envoyés", "Courrier", "c-post"); envChip("remises en main effectuées", "Remise en main", "c-hand"); envChip("liens envoyés", "Lien", "c-link");
   } else if (key === "games") {
     const ch = rows.filter(r => r.chosen), mins = ch.reduce((a, r) => a + (Number(r.duration) || 0), 0), hmin = m => m >= 60 ? Math.floor(m / 60) + " h" + (m % 60 ? " " + String(m % 60).padStart(2, "0") : "") : m + " min";
     chip("idées", String(rows.length), "c-all"); chip("retenues", String(ch.length), "c-ok"); chip("matériel prêt", ch.filter(r => r.ready).length + " / " + ch.length, ch.length && ch.every(r => r.ready) ? "good" : "c-wait");
@@ -593,16 +603,22 @@ async function seatPlan(rows) {
       }
       zone(t, r.id, null); plan.append(t); tabs.push({ r, t, W, H }); return;
     }
-    const g = rawSeats(r), cap = Number(r.capacity) || 0, n = Math.max(cap, g.length), rect = r.shape === "Rectangulaire", perSide = Math.ceil(n / 2), R = Math.max(96, Math.ceil(n * 64 / (2 * Math.PI))), rot = rect ? ((Number(rotMap[r.id]) || 0) % 360 + 360) % 360 : 0, vert = rot % 180 === 90, W0 = rect ? Math.max(336, perSide * 66 + 84) : Math.max(280, 2 * R + 100), H0 = rect ? 232 : Math.max(280, 2 * R + 100), W = vert ? H0 : W0, H = vert ? W0 : H0, count = g.filter(Boolean).length;
+    const g = rawSeats(r), cap = Number(r.capacity) || 0, n = Math.max(cap, g.length), rect = r.shape === "Rectangulaire", ends = rect ? Math.min(2, Math.max(0, Number(r.ends) || 0), n) : 0, sidesN = n - ends, perSide = Math.ceil(sidesN / 2), R = Math.max(96, Math.ceil(n * 64 / (2 * Math.PI))), rot = rect ? ((Number(rotMap[r.id]) || 0) % 360 + 360) % 360 : 0, vert = rot % 180 === 90, E = ends ? 140 : 0, W0 = rect ? Math.max(336, perSide * 66 + 84) + E : Math.max(280, 2 * R + 100), H0 = rect ? 232 : Math.max(280, 2 * R + 100), W = vert ? H0 : W0, H = vert ? W0 : H0, count = g.filter(Boolean).length;
     g.filter(Boolean).forEach(x => placed.add(norm(x)));
-    const t = el("div", { class: "seat-table" + (rect ? " rect" : "") + (vert ? " vert" : "") + (count > cap && cap ? " full" : ""), style: "width:" + W + "px;height:" + H + "px" },
+    const t = el("div", { class: "seat-table" + (rect ? " rect" : "") + (ends ? " ends" : "") + (vert ? " vert" : "") + (count > cap && cap ? " full" : ""), style: "width:" + W + "px;height:" + H + "px" },
       el("div", { class: "t-disc" }, el("b", { text: r.name }), el("span", { text: count + " / " + (cap || "?") }), addBadge(r)));
     for (let i = 0; i < n; i++) {
       let x, y, topRow = false;
       if (rect) {
-        const top = Math.ceil(n / 2), bot = n - top, onTop = i < top, k = onTop ? i : i - top, cnt = onTop ? top : bot, sp = Math.min(66, (W0 - 84) / Math.max(1, cnt));
-        const dx = (onTop ? (k - (cnt - 1) / 2) : ((cnt - 1) / 2 - k)) * sp, dy = onTop ? -62 : 62, th = rot * Math.PI / 180;
-        x = W / 2 + dx * Math.cos(th) - dy * Math.sin(th); y = H / 2 + dx * Math.sin(th) + dy * Math.cos(th); topRow = rot === 0 ? onTop : rot === 180 ? !onTop : false;
+        const th = rot * Math.PI / 180;
+        if (i >= sidesN) {   // place en bout de table : au milieu d'un des deux petits côtés (la 1re à droite, la 2e à gauche)
+          const dx = (i - sidesN === 0 ? 1 : -1) * (W0 / 2 - 64), dy = 0;
+          x = W / 2 + dx * Math.cos(th) - dy * Math.sin(th); y = H / 2 + dx * Math.sin(th) + dy * Math.cos(th);
+        } else {
+          const top = Math.ceil(sidesN / 2), bot = sidesN - top, onTop = i < top, k = onTop ? i : i - top, cnt = onTop ? top : bot, sp = Math.min(66, (W0 - E - 84) / Math.max(1, cnt));
+          const dx = (onTop ? (k - (cnt - 1) / 2) : ((cnt - 1) / 2 - k)) * sp, dy = onTop ? -62 : 62;
+          x = W / 2 + dx * Math.cos(th) - dy * Math.sin(th); y = H / 2 + dx * Math.sin(th) + dy * Math.cos(th); topRow = rot === 0 ? onTop : rot === 180 ? !onTop : false;
+        }
       } else { const ang = -Math.PI / 2 + i * 2 * Math.PI / n; x = W / 2 + R * Math.cos(ang); y = H / 2 + R * Math.sin(ang); }
       const seat = el("div", { class: "seat" + (topRow ? " top" : ""), style: "left:" + x + "px;top:" + y + "px" });
       if (g[i]) seat.append(avatar(g[i], r.id, cap && i >= cap, i)); else seat.append(emptySeat(r, i));
@@ -721,6 +737,36 @@ async function renderOrg(key) {
 }
 const getDecoBudget = async () => { try { return Number(String((await store.getSetting("deco_budget")) || "").replace(",", ".")) || 0; } catch { return 0; } };
 async function decoStats() { try { const l = await orgStore.list("org_deco"), env = await getDecoBudget(), items = l.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0); return { items, env, total: env > 0 ? Math.max(env, items) : items, paid: l.reduce((a, r) => a + (Number(r.paid) || 0), 0), count: l.length }; } catch { return null; } }
+function saleBoard(rows) {
+  const spent = rows.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0);
+  const sale = rows.filter(r => r.for_sale && !r.sold), sold = rows.filter(r => r.sold), rest = rows.filter(r => !r.for_sale && !r.sold);
+  const expected = sale.reduce((a, r) => a + (Number(r.sale_price) || 0), 0), got = sold.reduce((a, r) => a + (Number(r.sold_price) || 0), 0);
+  const upd = async (r, patch) => { try { await orgStore.update("org_deco", r.id, patch); renderOrg("deco"); } catch (e) { showToast(orgErr(e)); } };
+  const box = el("section", { class: "card sale-board" }, el("div", { class: "h-row" }, el("h3", { text: "À vendre après le mariage" }),
+    infoTip("Choisissez ce que vous souhaitez revendre ensuite (décoration, papeterie…). Notez le prix espéré ; une fois vendu, le prix obtenu et l'acheteur. Vous voyez ainsi ce que vous récupérez, même si cela ne couvre pas la totalité.")));
+  box.append(el("p", { class: "sale-sum" }, el("b", { text: eur2(got) }), " récupérés" + (spent > 0 ? " sur " + eur2(spent) + " dépensés (" + Math.round(got / spent * 100) + " %)" : ""), expected > 0 ? " · " : "", expected > 0 ? el("span", { text: eur2(expected) + " encore espérés" }) : ""));
+  const num = (v, ph, fn) => { const i = el("input", { type: "number", min: "0", step: "any", inputmode: "decimal", placeholder: ph, "aria-label": ph }); i.value = v == null ? "" : v; i.addEventListener("change", () => fn(i.value === "" ? null : Number(i.value))); return i; };
+  box.append(el("h4", { class: "gb-sub", text: "En vente (" + sale.length + ")" }));
+  if (!sale.length) box.append(el("p", { class: "hint", text: "Rien en vente pour l'instant. Choisissez des articles ci-dessous." }));
+  sale.forEach(r => {
+    const f = el("form", { class: "sale-sold", hidden: true, novalidate: true }), pi = el("input", { type: "number", min: "0", step: "any", inputmode: "decimal", placeholder: "Vendu pour (€)", "aria-label": "Vendu pour (€)" }), bi = el("input", { type: "text", placeholder: "Vendu à / où (Leboncoin, Vinted…)", "aria-label": "Vendu à / où" });
+    pi.value = r.sale_price == null ? "" : r.sale_price;
+    f.append(pi, bi, el("button", { type: "submit", class: "btn small solid", text: "Enregistrer la vente" }), el("button", { type: "button", class: "btn small", text: "Annuler", onclick: () => { f.hidden = true; } }));
+    f.addEventListener("submit", e => { e.preventDefault(); upd(r, { sold: true, sold_price: pi.value === "" ? 0 : Number(pi.value), sold_to: bi.value.trim() || null }); });
+    box.append(el("div", { class: "sale-row" },
+      el("b", { text: r.name }), el("small", { text: (r.qty || 1) + " × · acheté " + eur2((Number(r.unit) || 0) * (Number(r.qty) || 0)) }),
+      el("label", { class: "sale-in" }, el("span", { text: "Prix espéré (€)" }), num(r.sale_price, "Prix espéré", v => upd(r, { sale_price: v }))),
+      el("div", { class: "sale-act" }, el("button", { type: "button", class: "btn small solid", text: "✓ Vendu", onclick: () => { f.hidden = !f.hidden; if (!f.hidden) pi.focus(); } }), el("button", { type: "button", class: "btn small", text: "Retirer", title: "Ne plus revendre cet article", onclick: () => upd(r, { for_sale: false }) })), f));
+  });
+  if (sold.length) {
+    box.append(el("h4", { class: "gb-sub", text: "Vendus (" + sold.length + ")" }));
+    sold.forEach(r => box.append(el("div", { class: "sale-row sold" }, el("b", { text: r.name }), el("small", { text: [r.sold_to ? "à " + r.sold_to : "", "acheté " + eur2((Number(r.unit) || 0) * (Number(r.qty) || 0))].filter(Boolean).join(" · ") }), el("span", { class: "st-badge ok", text: "Vendu " + eur2(r.sold_price || 0) }), el("button", { type: "button", class: "btn small", text: "Annuler la vente", onclick: () => upd(r, { sold: false, sold_price: null, sold_to: null }) }))));
+  }
+  if (rest.length) {
+    box.append(el("h4", { class: "gb-sub", text: "À décider (" + rest.length + ")" }), el("div", { class: "gb-ideas" }, ...rest.map(r => el("span", { class: "gb-idea" }, el("button", { type: "button", class: "gb-star", title: "Mettre à revendre", "aria-label": "Mettre " + r.name + " à revendre", text: "＋", onclick: () => upd(r, { for_sale: true }) }), r.name))));
+  }
+  return box;
+}
 function gamesBoard(rows) {
   const hm = t => String(t || "").slice(0, 5).replace(":", "h"), ch = rows.filter(r => r.chosen), idea = rows.filter(r => !r.chosen);
   const box = el("section", { class: "card gb" }, el("h3", { text: "Programme des jeux" }));
@@ -788,7 +834,7 @@ async function renderOrgInner(key) {
     const bi = el("input", { type: "number", min: "0", step: "any", inputmode: "decimal", "aria-label": "Budget global décoration et papeterie (€)", placeholder: "ex. 700" }); bi.value = decoS.env || "";
     const bm = el("span", { class: "hint" });
     bi.addEventListener("change", async () => { const v = Number(String(bi.value).replace(",", ".")) || 0; try { await store.setSetting("deco_budget", v > 0 ? String(v) : ""); showToast("Budget global enregistré"); renderOrg("deco"); } catch (e) { showToast(orgErr(e)); } });
-    host.append(el("div", { class: "card deco-env" }, el("div", { class: "h-row" }, el("b", { text: "Budget global décoration et papeterie" }), infoTip("C'est l'enveloppe que vous prévoyez pour toute la décoration et la papeterie, sans détailler. Elle est comptée dans le budget global. Les articles ci-dessous servent à suivre ce que vous dépensez réellement dessus (si vous dépassez l'enveloppe, c'est le total des articles qui est compté).")), el("label", { class: "deco-env-in" }, bi, el("span", { text: "€" })), bm));
+    sumBox.after(el("div", { class: "card deco-env" }, el("div", { class: "h-row" }, el("b", { text: "Budget global décoration et papeterie" }), infoTip("C'est l'enveloppe que vous prévoyez pour toute la décoration et la papeterie, sans détailler. Elle est comptée dans le budget global. Les articles ci-dessous servent à suivre ce que vous dépensez réellement dessus (si vous dépassez l'enveloppe, c'est le total des articles qui est compté).")), el("label", { class: "deco-env-in" }, bi, el("span", { text: "€" })), bm));
   }
 
   // barre d'outils : filtres (tâches) et modèle
@@ -802,10 +848,12 @@ async function renderOrgInner(key) {
   let guestFilter = () => {};
   if (key === "guests") {
     const gp = el("select", { "aria-label": "Présence" }, ...[["", "Tous les invités"], ["ATT", "En attente"], ["OUI", "Présents"], ["NON", "Absents"], ["ALL", "Avec allergie"], ["CHK", "À vérifier (réponses du site)"]].map(([v, t]) => el("option", { value: v, text: t }))); gp.value = orgState.filter.gp;
+    const gs = el("select", { "aria-label": "Ordre de la liste", title: "Ordre d'affichage des invités" }, el("option", { value: "list", text: "Ordre de ma liste (Excel)" }), el("option", { value: "az", text: "Ordre alphabétique" })); gs.value = orgState.filter.gsort || "list";
+    gs.addEventListener("change", () => { orgState.filter.gsort = gs.value; renderOrg("guests"); });
     const gq = el("input", { type: "search", placeholder: "Rechercher un invité…", "aria-label": "Rechercher un invité", style: "max-width:260px;min-height:38px;padding:4px 10px;font-size:var(--fs-small)" }); gq.value = orgState.filter.gq;
-    guestFilter = () => { orgState.filter.gp = gp.value; orgState.filter.gq = gq.value; const q = norm(gq.value); document.querySelectorAll("#org-body tr[data-q]").forEach(tr => { const okP = !gp.value || (gp.value === "ALL" ? tr.dataset.a === "1" : gp.value === "CHK" ? tr.dataset.c === "1" : tr.dataset.p === gp.value), okQ = !q || tr.dataset.q.includes(q); tr.hidden = !(okP && okQ); }); };
+    guestFilter = () => { orgState.filter.gp = gp.value; orgState.filter.gq = gq.value; const q = norm(gq.value); document.querySelectorAll("#org-body tr[data-q]").forEach(tr => { const okP = !gp.value || (gp.value === "ALL" ? tr.dataset.a === "1" : gp.value === "CHK" ? tr.dataset.c === "1" : tr.dataset.p === gp.value), okQ = !q || tr.dataset.q.includes(q), okE = !orgState.filter.envoi || tr.dataset.e === orgState.filter.envoi; tr.hidden = !(okP && okQ && okE); }); };
     gp.addEventListener("change", guestFilter); gq.addEventListener("input", guestFilter);
-    bar.append(gp, gq);
+    bar.append(gs, gp, gq);
   }
   if (key === "seating") {
     const un = el("button", { type: "button", class: "btn small hist-btn", onclick: histUndo }), re = el("button", { type: "button", class: "btn small hist-btn", onclick: histRedo }), sv = el("button", { type: "button", class: "btn small hist-btn hist-save", title: "Valider les modifications : vide l'historique d'annulation (tout est déjà enregistré automatiquement)", onclick: () => { seatHist.undo.length = 0; seatHist.redo.length = 0; histRefresh(); showToast("Plan de tables enregistré."); } });
@@ -889,6 +937,7 @@ async function renderOrgInner(key) {
   if (sheetForm) host.append(sheetForm);
   if (key === "timeline" && rows.length) host.append(timelinePanel(rows, tlGames));
   if (key === "games" && rows.length) host.append(gamesBoard(rows));
+  if (key === "deco" && rows.length) host.append(saleBoard(rows));
   if (key === "guests") host.append(invitePanel(rows));
 
   if (key === "seating" && rows.length) { const sp = await seatPlan(rows); if (tok !== orgTok) return; host.append(sp); }
@@ -931,7 +980,7 @@ async function renderOrgInner(key) {
     const sumFor = r => {
       if (key === "games") { const when = [r.moment, r.start_time ? String(r.start_time).slice(0, 5).replace(":", "h") : ""].filter(Boolean).join(" · "); return [el("b", { text: (r.chosen ? "★ " : "") + r.name }), el("span", { class: "sm", text: when || "à placer" }), el("span", { class: "num", text: r.duration ? r.duration + " min" : "" }), el("span", { class: "st-badge " + (r.chosen ? (r.ready ? "ok" : "wait") : ""), text: r.chosen ? (r.ready ? "Prêt" : "À préparer") : "Idée" })]; }
       if (key === "vendors") return [el("b", { text: r.name }), badge(r.status), el("span", { class: "num", text: r.price != null ? eur(r.price) : "" }), el("span", { class: "sm", text: r.phone || r.email || r.contact || r.location || "" })];
-      if (key === "deco") { const tot = (Number(r.unit) || 0) * (Number(r.qty) || 0), pd = Number(r.paid) || 0, sm = el("span", { class: "sm" }); if (isUrl(r.link)) sm.append(el("a", { class: "lnk", href: r.link, target: "_blank", rel: "noopener noreferrer", title: r.link, text: "Voir le lien ↗", onclick: e => e.stopPropagation() })); const st = tot > 0 && pd >= tot - 0.005 ? "Payé" : pd > 0 ? "Partiel" : "À payer"; return [el("b", { text: r.name }), sm, el("span", { class: "num", text: (r.qty || 0) + " × " + eur2(r.unit || 0) + " = " + eur2(tot) }), el("span", { class: "st-badge " + (st === "Payé" ? "ok" : st === "Partiel" ? "wait" : "no"), text: st === "Partiel" ? "Payé " + eur2(pd) : st })]; }
+      if (key === "deco") { const tot = (Number(r.unit) || 0) * (Number(r.qty) || 0), pd = Number(r.paid) || 0, sm = el("span", { class: "sm" }); if (isUrl(r.link)) sm.append(el("a", { class: "lnk", href: r.link, target: "_blank", rel: "noopener noreferrer", title: r.link, text: "Voir le lien ↗", onclick: e => e.stopPropagation() })); const st = tot > 0 && pd >= tot - 0.005 ? "Payé" : pd > 0 ? "Partiel" : "À payer"; return [el("b", { text: r.name }), sm, el("span", { class: "num", text: (r.qty || 0) + " × " + eur2(r.unit || 0) + " = " + eur2(tot) }), el("span", { class: "st-badge " + (r.sold ? "ok" : r.for_sale ? "wait" : st === "Payé" ? "ok" : st === "Partiel" ? "wait" : "no"), text: r.sold ? "Vendu" + (r.sold_price ? " " + eur2(r.sold_price) : "") : r.for_sale ? "À revendre" : st === "Partiel" ? "Payé " + eur2(pd) : st })]; }
       if (key === "budget") return [el("b", { text: r.item }), el("span", { class: "sm", text: r.family ? "famille " + eur(r.family) : "" }), el("span", { class: "num", text: "prévu " + eur(r.estimated || 0) }), el("span", { class: "num pay " + payCls(r.estimated, r.paid), text: "● payé " + eur(r.paid || 0) })];
       const g = guestsOf(r).length; return [el("b", { text: r.name }), el("span", { class: "sm", text: r.shape || "Ronde" }), el("span", { class: "num", text: g + " / " + (r.capacity || "?") }), el("span", { class: "sm", text: "" })];
     };
@@ -980,10 +1029,11 @@ async function renderOrgInner(key) {
     }
     const late = key === "tasks" && !r.done && r.due && r.due < todayISO();
     const tr = el("tr", { "data-rid": r.id, class: (late ? "late " : "") + (key === "tasks" && r.done ? "done" : "") + (key === "guests" ? " p-" + (r.presence || "ATT") + (r.a_verifier ? " to-check" : "") : "") });
-    if (key === "guests") { tr.dataset.q = norm((r.nom || "") + " " + (r.prenom || "")); tr.dataset.p = r.presence || "ATT"; tr.dataset.a = r.allergie && r.allergie.trim() ? "1" : "0"; tr.dataset.c = r.a_verifier ? "1" : "0"; }
+    if (key === "guests") { tr.dataset.q = norm((r.nom || "") + " " + (r.prenom || "")); tr.dataset.p = r.presence || "ATT"; tr.dataset.a = r.allergie && r.allergie.trim() ? "1" : "0"; tr.dataset.c = r.a_verifier ? "1" : "0"; tr.dataset.e = r.envoi || ""; }
     M.fields.forEach(f => {
       const inp = fieldInput(f, f.k === "status" && key === "tasks" ? statusOf(r) : r[f.k]);
       if (key === "tasks" && f.k === "status") inp.dataset.st = statusOf(r);
+      if (key === "guests" && f.k === "envoi") inp.dataset.envoi = r.envoi || "";
       if (key === "guests" && (f.k === "nom" || f.k === "prenom")) inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
       if (key === "guests" && f.k === "allergie") { const mark = () => inp.classList.toggle("has-alg", !!inp.value.trim()); mark(); inp.addEventListener("input", mark); }
       inp.addEventListener("change", async () => {
@@ -1008,15 +1058,16 @@ async function renderOrgInner(key) {
       const manual = r.envoi === "Courrier" || r.envoi === "Remise en main", doneTxt = r.envoi === "Courrier" ? "Courrier envoyé" : "Remise en main effectuée", todoTxt = r.envoi === "Courrier" ? "Marquer le courrier envoyé" : "Marquer la remise effectuée";
       const mark = el("button", { class: "btn small" + (r.invite_sent_at ? " sent-ok" : ""), type: "button", text: r.invite_sent_at ? "✓ " + doneTxt : todoTxt, title: r.invite_sent_at ? "Cliquer pour annuler" : "Garder une trace", onclick: async () => {
         try { const when = r.invite_sent_at ? null : new Date().toISOString(); await orgStore.update("org_guests", r.id, { invite_sent_at: when }); r.invite_sent_at = when; renderOrg("guests"); } catch (e) { showToast(orgErr(e)); } } });
-      tr.append(el("td", { class: "sendcell" }, manual ? mark : send, el("small", { class: "sentat", text: r.invite_sent_at ? "✓ " + frDate(String(r.invite_sent_at).slice(0, 10)) : "" })));
+      tr.append(el("td", { class: "sendcell", "data-envoi": r.envoi || "" }, manual ? mark : send, el("small", { class: "sentat", text: r.invite_sent_at ? "✓ " + frDate(String(r.invite_sent_at).slice(0, 10)) : "" })));
     }
     tr.append(el("td", {}, el("button", { class: "btn small danger", type: "button", text: "Supprimer", "aria-label": "Supprimer la ligne", onclick: async () => {
       try { await orgStore.remove(M.table, r.id); renderOrg(key); } catch (e) { showToast(orgErr(e)); }
     } })));
     tb.append(tr);
   });
-  table.append(tb); guestFilter();
+  table.append(tb);
   host.append(el("div", { class: "tbl org-wrap" }, table));
+  guestFilter();   // après l'ajout dans la page : les filtres (présence, recherche, mode d'envoi) s'appliquent dès l'affichage
 }
 
 
