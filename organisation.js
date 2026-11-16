@@ -93,6 +93,8 @@ const WHO = ["Cassiana", "Matthieu", "Les deux", "Autre"];
 const MOMENTS_GAME = ["Après la cérémonie", "Cocktail", "Dîner", "Soirée dansante", "Fin de soirée"];
 const TRIP_BOOK = ["Vol", "Train / bus", "Hébergement", "Location de voiture", "Activité", "Restaurant", "Assurance", "Autre réservation"], TRIP_TODO = ["À faire", "Document", "Valise"];
 const TRIP_VIEWS = [["trip_chrono", "Chronologie"], ["trip_book", "Réservations"], ["trip_help", "Aide à réserver"], ["trip_reco", "Recommandations"], ["trip_days", "Itinéraire"], ["trip_todo", "À faire et valise"], ["trip_ideas", "Idées"]];
+const AFTER_PHASES = [{ k: "j1", l: "Dès le lendemain", d: 1 }, { k: "m1", l: "Dans le mois", d: 30 }, { k: "m3", l: "Sous 3 mois", d: 90 }, { k: "an", l: "Dans l'année", d: 365 }, { k: "tard", l: "Plus tard", d: null }];
+const afterPhase = r => AFTER_PHASES.some(x => x.k === r.phase) ? r.phase : "m1";
 const CATS_AFTER = ["Papiers d'identité", "Impôts et argent", "Santé et social", "Travail", "Assurances", "Logement et contrats", "Souvenirs et remerciements", "Organisation"];
 const KINDS_TL = ["Préparatifs", "Photos", "Cérémonie", "Trajet", "Cocktail", "Repas", "Discours", "Jeu / animation", "Danse", "Logistique", "Autre"];
 const KIND_COL = { "Préparatifs": "#b9a77a", "Photos": "#8a9bb0", "Cérémonie": "#4f5020", "Trajet": "#9a8f80", "Cocktail": "#c58a4a", "Repas": "#a3592f", "Discours": "#7d6a9a", "Jeu / animation": "#c0605a", "Danse": "#d08aa0", "Logistique": "#7a8a6a", "Autre": "#8d8d80" };
@@ -129,9 +131,16 @@ const ORG = {
     { k: "place", l: "Lieu", t: "text", ph: "ex. jardin, salle, piste de danse" }, { k: "people", l: "Participants", t: "text", ph: "ex. tout le monde, les enfants, 2 équipes" }, { k: "owner", l: "Qui l'anime", t: "text" },
     { k: "material", l: "Matériel", t: "text", wide: true }, { k: "ready", l: "Matériel prêt", t: "check" }, { k: "price", l: "Prix (€)", t: "number" },
     { k: "prize", l: "Lots à gagner", t: "text" }, { k: "rules", l: "Règles / déroulé", t: "long", wide: true }, { k: "notes", l: "Notes", t: "long", wide: true }] },
-  after: { table: "org_after", label: "Après le mariage", order: "done", defaults: { done: false, cat: CATS_AFTER[0], who: "Les deux" }, fields: [
-    { k: "done", l: "Fait", t: "check" }, { k: "title", l: "À faire", t: "text", req: true, wide: true }, { k: "cat", l: "Rubrique", t: "select", o: CATS_AFTER, newable: true },
-    { k: "who", l: "Qui", t: "select", o: WHO }, { k: "due", l: "Pour le", t: "date" }, { k: "link", l: "Lien utile", t: "text" }, { k: "notes", l: "Notes", t: "text" }] },
+  after: { table: "org_after", label: "Après le mariage", order: "done", defaults: { done: false, phase: AFTER_PHASES[1].k, cat: CATS_AFTER[0], who: "Les deux" }, fields: [
+    { k: "done", l: "Fait", t: "check" }, { k: "title", l: "À faire", t: "text", req: true, wide: true, span: 6 },
+    { k: "phase", l: "Quand", t: "select", o: AFTER_PHASES.map(x => x.k), labels: Object.fromEntries(AFTER_PHASES.map(x => [x.k, x.l])), span: 2 }, { k: "cat", l: "Rubrique", t: "select", o: CATS_AFTER, newable: true, span: 2 },
+    { k: "who", l: "Qui", t: "select", o: WHO, span: 1 }, { k: "due", l: "Pour le", t: "date", span: 1 },
+    { k: "instructions", l: "Comment faire (étapes)", t: "long", det: true, sec: "Comment faire", span: 6, ph: "ex. 1. Prendre rendez-vous en mairie · 2. Apporter le livret de famille…" },
+    { k: "docs", l: "Pièces à fournir", t: "long", det: true, span: 6, ph: "ex. pièce d'identité, justificatif de domicile, acte de mariage…" }, { k: "link", l: "Lien utile", t: "text", span: 6 },
+    { k: "contact", l: "Organisme / personne", t: "text", det: true, sec: "Contact", span: 3 }, { k: "phone", l: "Téléphone", t: "text", det: true, span: 3 },
+    { k: "email", l: "E-mail", t: "text", det: true, span: 3 }, { k: "address", l: "Adresse / horaires", t: "text", det: true, span: 3 },
+    { k: "cost", l: "Frais prévus (€)", t: "number", det: true, sec: "Frais", span: 2 }, { k: "paid", l: "Déjà payé (€)", t: "number", det: true, span: 2 }, { k: "ref", l: "N° de dossier", t: "text", det: true, span: 2 },
+    { k: "notes", l: "Notes", t: "long", det: true, sec: "Notes et documents", span: 6 }] },
   trip_chrono: { table: "org_trip", label: "Chronologie du voyage", accept: () => true, defaults: {}, fields: [] },
   trip_help: { table: "org_trip", label: "Aide à réserver", accept: () => true, defaults: {}, fields: [] },
   trip_reco: { table: "org_trip", label: "Recommandations", accept: () => true, defaults: {}, fields: [] },
@@ -335,7 +344,7 @@ function sortRows(key, rows) {
   if (key === "budget") return by((a, b) => CATS_BUDGET.indexOf(a.cat) - CATS_BUDGET.indexOf(b.cat) || String(a.item).localeCompare(String(b.item)));
   if (key === "vendors") return by((a, b) => { const ia = ROLES.indexOf(a.role), ib = ROLES.indexOf(b.role); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || String(a.created_at || "").localeCompare(String(b.created_at || "")); });
   if (key === "games") { const k = t => { const [h, m] = String(t || "99:00").split(":").map(Number); return (h < 6 ? h + 24 : h) * 60 + (m || 0); }, mi = m => { const i = MOMENTS_GAME.indexOf(m); return i < 0 ? 99 : i; }; return by((a, b) => (!!b.chosen - !!a.chosen) || mi(a.moment) - mi(b.moment) || k(a.start_time) - k(b.start_time) || String(a.name).localeCompare(String(b.name), "fr")); }
-  if (key === "after") return by((a, b) => (CATS_AFTER.indexOf(a.cat) < 0 ? 99 : CATS_AFTER.indexOf(a.cat)) - (CATS_AFTER.indexOf(b.cat) < 0 ? 99 : CATS_AFTER.indexOf(b.cat)) || (!!a.done - !!b.done) || String(a.due || "9999").localeCompare(String(b.due || "9999")) || String(a.title).localeCompare(String(b.title), "fr"));
+  if (key === "after") { const pi = r => AFTER_PHASES.findIndex(x => x.k === afterPhase(r)); return by((a, b) => pi(a) - pi(b) || (!!a.done - !!b.done) || String(a.due || "9999").localeCompare(String(b.due || "9999")) || (CATS_AFTER.indexOf(a.cat) < 0 ? 99 : CATS_AFTER.indexOf(a.cat)) - (CATS_AFTER.indexOf(b.cat) < 0 ? 99 : CATS_AFTER.indexOf(b.cat)) || String(a.title).localeCompare(String(b.title), "fr")); }
   if (key === "trip_book" || key === "trip_days") return by((a, b) => String(a.date || "9999").localeCompare(String(b.date || "9999")) || String(a.time || "").localeCompare(String(b.time || "")) || String(a.title).localeCompare(String(b.title), "fr"));
   if (key === "trip_todo") return by((a, b) => (!!a.done - !!b.done) || TRIP_TODO.indexOf(a.kind) - TRIP_TODO.indexOf(b.kind) || String(a.due || "9999").localeCompare(String(b.due || "9999")) || String(a.title).localeCompare(String(b.title), "fr"));
   if (key === "seating") return by((a, b) => (a.position || 0) - (b.position || 0) || String(a.name).localeCompare(String(b.name), "fr", { numeric: true }));
@@ -451,6 +460,8 @@ function orgSummary(key, rows, deco) {
     const done = rows.filter(r => r.done).length, late = rows.filter(r => !r.done && r.due && r.due < todayISO()).length;
     chip("faites", done + " / " + rows.length, rows.length && done === rows.length ? "good" : "c-ok"); chip("à faire", String(rows.length - done), "c-wait"); chip("en retard", String(late), late ? "warn" : "good");
     const w = (n) => rows.filter(r => !r.done && (r.who === n || r.who === "Les deux")).length; chip("pour Cassiana", String(w("Cassiana")), "c-hand"); chip("pour Matthieu", String(w("Matthieu")), "c-link");
+    const cost = rows.reduce((a, r) => a + (Number(r.cost) || 0), 0), paidA = rows.reduce((a, r) => a + (Number(r.paid) || 0), 0);
+    if (cost > 0) { chip("frais prévus", eur2(cost), "c-alg"); chip("reste à payer", eur2(Math.max(0, cost - paidA)), cost - paidA > 0.005 ? "warn" : "good"); }
   } else if (key === "deco") {
     const articles = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0), total = rows.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0), env = deco ? deco.env : 0;
     const paidD = rows.reduce((a, r) => a + (Number(r.paid) || 0), 0), resteD = total - paidD;
@@ -1039,6 +1050,80 @@ const AFTER_TPL = [
   ["Organisation", "Revendre la décoration et la papeterie (onglet Décoration et papeterie)", ""],
   ["Organisation", "Laisser un avis aux prestataires", ""],
   ["Organisation", "Archiver les documents du mariage (contrats, factures, acte)", ""]];
+const AFTER_STYLE = { j1: "#8a5a2b", m1: "#a8741a", m3: "#5c7a3a", an: "#3f6f78", tard: "#6d5a7a" };
+function afterPhaseHead(k, rows) {
+  const ph = AFTER_PHASES.find(x => x.k === k), inP = rows.filter(r => afterPhase(r) === k), done = inP.filter(r => r.done).length, cost = inP.reduce((a, r) => a + (Number(r.cost) || 0), 0);
+  const until = ph.d ? new Date(new Date(WEDDING_ISO + "T12:00:00").getTime() + ph.d * 864e5).toISOString().slice(0, 10) : "";
+  const left = ph.d ? daysBetween(todayISO(), until) : null;
+  const when = !ph.d ? "à votre rythme" : left > 0 ? "d'ici le " + frDate(until) + " · dans " + left + " j" : "avant le " + frDate(until);
+  const pct = inP.length ? Math.round(done * 100 / inP.length) : 0;
+  return el("div", { class: "af-phase", style: "--c:" + AFTER_STYLE[k] },
+    el("div", { class: "af-dot" }), el("div", { class: "af-ph-main" }, el("h3", { text: ph.l }), el("span", { class: "af-when", text: when })),
+    el("div", { class: "af-ph-side" }, el("span", { text: done + " / " + inP.length + " faites" + (cost ? " · " + eur2(cost) : "") }), el("span", { class: "af-bar" }, el("i", { style: "width:" + pct + "%" }))));
+}
+/* Dans la fiche : contact cliquable, lien, pièces jointes (stockage privé « prive », réservé aux mariés) */
+function afterExtras(r) {
+  const box = el("div", { class: "af-extra" });
+  const links = el("div", { class: "af-links" });
+  if (isUrl(r.link)) links.append(el("a", { class: "btn small", href: r.link, target: "_blank", rel: "noopener noreferrer", text: "Ouvrir le site ↗" }));
+  if (r.phone) links.append(el("a", { class: "btn small", href: "tel:" + String(r.phone).replace(/[^\d+]/g, ""), text: "📞 " + r.phone }));
+  if (isMail(r.email)) links.append(el("a", { class: "btn small", href: "mailto:" + r.email.trim(), text: "✉ " + r.email.trim() }));
+  if (r.address) links.append(el("a", { class: "btn small", href: "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(r.address), target: "_blank", rel: "noopener noreferrer", text: "📍 Voir sur la carte ↗" }));
+  if (links.childNodes.length) box.append(links);
+  const cs = Number(r.cost) || 0, pd = Number(r.paid) || 0;
+  if (cs > 0) box.append(el("p", { class: "af-fee " + (pd >= cs - 0.005 ? "ok" : pd > 0 ? "part" : "no"), text: "Frais : " + eur2(cs) + " · payé " + eur2(pd) + (cs - pd > 0.005 ? " · reste " + eur2(cs - pd) : " · réglé") }));
+  box.append(afterFiles(r));
+  return box;
+}
+function afterFiles(r) {
+  const box = el("div", { class: "af-files" }), list = el("ul", { class: "af-flist" });
+  const status = el("span", { class: "hint", role: "status" });
+  const save = async arr => { await orgStore.update("org_after", r.id, { files: arr }); r.files = arr; draw(); };
+  const draw = () => {
+    list.replaceChildren(...(Array.isArray(r.files) ? r.files : []).map((f, i) => el("li", {},
+      el("button", { type: "button", class: "lnk-btn", text: "📎 " + f.name, title: "Ouvrir", onclick: async () => { try { const { data, error } = await remote.storage.from("prive").createSignedUrl(f.path, 300); if (error) throw error; window.open(data.signedUrl, "_blank", "noopener"); } catch (e) { showToast("Ouverture impossible : " + explainErr(e)); } } }),
+      el("span", { class: "sm", text: f.size ? Math.max(1, Math.round(f.size / 1024)) + " Ko" : "" }),
+      el("button", { type: "button", class: "btn small danger", text: "Retirer", "aria-label": "Retirer " + f.name, onclick: async () => { try { await remote.storage.from("prive").remove([f.path]); await save(r.files.filter((_, j) => j !== i)); } catch (e) { showToast(orgErr(e)); } } }))));
+  };
+  const input = el("input", { type: "file", multiple: true, hidden: true, accept: ".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.txt,.odt" });
+  input.addEventListener("change", async () => {
+    const picked = [...input.files]; input.value = ""; if (!picked.length) return;
+    let arr = Array.isArray(r.files) ? [...r.files] : [], bad = [];
+    for (const f of picked) {
+      if (f.size > 10 * 1024 * 1024) { bad.push(f.name + " (plus de 10 Mo)"); continue; }
+      status.textContent = "Envoi de " + f.name + "…";
+      try {
+        const path = "apres/" + r.id + "/" + Date.now() + "-" + f.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w.\-]+/g, "_").slice(-80);
+        const up = await remote.storage.from("prive").upload(path, f, { contentType: f.type || "application/octet-stream", upsert: false });
+        if (up.error) throw up.error;
+        arr = [...arr, { path, name: f.name, size: f.size }]; await save(arr);
+      } catch (e) { bad.push(f.name + " (" + explainErr(e) + ")"); }
+    }
+    status.textContent = bad.length ? "Non envoyé : " + bad.join(" ; ") : "";
+  });
+  box.append(el("h5", { class: "fsec", text: "Documents joints" }), list, el("div", { class: "af-fadd" }, el("button", { type: "button", class: "btn small", text: "➕ Ajouter un fichier", onclick: () => input.click() }), el("span", { class: "hint", text: "PDF, photos, Word, Excel · 10 Mo max · stockés en privé (visibles seulement par vous)" }), input), status);
+  draw(); return box;
+}
+/* Détails proposés avec la liste type : délai conseillé, étapes, pièces, contact (à adapter / vérifier sur service-public.fr) */
+const AFTER_PHASE_BY_CAT = { "Papiers d'identité": "m1", "Impôts et argent": "m3", "Santé et social": "m3", "Travail": "m1", "Assurances": "m3", "Logement et contrats": "an", "Souvenirs et remerciements": "m3", "Organisation": "m1" };
+const AFTER_DETAIL = [
+  ["livret de famille", { phase: "j1", instructions: "1. Le livret est remis à la mairie à l'issue de la cérémonie civile.\n2. Vérifiez les noms, dates et lieux.\n3. Faites-en des photocopies, gardez l'original en lieu sûr.", docs: "Livret de famille", contact: "Mairie du lieu du mariage" }],
+  ["copies intégrales", { phase: "j1", instructions: "1. Demandez 3 à 5 copies intégrales à la mairie (gratuit) ou en ligne.\n2. Elles servent pour la banque, l'employeur, la CAF, les assurances…", docs: "Pièce d'identité", contact: "Mairie du lieu du mariage" }],
+  ["Carte d'identité", { phase: "m1", instructions: "1. Pré-demande en ligne sur l'ANTS (ou en mairie).\n2. Prendre rendez-vous en mairie équipée.\n3. Venir avec les pièces et la photo.\n4. Le nom d'usage est une option, pas une obligation.", docs: "Acte de mariage, ancienne carte, justificatif de domicile, photo d'identité, timbre fiscal si perte", cost: 0 }],
+  ["Passeport", { phase: "m1", instructions: "1. Pré-demande en ligne (ANTS).\n2. Rendez-vous en mairie équipée.\n3. Paiement par timbre fiscal.", docs: "Acte de mariage, ancien passeport, justificatif de domicile, photo d'identité" }],
+  ["Permis de conduire", { phase: "an", instructions: "Le nom d'usage se déclare sur le site de l'ANTS. Vérifiez aussi la carte grise (changement de titulaire si besoin)." }],
+  ["Signaler le mariage aux impôts", { phase: "m3", instructions: "1. Espace particulier sur impots.gouv.fr → « Gérer mon prélèvement à la source » → signaler un changement de situation.\n2. À faire dans les 3 mois suivant le mariage.", docs: "Date du mariage", contact: "Impôts (impots.gouv.fr)" }],
+  ["déclaration commune ou séparée", { phase: "an", instructions: "L'année du mariage, vous remplissez une déclaration commune pour l'ensemble de l'année, ou déclarez séparément. Comparez avec le simulateur de impots.gouv.fr." }],
+  ["carte Vitale", { phase: "m3", instructions: "1. Mettre à jour sur ameli.fr (compte).\n2. Une nouvelle carte Vitale peut être demandée si le nom change.", docs: "Acte de mariage, pièce d'identité", contact: "Assurance maladie (CPAM)", phone: "3646" }],
+  ["CAF", { phase: "m1", instructions: "Déclarez le changement de situation sur caf.fr (rubrique « Mes démarches »). Prévenir sous un mois évite les indus.", docs: "Acte de mariage ou livret de famille", contact: "CAF", phone: "3230" }],
+  ["Informer l'employeur", { phase: "m1", instructions: "Remettre la copie de l'acte de mariage aux RH : nom d'usage, mutuelle, prévoyance, congé mariage si pas déjà pris.", docs: "Copie de l'acte de mariage", contact: "Service RH" }],
+  ["Envoyer les remerciements", { phase: "m1", instructions: "1. Préparer un message ou une carte avec une photo.\n2. Utiliser la liste des invités (onglet Invités) et noter les cadeaux reçus.", contact: "" }],
+  ["album photo", { phase: "an", instructions: "Comparez les imprimeurs, choisissez 30 à 60 photos, validez la maquette avant paiement." }],
+  ["robe et le costume", { phase: "m1", instructions: "Confiez-les rapidement à un pressing spécialisé, puis conservez-les dans une housse respirante." }],
+  ["soldes restants", { phase: "j1", instructions: "Listez les factures dans l'onglet Budget, réglez les soldes aux dates prévues par les contrats et gardez les justificatifs.", docs: "Devis et factures" }],
+  ["Rendre le matériel", { phase: "j1", instructions: "Relevez la liste du matériel loué et les dates de retour dans les contrats, prenez des photos avant restitution." }],
+  ["Service-Public", { phase: "m1" }]];
+const afterDetail = (cat, title) => { const hit = AFTER_DETAIL.find(([k]) => norm(title).includes(norm(k))); return { phase: AFTER_PHASE_BY_CAT[cat] || "m1", ...(hit ? hit[1] : {}) }; };
 function afterProposal(rows, bar) {
   const old = document.querySelector(".tl-prop.after-prop"); if (old) { old.remove(); return; }
   const have = new Set(rows.map(r => norm(r.title))), items = AFTER_TPL.filter(([, t]) => !have.has(norm(t)));
@@ -1047,7 +1132,7 @@ function afterProposal(rows, bar) {
   box.append(el("p", { class: "hint", text: "Pistes générales à adapter à votre situation (les démarches changent selon chacun : vérifiez sur service-public.fr). Décochez ce que vous ne voulez pas." }));
   const list = el("div", { class: "tl-prop-list" }), checks = [];
   items.forEach(([c, t]) => { const cb = el("input", { type: "checkbox" }); cb.checked = true; checks.push(cb); list.append(el("label", { class: "tl-prop-row" }, cb, el("span", { class: "tl-prop-t", text: c }), el("span", { class: "tl-prop-n" }, el("b", { text: t })))); });
-  const go = el("button", { type: "button", class: "btn small solid", onclick: async () => { go.disabled = true; try { for (let i = 0; i < items.length; i++) if (checks[i].checked) { const [c, t, kw] = items[i]; await orgStore.insert("org_after", { cat: c, title: t, who: "Les deux", done: false, ...(kw ? { link: "https://www.service-public.fr/particuliers/recherche?keyword=" + encodeURIComponent(kw) } : {}) }); } showToast("Liste mise à jour"); renderOrg("after"); } catch (e) { showToast(orgErr(e)); go.disabled = false; } } });
+  const go = el("button", { type: "button", class: "btn small solid", onclick: async () => { go.disabled = true; try { for (let i = 0; i < items.length; i++) if (checks[i].checked) { const [c, t, kw] = items[i]; await orgStore.insert("org_after", { cat: c, title: t, who: "Les deux", done: false, ...afterDetail(c, t), ...(kw ? { link: "https://www.service-public.fr/particuliers/recherche?keyword=" + encodeURIComponent(kw) } : {}) }); } showToast("Liste mise à jour"); renderOrg("after"); } catch (e) { showToast(orgErr(e)); go.disabled = false; } } });
   const upd = () => { const n = checks.filter(c => c.checked).length; go.disabled = !n; go.textContent = "Ajouter la sélection (" + n + ")"; };
   list.addEventListener("change", upd); upd();
   box.append(list, el("div", { class: "tl-prop-act" }, go, el("button", { type: "button", class: "btn small", text: "Annuler", onclick: () => box.remove() })));
@@ -1263,7 +1348,7 @@ async function renderOrgInner(key) {
   const form = el("form", { class: "card org-add", novalidate: true });
   const inputs = {};
   const grid = el("div", { class: "org-grid" });
-  M.fields.filter(f => f.t !== "check").forEach(f => { const inp = fieldInput(f, M.defaults[f.k]); inputs[f.k] = inp; grid.append(el("label", { class: labelCls(f) }, el("span", { text: f.l }), inp)); });
+  M.fields.filter(f => f.t !== "check" && !f.det).forEach(f => { const inp = fieldInput(f, M.defaults[f.k]); inputs[f.k] = inp; grid.append(el("label", { class: labelCls(f) }, el("span", { text: f.l }), inp)); });
   const msg = el("p", { class: "msg", role: "status", hidden: true });
   form.append(el("h3", { text: "Ajouter" }), grid, el("button", { class: "btn solid small", type: "submit", text: "Ajouter" }), msg);
   form.addEventListener("submit", async ev => {
@@ -1286,7 +1371,7 @@ async function renderOrgInner(key) {
   if (key === "after") shown = rows.filter(r => ((orgState.filter.astat || "todo") === "all" || ((orgState.filter.astat || "todo") === "done" ? r.done : !r.done)) && (!orgState.filter.acat || r.cat === orgState.filter.acat));
   if (key === "tasks") shown = rows.filter(r => (orgState.filter.status === "all" || (orgState.filter.status.startsWith("s:") ? statusOf(r) === orgState.filter.status.slice(2) : orgState.filter.status === "done" ? r.done : !r.done)) && (!orgState.filter.cat || r.cat === orgState.filter.cat));
   if (!shown.length) { host.append(el("div", { class: "empty-ico" }, icon("Agneau couché", 44)), el("p", { class: "empty", text: rows.length ? "Aucune ligne avec ce filtre." : "Rien pour l'instant. Ajoutez une première ligne avec « Ajouter »." })); return; }
-  if (key === "vendors" || key === "seating" || key === "budget" || key === "deco" || key === "games" || key === "trip_book" || key === "trip_days" || key === "trip_ideas") {
+  if (key === "vendors" || key === "seating" || key === "budget" || key === "deco" || key === "games" || key === "after" || key === "trip_book" || key === "trip_days" || key === "trip_ideas") {
     const list = el("div", { class: "org-cards" });
     const bar2 = el("div", { class: "org-fold" },
       el("button", { class: "btn small", type: "button", text: "Tout déplier", onclick: () => list.querySelectorAll("details.org-card").forEach(d => { d.open = true; }) }),
@@ -1298,6 +1383,15 @@ async function renderOrgInner(key) {
     const sumFor = r => {
       if (key === "games") { const when = [r.moment, r.start_time ? String(r.start_time).slice(0, 5).replace(":", "h") : ""].filter(Boolean).join(" · "); return [el("b", { text: (r.chosen ? "★ " : "") + r.name }), el("span", { class: "sm", text: when || "à placer" }), el("span", { class: "num", text: r.duration ? r.duration + " min" : "" }), el("span", { class: "st-badge " + (r.chosen ? (r.ready ? "ok" : "wait") : ""), text: r.chosen ? (r.ready ? "Prêt" : "À préparer") : "Idée" })]; }
       const linkA = () => isUrl(r.link) ? el("a", { class: "lnk", href: r.link, target: "_blank", rel: "noopener noreferrer", title: r.link, text: "Voir le lien ↗", onclick: e => e.stopPropagation() }) : "";
+      if (key === "after") {
+        const cb = el("input", { type: "checkbox", "aria-label": "Fait" }); cb.checked = !!r.done;
+        cb.addEventListener("click", e => e.stopPropagation());
+        cb.addEventListener("change", async () => { try { await orgStore.update(M.table, r.id, { done: cb.checked }); r.done = cb.checked; renderOrg(key); } catch (e) { cb.checked = !cb.checked; showToast(orgErr(e)); } });
+        const late = !r.done && r.due && r.due < todayISO(), cs = Number(r.cost) || 0, pd = Number(r.paid) || 0, files = Array.isArray(r.files) ? r.files.length : 0;
+        const meta = [r.cat, r.who && r.who !== "Les deux" ? r.who : "", r.due ? "pour le " + frDate(r.due) : "", files ? "📎 " + files : ""].filter(Boolean).join(" · ");
+        return [el("span", { class: "af-t" + (r.done ? " done" : late ? " late" : "") }, cb, el("b", { text: r.title })), el("span", { class: "sm", text: meta }), el("span", { class: "num", text: cs ? eur2(cs) : "" }),
+          el("span", { class: "st-badge " + (r.done ? "ok" : late ? "no" : ""), text: r.done ? "Fait" : late ? "En retard" : cs > 0 && pd >= cs - 0.005 ? "Payé" : "À faire" })];
+      }
       if (key === "trip_book") { const pr = Number(r.price) || 0, pd = Number(r.paid) || 0, st = pr > 0 && pd >= pr - 0.005 ? "Payé" : pd > 0 ? "Partiel" : pr > 0 ? "À payer" : "", dts = [r.date ? frDate(r.date) : "", r.end_date ? "→ " + frDate(r.end_date) : ""].filter(Boolean).join(" ");
         return [el("b", { text: r.title }), el("span", { class: "sm" }, [r.kind, dts, r.place].filter(Boolean).join(" · ") + (isUrl(r.link) ? "  " : ""), linkA()), el("span", { class: "num", text: pr ? eur2(pr) : "" }), el("span", { class: "st-badge " + (st === "Payé" ? "ok" : st === "Partiel" ? "wait" : st ? "no" : ""), text: st || "—" })]; }
       if (key === "trip_days") return [el("b", { text: (r.time ? String(r.time).slice(0, 5).replace(":", "h") + " · " : "") + r.title }), el("span", { class: "sm" }, (r.place || "") + (isUrl(r.link) ? "  " : ""), linkA()), el("span", { class: "num", text: r.price ? eur2(r.price) : "" }), el("span", {})];
@@ -1309,6 +1403,7 @@ async function renderOrgInner(key) {
     };
     shown.forEach((r, i) => {
       if (key === "trip_days" && (r.date || "") !== lastCat) { lastCat = r.date || ""; list.append(el("h3", { class: "org-grp", text: r.date ? new Date(r.date + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) : "Sans date" })); }
+      if (key === "after" && afterPhase(r) !== lastCat) { lastCat = afterPhase(r); list.append(afterPhaseHead(lastCat, rows)); }
       if (key === "budget" && r.cat !== lastCat) { lastCat = r.cat; const inCat = rows.filter(x => x.cat === r.cat), sub = inCat.reduce((a, x) => a + (Number(x.estimated) || 0), 0), fam = inCat.reduce((a, x) => a + (Number(x.family) || 0), 0); list.append(el("h3", { class: "org-grp", text: (r.cat || "Sans poste") + " · " + eur(sub) + (fam ? " · dont famille " + eur(fam) : "") })); }
       if (key === "vendors" && r.role !== lastCat) { lastCat = r.role; list.append(el("h3", { class: "org-grp", text: (r.role || "Autre") + " · " + rows.filter(x => x.role === r.role).length })); }
       const card = el("details", { class: "card org-card", "data-rid": r.id });
@@ -1318,6 +1413,7 @@ async function renderOrgInner(key) {
       const g = el("div", { class: "org-grid" });
       let lastSec = null;
       M.fields.forEach(f => {
+        if (key === "after" && f.k === "done") return;
         const inp = fieldInput(f, r[f.k], r);
         inp.addEventListener("change", async () => {
           let v = readInput(f, inp);
@@ -1333,7 +1429,7 @@ async function renderOrgInner(key) {
         acts.append(el("button", { class: "btn small", type: "button", text: "▲", "aria-label": "Monter la table", disabled: i === 0, onclick: () => swap(-1) }), el("button", { class: "btn small", type: "button", text: "▼", "aria-label": "Descendre la table", disabled: i === shown.length - 1, onclick: () => swap(1) }));
       }
       acts.append(el("button", { class: "btn small danger", type: "button", text: "Supprimer", "aria-label": "Supprimer", onclick: async () => { try { await orgStore.remove(M.table, r.id); orgOpen.delete(r.id); renderOrg(key); } catch (e) { showToast(orgErr(e)); } } }));
-      card.append(head, el("div", { class: "org-card-body" }, g, (key === "trip_book" || key === "trip_days") ? helpRow(r) : "", acts));
+      card.append(head, el("div", { class: "org-card-body" }, g, (key === "trip_book" || key === "trip_days") ? helpRow(r) : key === "after" ? afterExtras(r) : "", acts));
       list.append(card);
     });
     if (key === "budget" && decoS && (decoS.count || decoS.env)) {

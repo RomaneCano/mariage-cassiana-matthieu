@@ -628,6 +628,24 @@ details.org-card>summary{position:relative}details.org-card>summary>.sel-box{pos
 .org-fold{display:flex;gap:6px;justify-content:flex-end;margin:0 0 6px}
 @media(max-width:640px){.org-sum-row{grid-template-columns:minmax(0,1fr) auto}.org-sum-row .sm,.org-sum-row .num:nth-of-type(2){display:none}}
 .org-grp{margin:10px 0 0;font-size:.95rem;color:var(--olive)}
+/* Après le mariage : frise chronologique par phases */
+.af-phase{display:grid;grid-template-columns:auto 1fr auto;gap:4px 14px;align-items:center;margin:22px 0 8px;padding:10px 14px;border-left:5px solid var(--c);background:var(--paper-2);border-radius:0 12px 12px 0}
+.af-phase:first-child{margin-top:8px}
+.af-dot{width:14px;height:14px;border-radius:50%;background:var(--c);box-shadow:0 0 0 4px var(--paper)}
+.af-ph-main h3{margin:0;font-size:1.05rem;color:var(--c)}.af-when{font-size:.8rem;opacity:.75}
+.af-ph-side{display:grid;gap:4px;justify-items:end;font-size:.8rem;font-variant-numeric:tabular-nums}
+.af-bar{display:block;width:130px;height:6px;border-radius:99px;background:var(--line);overflow:hidden}.af-bar i{display:block;height:100%;background:var(--c)}
+.af-t{display:flex;gap:9px;align-items:center;min-width:0}.af-t input{width:18px;height:18px;flex:none;accent-color:var(--olive)}
+.af-t.done b{text-decoration:line-through;opacity:.55}.af-t.late b{color:#a3392a}
+.af-extra{display:grid;gap:10px}.af-links{display:flex;gap:8px;flex-wrap:wrap}.af-links .btn{text-decoration:none}
+.af-fee{margin:0;padding:6px 12px;border-radius:10px;font-size:.88rem;font-weight:600;background:var(--paper-2)}.af-fee.ok{color:#2f6b1f}.af-fee.part{color:#8a6310}.af-fee.no{color:#a3392a}
+.af-files{display:grid;gap:8px}.af-files h5.fsec{margin:6px 0 0;padding-bottom:4px;border-bottom:1px solid var(--olive-soft);font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--olive);opacity:.85}
+.af-flist{list-style:none;margin:0;padding:0;display:grid;gap:6px}.af-flist li{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--paper-2);border-radius:10px;padding:6px 10px}
+.lnk-btn{border:0;background:none;font:inherit;color:var(--olive);text-decoration:underline;cursor:pointer;text-align:left;padding:0;overflow-wrap:anywhere}
+.af-fadd{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+@media(max-width:640px){.af-phase{grid-template-columns:auto 1fr}.af-ph-side{grid-column:1/-1;justify-items:start}}
+@media print{.af-files .btn,.af-fadd{display:none}}
+
 .org-card-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
 .org-table td:nth-child(2){min-width:240px}.org-table td:nth-child(3){min-width:150px}
 .org-table input[type=text],.org-table select,.org-table input[type=date],.org-table input[type=time]{min-width:130px}
@@ -2408,7 +2426,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611161745"></script>
+<script src="organisation.js?v=202611161926"></script>
 <script src="covoiturage.js?v=202611161745"></script>
 </body>
 </html>

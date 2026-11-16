@@ -269,6 +269,17 @@ create table if not exists public.org_after (
   title text not null check (char_length(title) between 1 and 300),
   cat text, who text, due date, link text, notes text
 );
+alter table public.org_after add column if not exists phase text;
+alter table public.org_after add column if not exists instructions text;
+alter table public.org_after add column if not exists docs text;
+alter table public.org_after add column if not exists contact text;
+alter table public.org_after add column if not exists phone text;
+alter table public.org_after add column if not exists email text;
+alter table public.org_after add column if not exists address text;
+alter table public.org_after add column if not exists ref text;
+alter table public.org_after add column if not exists cost numeric;
+alter table public.org_after add column if not exists paid numeric;
+alter table public.org_after add column if not exists files jsonb;
 alter table public.org_after enable row level security;
 drop policy if exists org_after_admin on public.org_after;
 create policy org_after_admin on public.org_after for all to authenticated using (public.is_admin()) with check (public.is_admin());
