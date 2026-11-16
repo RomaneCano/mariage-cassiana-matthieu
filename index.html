@@ -533,11 +533,12 @@ details.org-card>summary{position:relative}details.org-card>summary>.sel-box{pos
 .gb-sub{margin:14px 0 6px;font-size:.95rem}.gb-ideas{display:flex;flex-wrap:wrap;gap:6px}
 .gb-idea{display:inline-flex;align-items:center;gap:2px;background:var(--paper-2);border:1px dashed var(--olive-soft);border-radius:999px;padding:2px 12px 2px 4px;font-size:.9rem}
 /* mode d'envoi des invitations : mêmes couleurs que les puces du haut */
-.org-table.guests select[data-envoi="Courrier"],.org-table.guests td.sendcell[data-envoi="Courrier"]{background:#ebe0cd;color:#5e4a2c;border-color:#b79b6e}
-.org-table.guests select[data-envoi="Lien"],.org-table.guests td.sendcell[data-envoi="Lien"]{background:#d6e6e2;color:#2c5a52;border-color:#6fa399}
-.org-table.guests select[data-envoi="Remise en main"],.org-table.guests td.sendcell[data-envoi="Remise en main"]{background:#e6dcec;color:#54386a;border-color:#a58bb8}
+.org-table.guests select[data-envoi="Courrier"],.org-table.guests .sendcell .btn[data-envoi="Courrier"]{background:#ebe0cd;color:#5e4a2c;border-color:#b79b6e}
+.org-table.guests select[data-envoi="Lien"],.org-table.guests .sendcell .btn[data-envoi="Lien"]{background:#d6e6e2;color:#2c5a52;border-color:#6fa399}
+.org-table.guests select[data-envoi="Remise en main"],.org-table.guests .sendcell .btn[data-envoi="Remise en main"]{background:#e6dcec;color:#54386a;border-color:#a58bb8}
 .org-table.guests select[data-envoi]{font-weight:700}
-.org-table.guests td.sendcell[data-envoi]{border-bottom-color:transparent}
+.org-table.guests .sendcell .btn[data-envoi][disabled]{opacity:.55}
+.org-table.guests .sendcell .btn.sent-ok{background:#d8e7c4;border-color:#5a7a2a;color:#2f5a1a;font-weight:700}
 .sum-chip.clickable{cursor:pointer;transition:transform .12s}.sum-chip.clickable:hover{transform:translateY(-2px)}.sum-chip.clickable.on{outline:3px solid var(--olive)}
 .sum-chip .sum-sub{display:block;font-size:.72rem;opacity:.85;margin-top:2px;font-weight:400}
 .deco-env{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 12px;padding:10px 14px}.deco-env-in{display:inline-flex;align-items:center;gap:6px}.deco-env-in input{width:140px;min-height:40px}
@@ -2365,7 +2366,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611161417"></script>
-<script src="covoiturage.js?v=202611161417"></script>
+<script src="organisation.js?v=202611161419"></script>
+<script src="covoiturage.js?v=202611161419"></script>
 </body>
 </html>

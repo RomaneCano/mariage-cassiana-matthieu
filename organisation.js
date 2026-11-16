@@ -1070,7 +1070,8 @@ async function renderOrgInner(key) {
       const manual = r.envoi === "Courrier" || r.envoi === "Remise en main", doneTxt = r.envoi === "Courrier" ? "Courrier envoyé" : "Remise en main effectuée", todoTxt = r.envoi === "Courrier" ? "Marquer le courrier envoyé" : "Marquer la remise effectuée";
       const mark = el("button", { class: "btn small" + (r.invite_sent_at ? " sent-ok" : ""), type: "button", text: r.invite_sent_at ? "✓ " + doneTxt : todoTxt, title: r.invite_sent_at ? "Cliquer pour annuler" : "Garder une trace", onclick: async () => {
         try { const when = r.invite_sent_at ? null : new Date().toISOString(); await orgStore.update("org_guests", r.id, { invite_sent_at: when }); r.invite_sent_at = when; renderOrg("guests"); } catch (e) { showToast(orgErr(e)); } } });
-      tr.append(el("td", { class: "sendcell", "data-envoi": r.envoi || "" }, manual ? mark : send, el("small", { class: "sentat", text: r.invite_sent_at ? "✓ " + frDate(String(r.invite_sent_at).slice(0, 10)) : "" })));
+      mark.dataset.envoi = send.dataset.envoi = r.envoi || "";
+      tr.append(el("td", { class: "sendcell" }, manual ? mark : send, el("small", { class: "sentat", text: r.invite_sent_at ? "✓ " + frDate(String(r.invite_sent_at).slice(0, 10)) : "" })));
     }
     tr.append(el("td", {}, el("button", { class: "btn small danger", type: "button", text: "Supprimer", "aria-label": "Supprimer la ligne", onclick: async () => {
       try { await orgStore.remove(M.table, r.id); renderOrg(key); } catch (e) { showToast(orgErr(e)); }
