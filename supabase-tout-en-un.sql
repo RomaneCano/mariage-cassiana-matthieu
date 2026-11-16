@@ -415,7 +415,12 @@ revoke all on public.org_deco from anon;
 -- ============================================================
 alter table public.org_deco add column if not exists paid numeric;
 alter table public.org_tasks add column if not exists status text;
-alter table public.org_tables add column if not exists ends int not null default 0;
+alter table public.org_tables add column if not exists ends int;
+alter table public.org_tables alter column ends drop not null;
+alter table public.org_tables alter column ends drop default;
+-- par défaut (valeur vide), une place à chaque bout des tables rectangulaires ; remise à zéro faite une seule fois pour les choix « 0 » de la première version
+update public.org_tables set ends = null where ends = 0 and not exists (select 1 from public.settings where key = 'ends_default_v1');
+insert into public.settings(key, value) values ('ends_default_v1', '1') on conflict (key) do nothing;
 alter table public.org_guests add column if not exists famille text;
 alter table public.org_guests add column if not exists enfant_de text;
 alter table public.org_deco add column if not exists for_sale boolean not null default false;

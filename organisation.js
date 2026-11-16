@@ -103,12 +103,12 @@ const ORG = {
     { k: "estimated", l: "Prévu (€)", t: "number" }, { k: "family", l: "Pris en charge par la famille (€)", t: "number" }, { k: "paid", l: "Payé (€)", t: "number" },
     { k: "notes", l: "Notes", t: "text" }] },
   deco: { table: "org_deco", label: "Décoration et papeterie", order: "created_at", defaults: { qty: 1 }, fields: [
-    { k: "name", l: "Article", t: "text", req: true, wide: true, ph: "ex. miroirs, bougies, menus…" },
-    { k: "link", l: "Lien", t: "text", wide: true, ph: "https://… (page du produit)" },
-    { k: "unit", l: "Prix à l'unité (€)", t: "number" }, { k: "qty", l: "Nombre total", t: "number" }, { k: "paid", l: "Payé (€)", t: "number" },
-    { k: "for_sale", l: "À revendre après le mariage", t: "check" }, { k: "sale_price", l: "Prix de revente souhaité, au total (€)", t: "number" },
-    { k: "sold", l: "Vendu", t: "check" }, { k: "sold_price", l: "Vendu pour (€)", t: "number" }, { k: "sold_to", l: "Vendu à / où", t: "text", ph: "ex. Leboncoin, Vinted, une amie…" },
-    { k: "notes", l: "Notes", t: "text" }] },
+    { k: "name", l: "Article", t: "text", req: true, span: 6, ph: "ex. miroirs, bougies, menus…" },
+    { k: "link", l: "Lien", t: "text", span: 6, ph: "https://… (page du produit)" },
+    { k: "unit", l: "Prix à l'unité (€)", t: "number", sec: "Achat", span: 2 }, { k: "qty", l: "Nombre total", t: "number", span: 2 }, { k: "paid", l: "Payé (€)", t: "number", span: 2 },
+    { k: "for_sale", l: "À revendre après le mariage", t: "check", sec: "Revente", span: 2 }, { k: "sale_price", l: "Prix de revente souhaité, au total (€)", t: "number", span: 4 },
+    { k: "sold", l: "Vendu", t: "check", span: 2 }, { k: "sold_price", l: "Vendu pour (€)", t: "number", span: 2 }, { k: "sold_to", l: "Vendu à / où", t: "text", span: 2, ph: "ex. Leboncoin, Vinted, une amie…" },
+    { k: "notes", l: "Notes", t: "text", span: 6 }] },
   vendors: { table: "org_vendors", label: "Prestataires", order: "role", defaults: { status: "À contacter", role: "Autre" }, fields: [
     { k: "name", l: "Prestataire", t: "text", req: true, wide: true }, { k: "role", l: "Catégorie", t: "select", o: ROLES, newable: true },
     { k: "status", l: "Statut", t: "select", o: STATUS }, { k: "location", l: "Localisation", t: "text" },
@@ -126,8 +126,8 @@ const ORG = {
     { k: "place", l: "Lieu", t: "text", ph: "ex. jardin, salle, piste de danse" }, { k: "people", l: "Participants", t: "text", ph: "ex. tout le monde, les enfants, 2 équipes" }, { k: "owner", l: "Qui l'anime", t: "text" },
     { k: "material", l: "Matériel", t: "text", wide: true }, { k: "ready", l: "Matériel prêt", t: "check" }, { k: "price", l: "Prix (€)", t: "number" },
     { k: "prize", l: "Lots à gagner", t: "text" }, { k: "rules", l: "Règles / déroulé", t: "long", wide: true }, { k: "notes", l: "Notes", t: "long", wide: true }] },
-  seating: { table: "org_tables", label: "Plan de tables", order: "position", defaults: { capacity: 10, shape: "Ronde" }, fields: [
-    { k: "name", l: "Nom de la table", t: "text", req: true, ph: "ex. Table 1, Famille Martin, Amis…" }, { k: "shape", l: "Forme", t: "select", o: ["Ronde", "Rectangulaire"] }, { k: "capacity", l: "Nombre de places", t: "number" }, { k: "ends", l: "Places en bout de table (rectangulaire)", t: "select", o: ["0", "1", "2"], labels: { "0": "Aucune", "1": "Un bout", "2": "Les deux bouts" } },
+  seating: { table: "org_tables", label: "Plan de tables", order: "position", defaults: { capacity: 10, shape: "Ronde", ends: "2" }, fields: [
+    { k: "name", l: "Nom de la table", t: "text", req: true, ph: "ex. Table 1, Famille Martin, Amis…" }, { k: "shape", l: "Forme", t: "select", o: ["Ronde", "Rectangulaire"] }, { k: "capacity", l: "Nombre de places", t: "number" }, { k: "ends", l: "Places en bout de table (rectangulaire)", t: "select", o: ["2", "1", "0"], labels: { "2": "Les deux bouts", "1": "Un bout", "0": "Aucune" } },
     { k: "guests", l: "Invités", t: "long", wide: true }, { k: "notes", l: "Notes", t: "text" }] },
   timeline: { table: "org_timeline", label: "Jour J", order: "time", defaults: {}, fields: [
     { k: "time", l: "Début", t: "time", req: true }, { k: "end_time", l: "Fin", t: "time" }, { k: "title", l: "Étape", t: "text", req: true, wide: true },
@@ -323,6 +323,7 @@ function guestEditor(value, cap) {
   render();
   return box;
 }
+const labelCls = f => (f.wide ? "wide" : "") + (f.t === "long" && f.k !== "guests" ? " full" : "") + (f.span ? " sp" + f.span : "");
 function fieldInput(f, value, row) {
   let inp;
   if (f.t === "select") {
@@ -605,7 +606,7 @@ async function seatPlan(rows) {
       }
       zone(t, r.id, null); plan.append(t); tabs.push({ r, t, W, H }); return;
     }
-    const g = rawSeats(r), cap = Number(r.capacity) || 0, n = Math.max(cap, g.length), rect = r.shape === "Rectangulaire", ends = rect ? Math.min(2, Math.max(0, Number(r.ends) || 0), n) : 0, sidesN = n - ends, perSide = Math.ceil(sidesN / 2), R = Math.max(96, Math.ceil(n * 64 / (2 * Math.PI))), rot = rect ? ((Number(rotMap[r.id]) || 0) % 360 + 360) % 360 : 0, vert = rot % 180 === 90, E = ends ? 140 : 0, W0 = rect ? Math.max(336, perSide * 66 + 84) + E : Math.max(280, 2 * R + 100), H0 = rect ? 232 : Math.max(280, 2 * R + 100), W = vert ? H0 : W0, H = vert ? W0 : H0, count = g.filter(Boolean).length;
+    const g = rawSeats(r), cap = Number(r.capacity) || 0, n = Math.max(cap, g.length), rect = r.shape === "Rectangulaire", ends = rect ? Math.min(2, n, r.ends == null || r.ends === "" ? 2 : Math.max(0, Number(r.ends) || 0)) : 0,   /* par défaut : une place à chaque bout */ sidesN = n - ends, perSide = Math.ceil(sidesN / 2), R = Math.max(96, Math.ceil(n * 64 / (2 * Math.PI))), rot = rect ? ((Number(rotMap[r.id]) || 0) % 360 + 360) % 360 : 0, vert = rot % 180 === 90, E = ends ? 140 : 0, W0 = rect ? Math.max(336, perSide * 66 + 84) + E : Math.max(280, 2 * R + 100), H0 = rect ? 232 : Math.max(280, 2 * R + 100), W = vert ? H0 : W0, H = vert ? W0 : H0, count = g.filter(Boolean).length;
     g.filter(Boolean).forEach(x => placed.add(norm(x)));
     const t = el("div", { class: "seat-table" + (rect ? " rect" : "") + (ends ? " ends" : "") + (vert ? " vert" : "") + (count > cap && cap ? " full" : ""), style: "width:" + W + "px;height:" + H + "px" },
       el("div", { class: "t-disc" }, el("b", { text: r.name }), el("span", { text: count + " / " + (cap || "?") }), addBadge(r)));
@@ -948,7 +949,7 @@ async function renderOrgInner(key) {
   const form = el("form", { class: "card org-add", novalidate: true });
   const inputs = {};
   const grid = el("div", { class: "org-grid" });
-  M.fields.filter(f => f.t !== "check").forEach(f => { const inp = fieldInput(f, M.defaults[f.k]); inputs[f.k] = inp; grid.append(el("label", { class: (f.wide ? "wide" : "") + (f.t === "long" && f.k !== "guests" ? " full" : "") }, el("span", { text: f.l }), inp)); });
+  M.fields.filter(f => f.t !== "check").forEach(f => { const inp = fieldInput(f, M.defaults[f.k]); inputs[f.k] = inp; grid.append(el("label", { class: labelCls(f) }, el("span", { text: f.l }), inp)); });
   const msg = el("p", { class: "msg", role: "status", hidden: true });
   form.append(el("h3", { text: "Ajouter" }), grid, el("button", { class: "btn solid small", type: "submit", text: "Ajouter" }), msg);
   form.addEventListener("submit", async ev => {
@@ -994,14 +995,16 @@ async function renderOrgInner(key) {
       card.addEventListener("toggle", () => { if (card.open) orgOpen.add(r.id); else orgOpen.delete(r.id); });
       const head = el("summary", { class: "org-sum-row" }); const fill = () => head.replaceChildren(...sumFor(r)); fill();
       const g = el("div", { class: "org-grid" });
+      let lastSec = null;
       M.fields.forEach(f => {
-        const inp = fieldInput(f, r[f.k], r);
+        const inp = fieldInput(f, f.k === "ends" && key === "seating" ? (r.ends == null || r.ends === "" ? "2" : String(r.ends)) : r[f.k], r);
         inp.addEventListener("change", async () => {
           let v = readInput(f, inp);
           if (f.k === "link") { const u = cleanUrl(v); if (u === false) { showToast("Ce lien n'est pas valide : collez l'adresse complète de la page."); inp.value = r.link || ""; return; } v = u; inp.value = u || ""; }
           try { await orgStore.update(M.table, r.id, { [f.k]: v }); r[f.k] = v; fill(); setTimeout(() => { if (!card.contains(document.activeElement)) renderOrg(key); }, 200); } catch (e) { showToast(orgErr(e)); }
         });
-        g.append(el("label", { class: (f.wide ? "wide" : "") + (f.t === "long" && f.k !== "guests" ? " full" : "") }, el("span", { text: f.l }), inp));
+        if (f.sec && f.sec !== lastSec) { g.append(el("h5", { class: "fsec", text: f.sec })); lastSec = f.sec; }
+        g.append(el("label", { class: labelCls(f) }, el("span", { text: f.l }), inp));
       });
       const acts = el("div", { class: "org-card-actions" });
       if (key === "seating") {
@@ -1033,7 +1036,7 @@ async function renderOrgInner(key) {
     const tr = el("tr", { "data-rid": r.id, class: (late ? "late " : "") + (key === "tasks" && r.done ? "done" : "") + (key === "guests" ? " p-" + (r.presence || "ATT") + (r.a_verifier ? " to-check" : "") : "") });
     if (key === "guests") { tr.dataset.q = norm((r.nom || "") + " " + (r.prenom || "")); tr.dataset.p = r.presence || "ATT"; tr.dataset.a = r.allergie && r.allergie.trim() ? "1" : "0"; tr.dataset.c = r.a_verifier ? "1" : "0"; tr.dataset.e = r.envoi || ""; }
     M.fields.forEach(f => {
-      const inp = fieldInput(f, f.k === "status" && key === "tasks" ? statusOf(r) : r[f.k]);
+      const inp = fieldInput(f, f.k === "status" && key === "tasks" ? statusOf(r) : f.k === "ends" && key === "seating" ? (r.ends == null || r.ends === "" ? "2" : String(r.ends)) : r[f.k]);
       if (key === "tasks" && f.k === "status") inp.dataset.st = statusOf(r);
       if (key === "guests" && f.k === "envoi") inp.dataset.envoi = r.envoi || "";
       if (key === "guests" && (f.k === "nom" || f.k === "prenom")) inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });

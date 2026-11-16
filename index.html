@@ -378,6 +378,12 @@ details[open]>.org-sum-row::before{transform:translateY(-50%) rotate(90deg)}
 .org-card .org-grid label:has(input[type=checkbox]),.org-add .org-grid label:has(input[type=checkbox]){flex-direction:row;display:flex;align-items:center;gap:10px;align-self:end;min-height:40px}
 .org-card .org-grid input[type=checkbox]{width:22px;height:22px;min-height:0;accent-color:var(--olive)}
 .org-card .org-grid label:has(textarea[aria-label="Notes"]),.org-add .org-grid label:has(textarea[aria-label="Notes"]){grid-column:1/-1}
+/* largeurs choisies par champ (sur 6 colonnes) et rubriques des fiches */
+.org-card .org-grid label.sp2,.org-add .org-grid label.sp2{grid-column:span 2}.org-card .org-grid label.sp3,.org-add .org-grid label.sp3{grid-column:span 3}
+.org-card .org-grid label.sp4,.org-add .org-grid label.sp4{grid-column:span 4}.org-card .org-grid label.sp6,.org-add .org-grid label.sp6{grid-column:1/-1}
+.org-grid h5.fsec{grid-column:1/-1;margin:6px 0 -4px;padding-bottom:4px;border-bottom:1px solid var(--olive-soft);font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--olive);opacity:.85}
+.org-add .org-grid h5.fsec{display:none}
+@media(max-width:900px){.org-card .org-grid label.sp2,.org-card .org-grid label.sp3,.org-card .org-grid label.sp4,.org-add .org-grid label.sp2,.org-add .org-grid label.sp3,.org-add .org-grid label.sp4{grid-column:span 1}.org-card .org-grid label.sp6,.org-add .org-grid label.sp6{grid-column:1/-1}}
 .org-card-actions{border-top:1px solid var(--line);padding-top:10px}
 .org-add .btn.solid{min-height:34px;padding:3px 18px;width:auto;justify-self:start}
 .guest-ed{display:grid;gap:6px}
@@ -2354,7 +2360,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611161348"></script>
-<script src="covoiturage.js?v=202611161348"></script>
+<script src="organisation.js?v=202611161359"></script>
+<script src="covoiturage.js?v=202611161359"></script>
 </body>
 </html>
