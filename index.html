@@ -511,6 +511,11 @@ details.org-card>summary{position:relative}details.org-card>summary>.sel-box{pos
 .org-card-body textarea{min-height:96px;resize:vertical;line-height:1.45;padding:10px 12px}
 .org-card-body textarea[aria-label="Notes"],.org-card-body textarea[aria-label="Règles / déroulé"]{min-height:130px}
 .org-add textarea{min-height:90px;resize:vertical}
+.sale-fold{margin:18px 0 6px;border:1px dashed var(--olive-soft);border-radius:12px;padding:0 14px;background:transparent}
+.sale-fold>summary{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;font-weight:700;font-size:.92rem;list-style:none;min-height:0}
+.sale-fold>summary::-webkit-details-marker{display:none}.sale-fold>summary::before{content:"▸";margin-right:8px;color:var(--olive-soft);display:inline-block;transition:transform .15s}
+.sale-fold[open]>summary::before{transform:rotate(90deg)}.sale-fold>summary small{margin-left:auto;font-weight:400;opacity:.65}
+.sale-fold .sale-board{padding:0 0 12px}
 .sale-board{margin:0 0 14px}.sale-sum{margin:6px 0 4px;font-size:1rem}
 .sale-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto auto;gap:6px 14px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--olive-soft)}
 .sale-row small{opacity:.75}.sale-in{display:grid;gap:2px;font-size:.74rem;font-weight:700}.sale-in input{min-height:36px;max-width:160px}
@@ -2360,7 +2365,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611161359"></script>
-<script src="covoiturage.js?v=202611161359"></script>
+<script src="organisation.js?v=202611161400"></script>
+<script src="covoiturage.js?v=202611161400"></script>
 </body>
 </html>

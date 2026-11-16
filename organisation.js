@@ -740,12 +740,19 @@ async function renderOrg(key) {
 }
 const getDecoBudget = async () => { try { return Number(String((await store.getSetting("deco_budget")) || "").replace(",", ".")) || 0; } catch { return 0; } };
 async function decoStats() { try { const l = await orgStore.list("org_deco"), env = await getDecoBudget(), items = l.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0); return { items, env, total: env > 0 ? Math.max(env, items) : items, paid: l.reduce((a, r) => a + (Number(r.paid) || 0), 0), count: l.length }; } catch { return null; } }
+let saleOpen = false;
+function saleFold(rows) {
+  const nSale = rows.filter(r => r.for_sale && !r.sold).length, nSold = rows.filter(r => r.sold).length;
+  const d = el("details", { class: "sale-fold" }, el("summary", {}, "À vendre après le mariage", el("small", { text: nSale || nSold ? nSale + " à vendre · " + nSold + " vendu" + (nSold > 1 ? "s" : "") : "pour plus tard" })), saleBoard(rows));
+  d.open = saleOpen; d.addEventListener("toggle", () => { saleOpen = d.open; });
+  return d;
+}
 function saleBoard(rows) {
   const spent = rows.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0);
   const sale = rows.filter(r => r.for_sale && !r.sold), sold = rows.filter(r => r.sold), rest = rows.filter(r => !r.for_sale && !r.sold);
   const expected = sale.reduce((a, r) => a + (Number(r.sale_price) || 0), 0), got = sold.reduce((a, r) => a + (Number(r.sold_price) || 0), 0);
   const upd = async (r, patch) => { try { await orgStore.update("org_deco", r.id, patch); renderOrg("deco"); } catch (e) { showToast(orgErr(e)); } };
-  const box = el("section", { class: "card sale-board" }, el("div", { class: "h-row" }, el("h3", { text: "À vendre après le mariage" }),
+  const box = el("section", { class: "sale-board" }, el("div", { class: "h-row" },
     infoTip("Choisissez ce que vous souhaitez revendre ensuite (décoration, papeterie…). Notez le prix espéré ; une fois vendu, le prix obtenu et l'acheteur. Vous voyez ainsi ce que vous récupérez, même si cela ne couvre pas la totalité.")));
   box.append(el("p", { class: "sale-sum" }, el("b", { text: eur2(got) }), " récupérés" + (spent > 0 ? " sur " + eur2(spent) + " dépensés (" + Math.round(got / spent * 100) + " %)" : ""), expected > 0 ? " · " : "", expected > 0 ? el("span", { text: eur2(expected) + " encore espérés" }) : ""));
   const num = (v, ph, fn) => { const i = el("input", { type: "number", min: "0", step: "any", inputmode: "decimal", placeholder: ph, "aria-label": ph }); i.value = v == null ? "" : v; i.addEventListener("change", () => fn(i.value === "" ? null : Number(i.value))); return i; };
@@ -940,7 +947,6 @@ async function renderOrgInner(key) {
   if (sheetForm) host.append(sheetForm);
   if (key === "timeline" && rows.length) host.append(timelinePanel(rows, tlGames));
   if (key === "games" && rows.length) host.append(gamesBoard(rows));
-  if (key === "deco" && rows.length) host.append(saleBoard(rows));
   if (key === "guests") host.append(invitePanel(rows));
 
   if (key === "seating" && rows.length) { const sp = await seatPlan(rows); if (tok !== orgTok) return; host.append(sp); }
@@ -1021,6 +1027,7 @@ async function renderOrgInner(key) {
       list.prepend(dc);
     }
     host.append(list);
+    if (key === "deco" && rows.length) host.append(saleFold(rows));   // revente : section repliée en bas de page, pour plus tard
     return;
   }
   const table = el("table", { class: "org-table" + (key === "guests" ? " guests" : "") });
