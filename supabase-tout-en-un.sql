@@ -575,6 +575,24 @@ revoke execute on function public.journal_delete(text, text, uuid) from public, 
 notify pgrst, 'reload schema';
 
 -- ============================================================
+-- 24. VOYAGE DE NOCES : réservations, itinéraire, à faire / valise, idées (une seule table, rangée par type)
+-- ============================================================
+create table if not exists public.org_trip (
+  id uuid primary key default gen_random_uuid(), created_at timestamptz not null default now(),
+  kind text not null default 'Étape',
+  title text not null check (char_length(title) between 1 and 300),
+  date date, time text, end_date date, due date,
+  place text, price numeric, paid numeric, ref text, link text,
+  done boolean not null default false, notes text
+);
+alter table public.org_trip enable row level security;
+drop policy if exists org_trip_admin on public.org_trip;
+create policy org_trip_admin on public.org_trip for all to authenticated using (public.is_admin()) with check (public.is_admin());
+revoke all on public.org_trip from anon;
+grant select, insert, update, delete on public.org_trip to authenticated;
+notify pgrst, 'reload schema';
+
+-- ============================================================
 -- 22. DROITS D'ACCÈS EXPLICITES (indispensable sur les projets récents de Supabase,
 --     où les nouvelles tables ne sont plus accessibles automatiquement : sans ces lignes,
 --     l'onglet affiche « ce compte n'a pas le droit d'écrire »).

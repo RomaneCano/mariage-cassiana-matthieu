@@ -91,6 +91,8 @@ const RETAINED = ["Retenu (OUI)", "Réservé", "Acompte versé", "Soldé"];
 const WHO = ["Cassiana", "Matthieu", "Les deux", "Autre"];
 
 const MOMENTS_GAME = ["Après la cérémonie", "Cocktail", "Dîner", "Soirée dansante", "Fin de soirée"];
+const TRIP_BOOK = ["Vol", "Train / bus", "Hébergement", "Location de voiture", "Activité", "Restaurant", "Assurance", "Autre réservation"], TRIP_TODO = ["À faire", "Document", "Valise"];
+const TRIP_VIEWS = [["trip_book", "Réservations"], ["trip_days", "Itinéraire"], ["trip_todo", "À faire et valise"], ["trip_ideas", "Idées"]];
 const KINDS_TL = ["Préparatifs", "Photos", "Cérémonie", "Trajet", "Cocktail", "Repas", "Discours", "Jeu / animation", "Danse", "Logistique", "Autre"];
 const KIND_COL = { "Préparatifs": "#b9a77a", "Photos": "#8a9bb0", "Cérémonie": "#4f5020", "Trajet": "#9a8f80", "Cocktail": "#c58a4a", "Repas": "#a3592f", "Discours": "#7d6a9a", "Jeu / animation": "#c0605a", "Danse": "#d08aa0", "Logistique": "#7a8a6a", "Autre": "#8d8d80" };
 const STATUS_TASK = ["À faire", "En cours", "En attente de retour", "Terminé"];
@@ -126,6 +128,18 @@ const ORG = {
     { k: "place", l: "Lieu", t: "text", ph: "ex. jardin, salle, piste de danse" }, { k: "people", l: "Participants", t: "text", ph: "ex. tout le monde, les enfants, 2 équipes" }, { k: "owner", l: "Qui l'anime", t: "text" },
     { k: "material", l: "Matériel", t: "text", wide: true }, { k: "ready", l: "Matériel prêt", t: "check" }, { k: "price", l: "Prix (€)", t: "number" },
     { k: "prize", l: "Lots à gagner", t: "text" }, { k: "rules", l: "Règles / déroulé", t: "long", wide: true }, { k: "notes", l: "Notes", t: "long", wide: true }] },
+  trip_book: { table: "org_trip", label: "Réservations du voyage", order: "date", accept: r => TRIP_BOOK.includes(r.kind), defaults: { kind: "Vol" }, fields: [
+    { k: "kind", l: "Type", t: "select", o: TRIP_BOOK, span: 2 }, { k: "title", l: "Réservation", t: "text", req: true, span: 4, ph: "ex. Vol Paris → Lisbonne, Hôtel Bairro Alto…" },
+    { k: "date", l: "Du", t: "date", sec: "Dates et lieu", span: 2 }, { k: "end_date", l: "Au", t: "date", span: 2 }, { k: "place", l: "Lieu / ville", t: "text", span: 2 },
+    { k: "price", l: "Prix (€)", t: "number", sec: "Paiement", span: 2 }, { k: "paid", l: "Payé (€)", t: "number", span: 2 }, { k: "ref", l: "N° de réservation", t: "text", span: 2 },
+    { k: "link", l: "Lien", t: "text", span: 6, ph: "https://… (confirmation, billet, annonce)" }, { k: "notes", l: "Notes", t: "text", span: 6 }] },
+  trip_days: { table: "org_trip", label: "Itinéraire", order: "date", accept: r => r.kind === "Étape", defaults: { kind: "Étape" }, fields: [
+    { k: "date", l: "Jour", t: "date", span: 2 }, { k: "time", l: "Heure", t: "time", span: 2 }, { k: "title", l: "Programme", t: "text", req: true, span: 6, ph: "ex. Visite du château, dîner chez Maria…" },
+    { k: "place", l: "Lieu", t: "text", span: 3 }, { k: "price", l: "Coût estimé (€)", t: "number", span: 3 }, { k: "link", l: "Lien", t: "text", span: 6 }, { k: "notes", l: "Notes", t: "text", span: 6 }] },
+  trip_todo: { table: "org_trip", label: "À faire et valise", order: "done", accept: r => TRIP_TODO.includes(r.kind), defaults: { kind: "À faire", done: false }, fields: [
+    { k: "done", l: "Fait", t: "check" }, { k: "title", l: "Tâche", t: "text", req: true, wide: true }, { k: "kind", l: "Rubrique", t: "select", o: TRIP_TODO }, { k: "due", l: "Pour le", t: "date" }, { k: "notes", l: "Notes", t: "text" }] },
+  trip_ideas: { table: "org_trip", label: "Idées de voyage", order: "created_at", accept: r => r.kind === "Idée", defaults: { kind: "Idée", done: false }, fields: [
+    { k: "done", l: "Retenu", t: "check" }, { k: "title", l: "Idée", t: "text", req: true, wide: true, ph: "ex. Randonnée au lever du soleil, restaurant à tester…" }, { k: "place", l: "Lieu", t: "text" }, { k: "price", l: "Coût estimé (€)", t: "number" }, { k: "link", l: "Lien", t: "text" }, { k: "notes", l: "Notes", t: "text" }] },
   seating: { table: "org_tables", label: "Plan de tables", order: "position", defaults: { capacity: 10, shape: "Ronde", ends: 0 }, fields: [
     { k: "name", l: "Nom de la table", t: "text", req: true, ph: "ex. Table 1, Famille Martin, Amis…" }, { k: "shape", l: "Forme", t: "select", o: ["Ronde", "Rectangulaire"] }, { k: "capacity", l: "Nombre de places", t: "number" }, { k: "ends", l: "Places en bout de table (0, 1 ou 2)", t: "number", ph: "0" },
     { k: "guests", l: "Invités", t: "long", wide: true }, { k: "notes", l: "Notes", t: "text" }] },
@@ -299,6 +313,8 @@ function sortRows(key, rows) {
   if (key === "budget") return by((a, b) => CATS_BUDGET.indexOf(a.cat) - CATS_BUDGET.indexOf(b.cat) || String(a.item).localeCompare(String(b.item)));
   if (key === "vendors") return by((a, b) => { const ia = ROLES.indexOf(a.role), ib = ROLES.indexOf(b.role); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || String(a.created_at || "").localeCompare(String(b.created_at || "")); });
   if (key === "games") { const k = t => { const [h, m] = String(t || "99:00").split(":").map(Number); return (h < 6 ? h + 24 : h) * 60 + (m || 0); }, mi = m => { const i = MOMENTS_GAME.indexOf(m); return i < 0 ? 99 : i; }; return by((a, b) => (!!b.chosen - !!a.chosen) || mi(a.moment) - mi(b.moment) || k(a.start_time) - k(b.start_time) || String(a.name).localeCompare(String(b.name), "fr")); }
+  if (key === "trip_book" || key === "trip_days") return by((a, b) => String(a.date || "9999").localeCompare(String(b.date || "9999")) || String(a.time || "").localeCompare(String(b.time || "")) || String(a.title).localeCompare(String(b.title), "fr"));
+  if (key === "trip_todo") return by((a, b) => (!!a.done - !!b.done) || TRIP_TODO.indexOf(a.kind) - TRIP_TODO.indexOf(b.kind) || String(a.due || "9999").localeCompare(String(b.due || "9999")) || String(a.title).localeCompare(String(b.title), "fr"));
   if (key === "seating") return by((a, b) => (a.position || 0) - (b.position || 0) || String(a.name).localeCompare(String(b.name), "fr", { numeric: true }));
   if (key === "timeline") { const k = t => { const [h, m] = String(t || "99:00").split(":").map(Number); return (h < 6 ? h + 24 : h) * 60 + (m || 0); }; return by((a, b) => k(a.time) - k(b.time)); }
   return by((a, b) => String(a.created_at || "").localeCompare(String(b.created_at || "")));
@@ -777,6 +793,43 @@ function saleBoard(rows) {
   }
   return box;
 }
+async function tripHeader(key, all) {
+  const g = async k => { try { return ((await store.getSetting(k)) || "").trim(); } catch { return ""; } };
+  const [dest, start, end, bud] = await Promise.all([g("trip_dest"), g("trip_start"), g("trip_end"), g("trip_budget")]);
+  const budget = Number(String(bud).replace(",", ".")) || 0;
+  const save = async (k, v) => { try { await store.setSetting(k, v); showToast("Enregistré"); renderOrg(orgState.key); } catch (e) { showToast(orgErr(e)); } };
+  const fld = (label, type, val, k, ph) => { const i = el("input", { type, placeholder: ph || "", "aria-label": label, step: type === "number" ? "any" : null, min: type === "number" ? "0" : null }); i.value = val; i.addEventListener("change", () => save(k, i.value.trim())); return el("label", { class: "trip-f" }, el("span", { text: label }), i); };
+  const head = el("div", { class: "card trip-head" }, el("h3", { class: "trip-title", text: "Notre voyage de noces" }),
+    el("div", { class: "trip-info" }, fld("Destination", "text", dest, "trip_dest", "ex. Portugal, Japon, Corse…"), fld("Départ", "date", start, "trip_start"), fld("Retour", "date", end, "trip_end"), fld("Budget du voyage (€)", "number", budget || "", "trip_budget", "ex. 4000")),
+    el("div", { class: "trip-tabs", role: "group", "aria-label": "Voyage de noces" }, ...TRIP_VIEWS.map(([k, l]) => el("button", { type: "button", "aria-pressed": String(k === key), text: l, onclick: () => renderOrg(k) }))));
+  const sum = el("div", { class: "org-sum" }), chip = (label, value, cls) => sum.append(el("div", { class: "sum-chip " + (cls || "") }, el("b", { text: value }), el("span", { text: label })));
+  const books = all.filter(r => TRIP_BOOK.includes(r.kind)), days = all.filter(r => r.kind === "Étape"), todo = all.filter(r => TRIP_TODO.includes(r.kind));
+  const sp = (a, f) => a.reduce((t, r) => t + (Number(r[f]) || 0), 0), booked = sp(books, "price"), paid = sp(books, "paid"), planned = sp(days, "price"), total = booked + planned;
+  if (start) { const d = daysBetween(todayISO(), start); chip(d > 0 ? "avant le départ" : d === 0 ? "départ" : "voyage commencé", d > 0 ? d + " j" : d === 0 ? "aujourd'hui" : "✓", "c-kid"); }
+  if (start && end && end > start) chip("nuits sur place", String(daysBetween(start, end)), "c-all");
+  if (budget > 0) { chip("budget du voyage", eur(budget), "c-link"); chip(budget - total >= 0 ? "encore disponible" : "dépassement", eur(Math.abs(budget - total)), budget - total >= 0 ? "good" : "warn"); }
+  chip("réservations", String(books.length), "c-all"); chip("réservé", eur(booked), "c-alg"); if (planned) chip("activités prévues", eur(planned), "c-hand");
+  chip("payé", eur(paid), "c-ok"); if (paid > 0 && booked - paid > 0.005) chip("reste à payer", eur(booked - paid), "warn");
+  if (todo.length) chip("à faire", todo.filter(r => r.done).length + " / " + todo.length, todo.every(r => r.done) ? "good" : "c-wait");
+  return { head, sum };
+}
+const TRIP_TPL = [["Document", "Passeports ou cartes d'identité valides (6 mois après le retour)"], ["Document", "Visa ou autorisation de voyage (selon la destination)"], ["Document", "Assurance voyage et rapatriement"], ["Document", "Carte européenne d'assurance maladie / attestation"], ["Document", "Permis de conduire (international si besoin)"], ["Document", "Copies numériques de tous les documents"],
+  ["À faire", "Réserver les vols"], ["À faire", "Réserver les hébergements"], ["À faire", "Réserver la voiture / les transports sur place"], ["À faire", "Poser les congés"], ["À faire", "Prévenir la banque et vérifier les frais à l'étranger"], ["À faire", "Vaccins et traitements à prévoir"], ["À faire", "Garde des animaux, plantes, courrier"], ["À faire", "Changer de l'argent / prendre de la monnaie"], ["À faire", "Forfait téléphone ou eSIM"], ["À faire", "Faire le plein de chargeurs et batteries externes"],
+  ["Valise", "Adaptateurs de prises"], ["Valise", "Trousse à pharmacie et médicaments"], ["Valise", "Maillots, crème solaire, lunettes de soleil"], ["Valise", "Tenues pour les soirées"], ["Valise", "Chaussures de marche"], ["Valise", "Appareil photo et chargeurs"]];
+function tripProposal(rows, bar) {
+  const old = document.querySelector(".tl-prop.trip-prop"); if (old) { old.remove(); return; }
+  const have = new Set(rows.map(r => norm(r.title))), items = TRIP_TPL.filter(([, t]) => !have.has(norm(t)));
+  const box = el("section", { class: "card tl-prop trip-prop" }, el("h3", { text: "Liste type proposée" }));
+  if (!items.length) { box.append(el("p", { class: "hint", text: "Votre liste contient déjà tout ce qui est proposé." }), el("button", { type: "button", class: "btn small", text: "Fermer", onclick: () => box.remove() })); bar.after(box); return; }
+  box.append(el("p", { class: "hint", text: "Décochez ce que vous ne voulez pas : seules les lignes cochées seront ajoutées." }));
+  const list = el("div", { class: "tl-prop-list" }), checks = [];
+  items.forEach(([k, t]) => { const cb = el("input", { type: "checkbox" }); cb.checked = true; checks.push(cb); list.append(el("label", { class: "tl-prop-row" }, cb, el("span", { class: "tl-prop-t", text: k }), el("span", { class: "tl-prop-n" }, el("b", { text: t })))); });
+  const go = el("button", { type: "button", class: "btn small solid", onclick: async () => { go.disabled = true; try { for (let i = 0; i < items.length; i++) if (checks[i].checked) await orgStore.insert("org_trip", { kind: items[i][0], title: items[i][1], done: false }); showToast("Liste mise à jour"); renderOrg("trip_todo"); } catch (e) { showToast(orgErr(e)); go.disabled = false; } } });
+  const upd = () => { const n = checks.filter(c => c.checked).length; go.disabled = !n; go.textContent = "Ajouter la sélection (" + n + ")"; };
+  list.addEventListener("change", upd); upd();
+  box.append(list, el("div", { class: "tl-prop-act" }, go, el("button", { type: "button", class: "btn small", text: "Annuler", onclick: () => box.remove() })));
+  bar.after(box);
+}
 function gamesBoard(rows) {
   const hm = t => String(t || "").slice(0, 5).replace(":", "h"), ch = rows.filter(r => r.chosen), idea = rows.filter(r => !r.chosen);
   const box = el("section", { class: "card gb" }, el("h3", { text: "Programme des jeux" }));
@@ -824,13 +877,15 @@ function timelinePanel(rows, games) {
   return box;
 }
 async function renderOrgInner(key) {
+  if (key === "trip") key = orgState.tripView || "trip_book";   // l'onglet « Voyage de noces » a ses propres sous-onglets
+  if (key.startsWith("trip_")) orgState.tripView = key;
   const tok = ++orgTok;
   orgState.key = key;
-  document.querySelectorAll("[data-org]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.org === key)));
+  document.querySelectorAll("[data-org]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.org === (key.startsWith("trip_") ? "trip" : key))));
   const host = $("#org-body"); host.replaceChildren(); host.dataset.key = key;
   if (key === "notes") return renderNotes(host, () => tok === orgTok);
-  const M = ORG[key]; let rows = [];
-  try { rows = await orgStore.list(M.table); } catch (e) { host.append(el("p", { class: "msg err", text: "Impossible de charger : " + explainErr(e) + " Exécutez supabase-tout-en-un.sql dans Supabase." })); return; }
+  const M = ORG[key]; let rows = [], tripAll = [];
+  try { rows = await orgStore.list(M.table); if (key.startsWith("trip_")) { tripAll = rows; rows = rows.filter(M.accept); } } catch (e) { host.append(el("p", { class: "msg err", text: "Impossible de charger : " + explainErr(e) + " Exécutez supabase-tout-en-un.sql dans Supabase." })); return; }
   if (tok !== orgTok) return;
   rows = sortRows(key, rows);
   setExport($("#org-body"), () => buildOrgExport(key, M, rows));
@@ -839,7 +894,9 @@ async function renderOrgInner(key) {
   let tlGames = [];
   if (key === "timeline") { try { tlGames = await orgStore.list("org_games"); } catch {} if (tok !== orgTok) return; const gf = M.fields.find(f => f.k === "game"); gf.o.length = 0; tlGames.forEach(g => { if (g.name && !gf.o.includes(g.name)) gf.o.push(g.name); }); }
   const decoS = key === "budget" ? await decoStats() : key === "deco" ? { env: await getDecoBudget() } : null; if (tok !== orgTok) return;
-  const sumBox = orgSummary(key, rows, decoS); host.append(sumBox);
+  let sumBox;
+  if (key.startsWith("trip_")) { const th = await tripHeader(key, tripAll); if (tok !== orgTok) return; host.append(th.head); sumBox = th.sum; host.append(sumBox); }
+  else { sumBox = orgSummary(key, rows, decoS); host.append(sumBox); }
   if (key === "deco") {
     const bi = el("input", { type: "number", min: "0", step: "any", inputmode: "decimal", "aria-label": "Budget global décoration et papeterie (€)", placeholder: "ex. 700" }); bi.value = decoS.env || "";
     const bm = el("span", { class: "hint" });
@@ -906,6 +963,7 @@ async function renderOrgInner(key) {
     }
     tlProp = box; bar.after(box);
   } }));
+  if (key === "trip_todo") bar.append(el("button", { type: "button", class: "btn small", text: "✦ Proposer une liste type", title: "Documents, démarches et valise à ne pas oublier : vous choisissez ce que vous ajoutez", onclick: () => tripProposal(rows, bar) }));
   let sheetForm = null;
   if (key === "guests") {
     sheetStatusEl = el("small", { class: "sheet-status", text: "" });
@@ -977,7 +1035,7 @@ async function renderOrgInner(key) {
   let shown = rows;
   if (key === "tasks") shown = rows.filter(r => (orgState.filter.status === "all" || (orgState.filter.status.startsWith("s:") ? statusOf(r) === orgState.filter.status.slice(2) : orgState.filter.status === "done" ? r.done : !r.done)) && (!orgState.filter.cat || r.cat === orgState.filter.cat));
   if (!shown.length) { host.append(el("div", { class: "empty-ico" }, icon("Agneau couché", 44)), el("p", { class: "empty", text: rows.length ? "Aucune ligne avec ce filtre." : "Rien pour l'instant. Ajoutez une première ligne avec « Ajouter »." })); return; }
-  if (key === "vendors" || key === "seating" || key === "budget" || key === "deco" || key === "games") {
+  if (key === "vendors" || key === "seating" || key === "budget" || key === "deco" || key === "games" || key === "trip_book" || key === "trip_days" || key === "trip_ideas") {
     const list = el("div", { class: "org-cards" });
     const bar2 = el("div", { class: "org-fold" },
       el("button", { class: "btn small", type: "button", text: "Tout déplier", onclick: () => list.querySelectorAll("details.org-card").forEach(d => { d.open = true; }) }),
@@ -988,12 +1046,17 @@ async function renderOrgInner(key) {
     const badge = st => { const c = RETAINED.includes(st) ? "ok" : st === "Refusé (NON)" ? "no" : /attente|donner/i.test(st || "") ? "wait" : ""; return el("span", { class: "st-badge " + c, text: st || "—" }); };
     const sumFor = r => {
       if (key === "games") { const when = [r.moment, r.start_time ? String(r.start_time).slice(0, 5).replace(":", "h") : ""].filter(Boolean).join(" · "); return [el("b", { text: (r.chosen ? "★ " : "") + r.name }), el("span", { class: "sm", text: when || "à placer" }), el("span", { class: "num", text: r.duration ? r.duration + " min" : "" }), el("span", { class: "st-badge " + (r.chosen ? (r.ready ? "ok" : "wait") : ""), text: r.chosen ? (r.ready ? "Prêt" : "À préparer") : "Idée" })]; }
+      if (key === "trip_book") { const pr = Number(r.price) || 0, pd = Number(r.paid) || 0, st = pr > 0 && pd >= pr - 0.005 ? "Payé" : pd > 0 ? "Partiel" : pr > 0 ? "À payer" : "", dts = [r.date ? frDate(r.date) : "", r.end_date ? "→ " + frDate(r.end_date) : ""].filter(Boolean).join(" ");
+        return [el("b", { text: r.title }), el("span", { class: "sm", text: [r.kind, dts, r.place].filter(Boolean).join(" · ") }), el("span", { class: "num", text: pr ? eur2(pr) : "" }), el("span", { class: "st-badge " + (st === "Payé" ? "ok" : st === "Partiel" ? "wait" : st ? "no" : ""), text: st || "—" })]; }
+      if (key === "trip_days") return [el("b", { text: (r.time ? String(r.time).slice(0, 5).replace(":", "h") + " · " : "") + r.title }), el("span", { class: "sm", text: r.place || "" }), el("span", { class: "num", text: r.price ? eur2(r.price) : "" }), el("span", {})];
+      if (key === "trip_ideas") return [el("b", { text: (r.done ? "★ " : "") + r.title }), el("span", { class: "sm", text: r.place || "" }), el("span", { class: "num", text: r.price ? eur2(r.price) : "" }), el("span", { class: "st-badge " + (r.done ? "ok" : ""), text: r.done ? "Retenu" : "Idée" })];
       if (key === "vendors") return [el("b", { text: r.name }), badge(r.status), el("span", { class: "num", text: r.price != null ? eur(r.price) : "" }), el("span", { class: "sm", text: r.phone || r.email || r.contact || r.location || "" })];
       if (key === "deco") { const tot = (Number(r.unit) || 0) * (Number(r.qty) || 0), pd = Number(r.paid) || 0, sm = el("span", { class: "sm" }); if (isUrl(r.link)) sm.append(el("a", { class: "lnk", href: r.link, target: "_blank", rel: "noopener noreferrer", title: r.link, text: "Voir le lien ↗", onclick: e => e.stopPropagation() })); const st = tot > 0 && pd >= tot - 0.005 ? "Payé" : pd > 0 ? "Partiel" : "À payer"; return [el("b", { text: r.name }), sm, el("span", { class: "num", text: (r.qty || 0) + " × " + eur2(r.unit || 0) + " = " + eur2(tot) }), el("span", { class: "st-badge " + (r.sold ? "ok" : r.for_sale ? "wait" : st === "Payé" ? "ok" : st === "Partiel" ? "wait" : "no"), text: r.sold ? "Vendu" + (r.sold_price ? " " + eur2(r.sold_price) : "") : r.for_sale ? "À revendre" : st === "Partiel" ? "Payé " + eur2(pd) : st })]; }
       if (key === "budget") return [el("b", { text: r.item }), el("span", { class: "sm", text: r.family ? "famille " + eur(r.family) : "" }), el("span", { class: "num", text: "prévu " + eur(r.estimated || 0) }), el("span", { class: "num pay " + payCls(r.estimated, r.paid), text: "● payé " + eur(r.paid || 0) })];
       const g = guestsOf(r).length; return [el("b", { text: r.name }), el("span", { class: "sm", text: r.shape || "Ronde" }), el("span", { class: "num", text: g + " / " + (r.capacity || "?") }), el("span", { class: "sm", text: "" })];
     };
     shown.forEach((r, i) => {
+      if (key === "trip_days" && (r.date || "") !== lastCat) { lastCat = r.date || ""; list.append(el("h3", { class: "org-grp", text: r.date ? new Date(r.date + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) : "Sans date" })); }
       if (key === "budget" && r.cat !== lastCat) { lastCat = r.cat; const inCat = rows.filter(x => x.cat === r.cat), sub = inCat.reduce((a, x) => a + (Number(x.estimated) || 0), 0), fam = inCat.reduce((a, x) => a + (Number(x.family) || 0), 0); list.append(el("h3", { class: "org-grp", text: (r.cat || "Sans poste") + " · " + eur(sub) + (fam ? " · dont famille " + eur(fam) : "") })); }
       if (key === "vendors" && r.role !== lastCat) { lastCat = r.role; list.append(el("h3", { class: "org-grp", text: (r.role || "Autre") + " · " + rows.filter(x => x.role === r.role).length })); }
       const card = el("details", { class: "card org-card", "data-rid": r.id });
@@ -1040,7 +1103,7 @@ async function renderOrgInner(key) {
       tb.append(el("tr", { class: "grp" }, el("td", { colspan: String(M.fields.length + 1), text: r.cat + " · " + eur(sub) })));
     }
     const late = key === "tasks" && !r.done && r.due && r.due < todayISO();
-    const tr = el("tr", { "data-rid": r.id, class: (late ? "late " : "") + (key === "tasks" && r.done ? "done" : "") + (key === "guests" ? " p-" + (r.presence || "ATT") + (r.a_verifier ? " to-check" : "") : "") });
+    const tr = el("tr", { "data-rid": r.id, class: (late ? "late " : "") + ((key === "tasks" || key === "trip_todo") && r.done ? "done" : "") + (key === "guests" ? " p-" + (r.presence || "ATT") + (r.a_verifier ? " to-check" : "") : "") });
     if (key === "guests") { tr.dataset.q = norm((r.nom || "") + " " + (r.prenom || "")); tr.dataset.p = r.presence || "ATT"; tr.dataset.a = r.allergie && r.allergie.trim() ? "1" : "0"; tr.dataset.c = r.a_verifier ? "1" : "0"; tr.dataset.e = r.envoi || ""; }
     M.fields.forEach(f => {
       const inp = fieldInput(f, f.k === "status" && key === "tasks" ? statusOf(r) : r[f.k]);
@@ -1419,13 +1482,13 @@ function buildAdminShell() {
   const today = el("section", { "data-main-sec": "today" }, el("div", { id: "today-body" }));
   const org = el("section", { "data-main-sec": "org", hidden: true },
     el("div", { class: "admin-tabs", role: "group", "aria-label": "Organisation" },
-      ...[["tasks", "Tâches"], ["guests", "Invités"], ["budget", "Budget"], ["deco", "Décoration et papeterie"], ["games", "Jeux"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["notes", "Journal"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
+      ...[["tasks", "Tâches"], ["guests", "Invités"], ["budget", "Budget"], ["deco", "Décoration et papeterie"], ["games", "Jeux"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["trip", "Voyage de noces"], ["notes", "Journal"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
     el("div", { id: "org-body" }));
   const photos = el("section", { "data-main-sec": "photos", hidden: true }, titled("h3", "cat", "Rameau d'olivier", "Photos du mariage", 28), el("div", { id: "photos-admin" }));
   const pray = el("section", { "data-main-sec": "pray", hidden: true }, titled("h3", "cat", "Calice", "Prière du jour", 28), el("div", { id: "pray-body" }));
   const ICO = { today: "Soleil", site: "Croix", org: "Agneau", photos: "Rameau d'olivier", pray: "Calice" };
   nav.querySelectorAll("[data-main]").forEach(b => b.prepend(icon(ICO[b.dataset.main], 24)));
-  const OICO = { tasks: "Bougie", budget: "Épi de blé", deco: "Bougie", games: "Cartes", guests: "Alliances", seating: "Agneau couché", timeline: "Croix", notes: "Rameau d'olivier" };
+  const OICO = { trip: "Soleil", tasks: "Bougie", budget: "Épi de blé", deco: "Bougie", games: "Cartes", guests: "Alliances", seating: "Agneau couché", timeline: "Croix", notes: "Rameau d'olivier" };
   org.querySelectorAll("[data-org]").forEach(b => b.prepend(icon(OICO[b.dataset.org], 22)));
   const SICO = { al: "Épi de blé", so: "Musique", fq: "Bougie", gi: "Poisson" };
   site.querySelectorAll("[data-tab]").forEach(b => { if (SICO[b.dataset.tab]) b.prepend(icon(SICO[b.dataset.tab], 22)); });
@@ -1555,7 +1618,7 @@ function buildOrgExport(key, M, rows) {
   if (key === "guests") { headers.push("Invitation envoyée le"); rows.forEach((r, i) => out[i].push(r.invite_sent_at ? frDate(String(r.invite_sent_at).slice(0, 10)) : "")); }
   if (key === "deco") { headers.push("Total (€)"); rows.forEach((r, i) => out[i].push((Number(r.unit) || 0) * (Number(r.qty) || 0))); }
   if (key === "budget") { headers.push("Reste à payer (€)"); rows.forEach((r, i) => out[i].push((Number(r.estimated) || 0) - (Number(r.paid) || 0))); }
-  return { name: { tasks: "taches", guests: "invites", budget: "budget", deco: "decoration-papeterie", games: "jeux", timeline: "jour-j" }[key] || key, title: M.label, headers, rows: out };
+  return { name: { tasks: "taches", guests: "invites", budget: "budget", deco: "decoration-papeterie", games: "jeux", timeline: "jour-j", trip_book: "voyage-reservations", trip_days: "voyage-itineraire", trip_todo: "voyage-a-faire", trip_ideas: "voyage-idees" }[key] || key, title: M.label, headers, rows: out };
 }
 const csvCell = v => { const t = String(v == null ? "" : v).replace(/"/g, '""'); return /[";\r\n]/.test(t) ? '"' + t + '"' : t; };
 const stamp = () => todayISO();

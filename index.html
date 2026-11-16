@@ -511,6 +511,11 @@ details.org-card>summary{position:relative}details.org-card>summary>.sel-box{pos
 .org-card-body textarea{min-height:96px;resize:vertical;line-height:1.45;padding:10px 12px}
 .org-card-body textarea[aria-label="Notes"],.org-card-body textarea[aria-label="Règles / déroulé"]{min-height:130px}
 .org-add textarea{min-height:90px;resize:vertical}
+.trip-head{margin:0 0 12px;display:grid;gap:12px}.trip-title{margin:0;font-family:"Parisienne",cursive;font-weight:400;font-size:1.9rem;color:var(--olive)}
+.trip-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px 14px}.trip-f{display:grid;gap:4px;font-size:.8rem;font-weight:700}.trip-f input{min-height:40px;font-weight:400}
+.trip-tabs{display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--olive-soft);padding-top:10px}
+.trip-tabs button{border:1.5px solid var(--olive-soft);background:transparent;color:var(--olive);border-radius:999px;padding:7px 18px;font:inherit;font-size:.92rem;cursor:pointer}
+.trip-tabs button[aria-pressed="true"]{background:var(--olive);color:var(--paper);border-color:var(--olive)}
 .sale-fold{margin:18px 0 6px;border:1px dashed var(--olive-soft);border-radius:12px;padding:0 14px;background:transparent}
 .sale-fold>summary{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;font-weight:700;font-size:.92rem;list-style:none;min-height:0}
 .sale-fold>summary::-webkit-details-marker{display:none}.sale-fold>summary::before{content:"▸";margin-right:8px;color:var(--olive-soft);display:inline-block;transition:transform .15s}
@@ -2366,7 +2371,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611161419"></script>
-<script src="covoiturage.js?v=202611161419"></script>
+<script src="organisation.js?v=202611161426"></script>
+<script src="covoiturage.js?v=202611161426"></script>
 </body>
 </html>
