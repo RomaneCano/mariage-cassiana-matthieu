@@ -126,8 +126,8 @@ const ORG = {
     { k: "place", l: "Lieu", t: "text", ph: "ex. jardin, salle, piste de danse" }, { k: "people", l: "Participants", t: "text", ph: "ex. tout le monde, les enfants, 2 équipes" }, { k: "owner", l: "Qui l'anime", t: "text" },
     { k: "material", l: "Matériel", t: "text", wide: true }, { k: "ready", l: "Matériel prêt", t: "check" }, { k: "price", l: "Prix (€)", t: "number" },
     { k: "prize", l: "Lots à gagner", t: "text" }, { k: "rules", l: "Règles / déroulé", t: "long", wide: true }, { k: "notes", l: "Notes", t: "long", wide: true }] },
-  seating: { table: "org_tables", label: "Plan de tables", order: "position", defaults: { capacity: 10, shape: "Ronde", ends: "2" }, fields: [
-    { k: "name", l: "Nom de la table", t: "text", req: true, ph: "ex. Table 1, Famille Martin, Amis…" }, { k: "shape", l: "Forme", t: "select", o: ["Ronde", "Rectangulaire"] }, { k: "capacity", l: "Nombre de places", t: "number" }, { k: "ends", l: "Places en bout de table (rectangulaire)", t: "select", o: ["2", "1", "0"], labels: { "2": "Les deux bouts", "1": "Un bout", "0": "Aucune" } },
+  seating: { table: "org_tables", label: "Plan de tables", order: "position", defaults: { capacity: 10, shape: "Ronde", ends: 0 }, fields: [
+    { k: "name", l: "Nom de la table", t: "text", req: true, ph: "ex. Table 1, Famille Martin, Amis…" }, { k: "shape", l: "Forme", t: "select", o: ["Ronde", "Rectangulaire"] }, { k: "capacity", l: "Nombre de places", t: "number" }, { k: "ends", l: "Places en bout de table (0, 1 ou 2)", t: "number", ph: "0" },
     { k: "guests", l: "Invités", t: "long", wide: true }, { k: "notes", l: "Notes", t: "text" }] },
   timeline: { table: "org_timeline", label: "Jour J", order: "time", defaults: {}, fields: [
     { k: "time", l: "Début", t: "time", req: true }, { k: "end_time", l: "Fin", t: "time" }, { k: "title", l: "Étape", t: "text", req: true, wide: true },
@@ -606,7 +606,7 @@ async function seatPlan(rows) {
       }
       zone(t, r.id, null); plan.append(t); tabs.push({ r, t, W, H }); return;
     }
-    const g = rawSeats(r), cap = Number(r.capacity) || 0, n = Math.max(cap, g.length), rect = r.shape === "Rectangulaire", ends = rect ? Math.min(2, n, r.ends == null || r.ends === "" ? 2 : Math.max(0, Number(r.ends) || 0)) : 0,   /* par défaut : une place à chaque bout */ sidesN = n - ends, perSide = Math.ceil(sidesN / 2), R = Math.max(96, Math.ceil(n * 64 / (2 * Math.PI))), rot = rect ? ((Number(rotMap[r.id]) || 0) % 360 + 360) % 360 : 0, vert = rot % 180 === 90, E = ends ? 140 : 0, W0 = rect ? Math.max(336, perSide * 66 + 84) + E : Math.max(280, 2 * R + 100), H0 = rect ? 232 : Math.max(280, 2 * R + 100), W = vert ? H0 : W0, H = vert ? W0 : H0, count = g.filter(Boolean).length;
+    const g = rawSeats(r), cap = Number(r.capacity) || 0, n = Math.max(cap, g.length), rect = r.shape === "Rectangulaire", ends = rect ? Math.min(2, n, Math.max(0, Math.round(Number(r.ends) || 0))) : 0,   /* 0 par défaut : aucune place en bout de table */ sidesN = n - ends, perSide = Math.ceil(sidesN / 2), R = Math.max(96, Math.ceil(n * 64 / (2 * Math.PI))), rot = rect ? ((Number(rotMap[r.id]) || 0) % 360 + 360) % 360 : 0, vert = rot % 180 === 90, E = ends ? 140 : 0, W0 = rect ? Math.max(336, perSide * 66 + 84) + E : Math.max(280, 2 * R + 100), H0 = rect ? 232 : Math.max(280, 2 * R + 100), W = vert ? H0 : W0, H = vert ? W0 : H0, count = g.filter(Boolean).length;
     g.filter(Boolean).forEach(x => placed.add(norm(x)));
     const t = el("div", { class: "seat-table" + (rect ? " rect" : "") + (ends ? " ends" : "") + (vert ? " vert" : "") + (count > cap && cap ? " full" : ""), style: "width:" + W + "px;height:" + H + "px" },
       el("div", { class: "t-disc" }, el("b", { text: r.name }), el("span", { text: count + " / " + (cap || "?") }), addBadge(r)));
@@ -1003,7 +1003,7 @@ async function renderOrgInner(key) {
       const g = el("div", { class: "org-grid" });
       let lastSec = null;
       M.fields.forEach(f => {
-        const inp = fieldInput(f, f.k === "ends" && key === "seating" ? (r.ends == null || r.ends === "" ? "2" : String(r.ends)) : r[f.k], r);
+        const inp = fieldInput(f, r[f.k], r);
         inp.addEventListener("change", async () => {
           let v = readInput(f, inp);
           if (f.k === "link") { const u = cleanUrl(v); if (u === false) { showToast("Ce lien n'est pas valide : collez l'adresse complète de la page."); inp.value = r.link || ""; return; } v = u; inp.value = u || ""; }
@@ -1043,7 +1043,7 @@ async function renderOrgInner(key) {
     const tr = el("tr", { "data-rid": r.id, class: (late ? "late " : "") + (key === "tasks" && r.done ? "done" : "") + (key === "guests" ? " p-" + (r.presence || "ATT") + (r.a_verifier ? " to-check" : "") : "") });
     if (key === "guests") { tr.dataset.q = norm((r.nom || "") + " " + (r.prenom || "")); tr.dataset.p = r.presence || "ATT"; tr.dataset.a = r.allergie && r.allergie.trim() ? "1" : "0"; tr.dataset.c = r.a_verifier ? "1" : "0"; tr.dataset.e = r.envoi || ""; }
     M.fields.forEach(f => {
-      const inp = fieldInput(f, f.k === "status" && key === "tasks" ? statusOf(r) : f.k === "ends" && key === "seating" ? (r.ends == null || r.ends === "" ? "2" : String(r.ends)) : r[f.k]);
+      const inp = fieldInput(f, f.k === "status" && key === "tasks" ? statusOf(r) : r[f.k]);
       if (key === "tasks" && f.k === "status") inp.dataset.st = statusOf(r);
       if (key === "guests" && f.k === "envoi") inp.dataset.envoi = r.envoi || "";
       if (key === "guests" && (f.k === "nom" || f.k === "prenom")) inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
