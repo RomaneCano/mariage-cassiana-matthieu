@@ -116,7 +116,7 @@ const ORG = {
     { k: "contact", l: "Contact", t: "text" }, { k: "phone", l: "Téléphone", t: "text" }, { k: "email", l: "E-mail", t: "text" },
     { k: "availability", l: "Disponibilité", t: "text" }, { k: "deposit", l: "Acompte (€)", t: "number" }, { k: "notes", l: "Notes", t: "long", wide: true }] },
   guests: { table: "org_guests", label: "Invités", order: "position", defaults: { presence: "ATT" }, fields: [
-    { k: "nom", l: "Nom de famille", t: "long" }, { k: "prenom", l: "Prénom", t: "long", req: true }, { k: "famille", l: "Famille / groupe", t: "text", ph: "ex. Famille Cano, amis de Matthieu" }, { k: "enfant_de", l: "Enfant de", t: "text", ph: "ex. fils de Julie et Paul" }, { k: "tel", l: "Téléphone", t: "text" }, { k: "email", l: "E-mail", t: "text" },
+    { k: "nom", l: "Nom de famille", t: "long" }, { k: "prenom", l: "Prénom", t: "long", req: true }, { k: "tel", l: "Téléphone", t: "text" }, { k: "email", l: "E-mail", t: "text" },
     { k: "presence", l: "Présence", t: "select", o: ["ATT", "OUI", "NON"], labels: { ATT: "En attente", OUI: "Présent(e)", NON: "Absent(e)" } },
     { k: "allergie", l: "Allergie", t: "long" }, { k: "adresse", l: "Adresse", t: "long" },
     { k: "envoi", l: "Invitation", t: "select", o: ["Courrier", "Lien", "Remise en main"] }, { k: "age", l: "Âge", t: "text" }, { k: "notes", l: "Notes", t: "long" }, { k: "a_verifier", l: "À vérifier", t: "check" }] },
