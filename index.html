@@ -447,6 +447,8 @@ body.sorting .admin-main button,body.sorting .admin-tabs button{outline:1.5px da
 .org-table td textarea{min-width:150px;min-height:40px;line-height:1.35;resize:vertical;overflow:hidden}
 .org-table td textarea[aria-label="Tâche"],.org-table td textarea[aria-label="Étape"],.org-table td textarea[aria-label="Idée de jeu"]{min-width:240px}
 .org-table td textarea[aria-label="Notes"]{min-width:210px}
+.org-table td textarea[aria-label="Lien utile"]{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:38px!important;min-height:38px;min-width:140px;max-width:190px;resize:none}
+.org-table td a.btn{white-space:nowrap}
 .org-table td textarea[aria-label="Âge"],.org-table td textarea[aria-label="Téléphone"]{min-width:100px}
 .org-table select[data-st]{font-weight:700}
 .org-table select[data-st="En cours"]{background:#f6ecc9;border-color:#b8941f;color:#6b5210}
@@ -2406,7 +2408,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611161545"></script>
-<script src="covoiturage.js?v=202611161545"></script>
+<script src="organisation.js?v=202611161745"></script>
+<script src="covoiturage.js?v=202611161745"></script>
 </body>
 </html>

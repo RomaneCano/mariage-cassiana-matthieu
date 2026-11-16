@@ -259,3 +259,19 @@ create policy org_trip_admin on public.org_trip for all to authenticated using (
 revoke all on public.org_trip from anon;
 grant select, insert, update, delete on public.org_trip to authenticated;
 notify pgrst, 'reload schema';
+
+-- ============================================================
+-- 25. APRÈS LE MARIAGE : démarches administratives, remerciements, souvenirs
+-- ============================================================
+create table if not exists public.org_after (
+  id uuid primary key default gen_random_uuid(), created_at timestamptz not null default now(),
+  done boolean not null default false,
+  title text not null check (char_length(title) between 1 and 300),
+  cat text, who text, due date, link text, notes text
+);
+alter table public.org_after enable row level security;
+drop policy if exists org_after_admin on public.org_after;
+create policy org_after_admin on public.org_after for all to authenticated using (public.is_admin()) with check (public.is_admin());
+revoke all on public.org_after from anon;
+grant select, insert, update, delete on public.org_after to authenticated;
+notify pgrst, 'reload schema';

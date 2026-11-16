@@ -93,6 +93,7 @@ const WHO = ["Cassiana", "Matthieu", "Les deux", "Autre"];
 const MOMENTS_GAME = ["Après la cérémonie", "Cocktail", "Dîner", "Soirée dansante", "Fin de soirée"];
 const TRIP_BOOK = ["Vol", "Train / bus", "Hébergement", "Location de voiture", "Activité", "Restaurant", "Assurance", "Autre réservation"], TRIP_TODO = ["À faire", "Document", "Valise"];
 const TRIP_VIEWS = [["trip_chrono", "Chronologie"], ["trip_book", "Réservations"], ["trip_help", "Aide à réserver"], ["trip_reco", "Recommandations"], ["trip_days", "Itinéraire"], ["trip_todo", "À faire et valise"], ["trip_ideas", "Idées"]];
+const CATS_AFTER = ["Papiers d'identité", "Impôts et argent", "Santé et social", "Travail", "Assurances", "Logement et contrats", "Souvenirs et remerciements", "Organisation"];
 const KINDS_TL = ["Préparatifs", "Photos", "Cérémonie", "Trajet", "Cocktail", "Repas", "Discours", "Jeu / animation", "Danse", "Logistique", "Autre"];
 const KIND_COL = { "Préparatifs": "#b9a77a", "Photos": "#8a9bb0", "Cérémonie": "#4f5020", "Trajet": "#9a8f80", "Cocktail": "#c58a4a", "Repas": "#a3592f", "Discours": "#7d6a9a", "Jeu / animation": "#c0605a", "Danse": "#d08aa0", "Logistique": "#7a8a6a", "Autre": "#8d8d80" };
 const STATUS_TASK = ["À faire", "En cours", "En attente de retour", "Terminé"];
@@ -128,6 +129,9 @@ const ORG = {
     { k: "place", l: "Lieu", t: "text", ph: "ex. jardin, salle, piste de danse" }, { k: "people", l: "Participants", t: "text", ph: "ex. tout le monde, les enfants, 2 équipes" }, { k: "owner", l: "Qui l'anime", t: "text" },
     { k: "material", l: "Matériel", t: "text", wide: true }, { k: "ready", l: "Matériel prêt", t: "check" }, { k: "price", l: "Prix (€)", t: "number" },
     { k: "prize", l: "Lots à gagner", t: "text" }, { k: "rules", l: "Règles / déroulé", t: "long", wide: true }, { k: "notes", l: "Notes", t: "long", wide: true }] },
+  after: { table: "org_after", label: "Après le mariage", order: "done", defaults: { done: false, cat: CATS_AFTER[0], who: "Les deux" }, fields: [
+    { k: "done", l: "Fait", t: "check" }, { k: "title", l: "À faire", t: "text", req: true, wide: true }, { k: "cat", l: "Rubrique", t: "select", o: CATS_AFTER, newable: true },
+    { k: "who", l: "Qui", t: "select", o: WHO }, { k: "due", l: "Pour le", t: "date" }, { k: "link", l: "Lien utile", t: "text" }, { k: "notes", l: "Notes", t: "text" }] },
   trip_chrono: { table: "org_trip", label: "Chronologie du voyage", accept: () => true, defaults: {}, fields: [] },
   trip_help: { table: "org_trip", label: "Aide à réserver", accept: () => true, defaults: {}, fields: [] },
   trip_reco: { table: "org_trip", label: "Recommandations", accept: () => true, defaults: {}, fields: [] },
@@ -331,6 +335,7 @@ function sortRows(key, rows) {
   if (key === "budget") return by((a, b) => CATS_BUDGET.indexOf(a.cat) - CATS_BUDGET.indexOf(b.cat) || String(a.item).localeCompare(String(b.item)));
   if (key === "vendors") return by((a, b) => { const ia = ROLES.indexOf(a.role), ib = ROLES.indexOf(b.role); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || String(a.created_at || "").localeCompare(String(b.created_at || "")); });
   if (key === "games") { const k = t => { const [h, m] = String(t || "99:00").split(":").map(Number); return (h < 6 ? h + 24 : h) * 60 + (m || 0); }, mi = m => { const i = MOMENTS_GAME.indexOf(m); return i < 0 ? 99 : i; }; return by((a, b) => (!!b.chosen - !!a.chosen) || mi(a.moment) - mi(b.moment) || k(a.start_time) - k(b.start_time) || String(a.name).localeCompare(String(b.name), "fr")); }
+  if (key === "after") return by((a, b) => (CATS_AFTER.indexOf(a.cat) < 0 ? 99 : CATS_AFTER.indexOf(a.cat)) - (CATS_AFTER.indexOf(b.cat) < 0 ? 99 : CATS_AFTER.indexOf(b.cat)) || (!!a.done - !!b.done) || String(a.due || "9999").localeCompare(String(b.due || "9999")) || String(a.title).localeCompare(String(b.title), "fr"));
   if (key === "trip_book" || key === "trip_days") return by((a, b) => String(a.date || "9999").localeCompare(String(b.date || "9999")) || String(a.time || "").localeCompare(String(b.time || "")) || String(a.title).localeCompare(String(b.title), "fr"));
   if (key === "trip_todo") return by((a, b) => (!!a.done - !!b.done) || TRIP_TODO.indexOf(a.kind) - TRIP_TODO.indexOf(b.kind) || String(a.due || "9999").localeCompare(String(b.due || "9999")) || String(a.title).localeCompare(String(b.title), "fr"));
   if (key === "seating") return by((a, b) => (a.position || 0) - (b.position || 0) || String(a.name).localeCompare(String(b.name), "fr", { numeric: true }));
@@ -442,6 +447,10 @@ function orgSummary(key, rows, deco) {
   if (key === "tasks") {
     const done = rows.filter(r => r.done).length, late = rows.filter(r => !r.done && r.due && r.due < todayISO()).length;
     chip("faites", done + " / " + rows.length, "c-ok"); chip("en cours", String(rows.filter(r => statusOf(r) === "En cours").length), "c-wait"); chip("en attente de retour", String(rows.filter(r => statusOf(r) === "En attente de retour").length), "c-alg"); chip("en retard", String(late), late ? "warn" : "good"); chip("avant le mariage", Math.max(0, daysBetween(todayISO(), WEDDING_ISO)) + " j", "c-kid");
+  } else if (key === "after") {
+    const done = rows.filter(r => r.done).length, late = rows.filter(r => !r.done && r.due && r.due < todayISO()).length;
+    chip("faites", done + " / " + rows.length, rows.length && done === rows.length ? "good" : "c-ok"); chip("à faire", String(rows.length - done), "c-wait"); chip("en retard", String(late), late ? "warn" : "good");
+    const w = (n) => rows.filter(r => !r.done && (r.who === n || r.who === "Les deux")).length; chip("pour Cassiana", String(w("Cassiana")), "c-hand"); chip("pour Matthieu", String(w("Matthieu")), "c-link");
   } else if (key === "deco") {
     const articles = rows.reduce((a, r) => a + (Number(r.qty) || 0), 0), total = rows.reduce((a, r) => a + (Number(r.unit) || 0) * (Number(r.qty) || 0), 0), env = deco ? deco.env : 0;
     const paidD = rows.reduce((a, r) => a + (Number(r.paid) || 0), 0), resteD = total - paidD;
@@ -998,6 +1007,52 @@ function tripChrono(all, start) {
 const TRIP_TPL = [["Document", "Passeports ou cartes d'identité valides (6 mois après le retour)"], ["Document", "Visa ou autorisation de voyage (selon la destination)"], ["Document", "Assurance voyage et rapatriement"], ["Document", "Carte européenne d'assurance maladie / attestation"], ["Document", "Permis de conduire (international si besoin)"], ["Document", "Copies numériques de tous les documents"],
   ["À faire", "Réserver les vols"], ["À faire", "Réserver les hébergements"], ["À faire", "Réserver la voiture / les transports sur place"], ["À faire", "Poser les congés"], ["À faire", "Prévenir la banque et vérifier les frais à l'étranger"], ["À faire", "Vaccins et traitements à prévoir"], ["À faire", "Garde des animaux, plantes, courrier"], ["À faire", "Changer de l'argent / prendre de la monnaie"], ["À faire", "Forfait téléphone ou eSIM"], ["À faire", "Faire le plein de chargeurs et batteries externes"],
   ["Valise", "Adaptateurs de prises"], ["Valise", "Trousse à pharmacie et médicaments"], ["Valise", "Maillots, crème solaire, lunettes de soleil"], ["Valise", "Tenues pour les soirées"], ["Valise", "Chaussures de marche"], ["Valise", "Appareil photo et chargeurs"]];
+const AFTER_TPL = [
+  ["Papiers d'identité", "Récupérer le livret de famille remis par la mairie", "livret de famille mariage"],
+  ["Papiers d'identité", "Demander des copies intégrales de l'acte de mariage (mairie)", "copie intégrale acte de mariage"],
+  ["Papiers d'identité", "Carte d'identité : ajouter le nom d'usage si vous le souhaitez", "carte nationale d'identité nom d'usage"],
+  ["Papiers d'identité", "Passeport : ajouter le nom d'usage si vous le souhaitez", "passeport nom d'usage"],
+  ["Papiers d'identité", "Permis de conduire et carte grise : mettre à jour si besoin", "permis de conduire changement de nom"],
+  ["Impôts et argent", "Signaler le mariage aux impôts (changement de situation familiale)", "mariage déclaration changement de situation impôts"],
+  ["Impôts et argent", "Choisir déclaration commune ou séparée pour l'année du mariage", "mariage impôt sur le revenu année du mariage"],
+  ["Impôts et argent", "Vérifier le taux de prélèvement à la source", "prélèvement à la source changement de situation"],
+  ["Impôts et argent", "Informer la banque (nom d'usage, situation) et voir pour un compte joint", ""],
+  ["Impôts et argent", "Mettre à jour les bénéficiaires de l'assurance-vie", ""],
+  ["Santé et social", "Mettre à jour la carte Vitale et informer la CPAM (nom d'usage)", "carte vitale changement de nom"],
+  ["Santé et social", "Mutuelle : ajouter le conjoint ou mettre à jour les bénéficiaires", ""],
+  ["Santé et social", "Informer la CAF du changement de situation", "caf changement de situation familiale mariage"],
+  ["Travail", "Informer l'employeur (situation familiale, mutuelle et prévoyance d'entreprise)", ""],
+  ["Travail", "Mettre à jour France Travail et les caisses de retraite si besoin", ""],
+  ["Assurances", "Assurance habitation : ajouter le conjoint", ""],
+  ["Assurances", "Assurance auto : conducteurs désignés et nom d'usage", ""],
+  ["Assurances", "Vérifier la protection juridique et la responsabilité civile", ""],
+  ["Logement et contrats", "Bail, électricité, gaz, eau : ajouter le conjoint ou mettre à jour le nom", ""],
+  ["Logement et contrats", "Internet, téléphone, transports, abonnements : mettre à jour le nom", ""],
+  ["Logement et contrats", "Changement d'adresse si déménagement (poste, mairie, organismes)", "changement d'adresse"],
+  ["Souvenirs et remerciements", "Envoyer les remerciements aux invités", ""],
+  ["Souvenirs et remerciements", "Récupérer les photos et vidéos du photographe et du vidéaste", ""],
+  ["Souvenirs et remerciements", "Choisir et commander l'album photo", ""],
+  ["Souvenirs et remerciements", "Faire nettoyer et conserver la robe et le costume", ""],
+  ["Souvenirs et remerciements", "Partager l'album avec les invités (onglet Photos du site)", ""],
+  ["Organisation", "Régler les soldes restants des prestataires", ""],
+  ["Organisation", "Rendre le matériel loué (décoration, tenues, matériel)", ""],
+  ["Organisation", "Revendre la décoration et la papeterie (onglet Décoration et papeterie)", ""],
+  ["Organisation", "Laisser un avis aux prestataires", ""],
+  ["Organisation", "Archiver les documents du mariage (contrats, factures, acte)", ""]];
+function afterProposal(rows, bar) {
+  const old = document.querySelector(".tl-prop.after-prop"); if (old) { old.remove(); return; }
+  const have = new Set(rows.map(r => norm(r.title))), items = AFTER_TPL.filter(([, t]) => !have.has(norm(t)));
+  const box = el("section", { class: "card tl-prop after-prop" }, el("h3", { text: "Liste type proposée" }));
+  if (!items.length) { box.append(el("p", { class: "hint", text: "Votre liste contient déjà tout ce qui est proposé." }), el("button", { type: "button", class: "btn small", text: "Fermer", onclick: () => box.remove() })); bar.after(box); return; }
+  box.append(el("p", { class: "hint", text: "Pistes générales à adapter à votre situation (les démarches changent selon chacun : vérifiez sur service-public.fr). Décochez ce que vous ne voulez pas." }));
+  const list = el("div", { class: "tl-prop-list" }), checks = [];
+  items.forEach(([c, t]) => { const cb = el("input", { type: "checkbox" }); cb.checked = true; checks.push(cb); list.append(el("label", { class: "tl-prop-row" }, cb, el("span", { class: "tl-prop-t", text: c }), el("span", { class: "tl-prop-n" }, el("b", { text: t })))); });
+  const go = el("button", { type: "button", class: "btn small solid", onclick: async () => { go.disabled = true; try { for (let i = 0; i < items.length; i++) if (checks[i].checked) { const [c, t, kw] = items[i]; await orgStore.insert("org_after", { cat: c, title: t, who: "Les deux", done: false, ...(kw ? { link: "https://www.service-public.fr/particuliers/recherche?keyword=" + encodeURIComponent(kw) } : {}) }); } showToast("Liste mise à jour"); renderOrg("after"); } catch (e) { showToast(orgErr(e)); go.disabled = false; } } });
+  const upd = () => { const n = checks.filter(c => c.checked).length; go.disabled = !n; go.textContent = "Ajouter la sélection (" + n + ")"; };
+  list.addEventListener("change", upd); upd();
+  box.append(list, el("div", { class: "tl-prop-act" }, go, el("button", { type: "button", class: "btn small", text: "Annuler", onclick: () => box.remove() })));
+  bar.after(box);
+}
 function tripProposal(rows, bar) {
   const old = document.querySelector(".tl-prop.trip-prop"); if (old) { old.remove(); return; }
   const have = new Set(rows.map(r => norm(r.title))), items = TRIP_TPL.filter(([, t]) => !have.has(norm(t)));
@@ -1100,6 +1155,12 @@ async function renderOrgInner(key) {
     const ct = el("select", { "aria-label": "Catégorie" }, el("option", { value: "", text: "Toutes les catégories" }), ...ORG.tasks.fields.find(f => f.k === "cat").o.map(c => el("option", { value: c, text: c }))); ct.value = orgState.filter.cat;
     st.addEventListener("change", () => { orgState.filter.status = st.value; renderOrg(key); }); ct.addEventListener("change", () => { orgState.filter.cat = ct.value; renderOrg(key); });
     bar.append(st, ct);
+  }
+  if (key === "after") {
+    const st = el("select", { "aria-label": "Afficher" }, ...[["todo", "À faire"], ["done", "Faites"], ["all", "Toutes"]].map(([v, t]) => el("option", { value: v, text: t }))); st.value = orgState.filter.astat || "todo";
+    const ct = el("select", { "aria-label": "Rubrique" }, el("option", { value: "", text: "Toutes les rubriques" }), ...ORG.after.fields.find(f => f.k === "cat").o.map(c => el("option", { value: c, text: c }))); ct.value = orgState.filter.acat || "";
+    st.addEventListener("change", () => { orgState.filter.astat = st.value; renderOrg(key); }); ct.addEventListener("change", () => { orgState.filter.acat = ct.value; renderOrg(key); });
+    bar.append(st, ct, el("button", { type: "button", class: "btn small", text: "✦ Proposer la liste type", title: "Papiers, impôts, santé, assurances, remerciements… vous choisissez ce que vous ajoutez", onclick: () => afterProposal(rows, bar) }));
   }
   let guestFilter = () => {};
   if (key === "guests") {
@@ -1222,6 +1283,7 @@ async function renderOrgInner(key) {
 
   // tableau modifiable
   let shown = rows;
+  if (key === "after") shown = rows.filter(r => ((orgState.filter.astat || "todo") === "all" || ((orgState.filter.astat || "todo") === "done" ? r.done : !r.done)) && (!orgState.filter.acat || r.cat === orgState.filter.acat));
   if (key === "tasks") shown = rows.filter(r => (orgState.filter.status === "all" || (orgState.filter.status.startsWith("s:") ? statusOf(r) === orgState.filter.status.slice(2) : orgState.filter.status === "done" ? r.done : !r.done)) && (!orgState.filter.cat || r.cat === orgState.filter.cat));
   if (!shown.length) { host.append(el("div", { class: "empty-ico" }, icon("Agneau couché", 44)), el("p", { class: "empty", text: rows.length ? "Aucune ligne avec ce filtre." : "Rien pour l'instant. Ajoutez une première ligne avec « Ajouter »." })); return; }
   if (key === "vendors" || key === "seating" || key === "budget" || key === "deco" || key === "games" || key === "trip_book" || key === "trip_days" || key === "trip_ideas") {
@@ -1284,16 +1346,17 @@ async function renderOrgInner(key) {
     return;
   }
   const table = el("table", { class: "org-table" + (key === "guests" ? " guests" : "") });
-  table.append(el("thead", {}, el("tr", {}, ...M.fields.map(f => el("th", { text: f.l })), ...(key === "seating" ? [el("th", { text: "Ordre" })] : []), ...(key === "guests" ? [el("th", { text: "Envoi de l'invitation" })] : []), el("th", {}))));
+  table.append(el("thead", {}, el("tr", {}, ...M.fields.map(f => el("th", { text: f.l })), ...(key === "seating" ? [el("th", { text: "Ordre" })] : []), ...(key === "after" ? [el("th", { text: "Ouvrir" })] : []), ...(key === "guests" ? [el("th", { text: "Envoi de l'invitation" })] : []), el("th", {}))));
   const tb = el("tbody");
   let lastCat = null;
   shown.forEach(r => {
+    if (key === "after" && r.cat !== lastCat) { lastCat = r.cat; const inCat = rows.filter(x => x.cat === r.cat); tb.append(el("tr", { class: "grp" }, el("td", { colspan: String(M.fields.length + 2), text: (r.cat || "Sans rubrique") + " · " + inCat.filter(x => x.done).length + " / " + inCat.length }))); }
     if ((key === "budget" || key === "tasks") && (key === "budget" ? r.cat : null) !== null && r.cat !== lastCat) {
       lastCat = r.cat; const sub = rows.filter(x => x.cat === r.cat).reduce((a, x) => a + (Number(x.estimated) || 0), 0);
       tb.append(el("tr", { class: "grp" }, el("td", { colspan: String(M.fields.length + 1), text: r.cat + " · " + eur(sub) })));
     }
-    const late = key === "tasks" && !r.done && r.due && r.due < todayISO();
-    const tr = el("tr", { "data-rid": r.id, class: (late ? "late " : "") + ((key === "tasks" || key === "trip_todo") && r.done ? "done" : "") + (key === "guests" ? " p-" + (r.presence || "ATT") + (r.a_verifier ? " to-check" : "") : "") });
+    const late = (key === "tasks" || key === "after") && !r.done && r.due && r.due < todayISO();
+    const tr = el("tr", { "data-rid": r.id, class: (late ? "late " : "") + ((key === "tasks" || key === "trip_todo" || key === "after") && r.done ? "done" : "") + (key === "guests" ? " p-" + (r.presence || "ATT") + (r.a_verifier ? " to-check" : "") : "") });
     if (key === "guests") { tr.dataset.q = norm((r.nom || "") + " " + (r.prenom || "")); tr.dataset.p = r.presence || "ATT"; tr.dataset.a = r.allergie && r.allergie.trim() ? "1" : "0"; tr.dataset.c = r.a_verifier ? "1" : "0"; tr.dataset.e = r.envoi || ""; }
     M.fields.forEach(f => {
       const inp = fieldInput(f, f.k === "status" && key === "tasks" ? statusOf(r) : r[f.k]);
@@ -1328,6 +1391,7 @@ async function renderOrgInner(key) {
       mark.dataset.envoi = send.dataset.envoi = r.envoi || "";
       tr.append(el("td", { class: "sendcell" }, manual ? mark : send, el("small", { class: "sentat", text: r.invite_sent_at ? "✓ " + frDate(String(r.invite_sent_at).slice(0, 10)) : "" })));
     }
+    if (key === "after") tr.append(el("td", {}, isUrl(r.link) ? el("a", { class: "btn small", href: r.link, target: "_blank", rel: "noopener noreferrer", title: r.link, text: "↗ Ouvrir" }) : ""));
     tr.append(el("td", {}, el("button", { class: "btn small danger", type: "button", text: "Supprimer", "aria-label": "Supprimer la ligne", onclick: async () => {
       try { await orgStore.remove(M.table, r.id); renderOrg(key); } catch (e) { showToast(orgErr(e)); }
     } })));
@@ -1674,13 +1738,13 @@ function buildAdminShell() {
   const today = el("section", { "data-main-sec": "today" }, el("div", { id: "today-body" }));
   const org = el("section", { "data-main-sec": "org", hidden: true },
     el("div", { class: "admin-tabs", role: "group", "aria-label": "Organisation" },
-      ...[["tasks", "Tâches"], ["guests", "Invités"], ["budget", "Budget"], ["deco", "Décoration et papeterie"], ["games", "Jeux"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["trip", "Voyage de noces"], ["notes", "Journal"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
+      ...[["tasks", "Tâches"], ["guests", "Invités"], ["budget", "Budget"], ["deco", "Décoration et papeterie"], ["games", "Jeux"], ["seating", "Plan de tables"], ["timeline", "Jour J"], ["trip", "Voyage de noces"], ["after", "Après le mariage"], ["notes", "Journal"]].map(([k, l]) => el("button", { type: "button", "data-org": k, "aria-pressed": "false", text: l, onclick: () => renderOrg(k) }))),
     el("div", { id: "org-body" }));
   const photos = el("section", { "data-main-sec": "photos", hidden: true }, titled("h3", "cat", "Rameau d'olivier", "Photos du mariage", 28), el("div", { id: "photos-admin" }));
   const pray = el("section", { "data-main-sec": "pray", hidden: true }, titled("h3", "cat", "Calice", "Prière du jour", 28), el("div", { id: "pray-body" }));
   const ICO = { today: "Soleil", site: "Croix", org: "Agneau", photos: "Rameau d'olivier", pray: "Calice" };
   nav.querySelectorAll("[data-main]").forEach(b => b.prepend(icon(ICO[b.dataset.main], 24)));
-  const OICO = { trip: "Soleil", tasks: "Bougie", budget: "Épi de blé", deco: "Bougie", games: "Cartes", guests: "Alliances", seating: "Agneau couché", timeline: "Croix", notes: "Rameau d'olivier" };
+  const OICO = { after: "Alliances", trip: "Soleil", tasks: "Bougie", budget: "Épi de blé", deco: "Bougie", games: "Cartes", guests: "Alliances", seating: "Agneau couché", timeline: "Croix", notes: "Rameau d'olivier" };
   org.querySelectorAll("[data-org]").forEach(b => b.prepend(icon(OICO[b.dataset.org], 22)));
   const SICO = { al: "Épi de blé", so: "Musique", fq: "Bougie", gi: "Poisson" };
   site.querySelectorAll("[data-tab]").forEach(b => { if (SICO[b.dataset.tab]) b.prepend(icon(SICO[b.dataset.tab], 22)); });
@@ -1810,7 +1874,7 @@ function buildOrgExport(key, M, rows) {
   if (key === "guests") { headers.push("Invitation envoyée le"); rows.forEach((r, i) => out[i].push(r.invite_sent_at ? frDate(String(r.invite_sent_at).slice(0, 10)) : "")); }
   if (key === "deco") { headers.push("Total (€)"); rows.forEach((r, i) => out[i].push((Number(r.unit) || 0) * (Number(r.qty) || 0))); }
   if (key === "budget") { headers.push("Reste à payer (€)"); rows.forEach((r, i) => out[i].push((Number(r.estimated) || 0) - (Number(r.paid) || 0))); }
-  return { name: { tasks: "taches", guests: "invites", budget: "budget", deco: "decoration-papeterie", games: "jeux", timeline: "jour-j", trip_book: "voyage-reservations", trip_days: "voyage-itineraire", trip_todo: "voyage-a-faire", trip_ideas: "voyage-idees" }[key] || key, title: M.label, headers, rows: out };
+  return { name: { tasks: "taches", guests: "invites", budget: "budget", deco: "decoration-papeterie", games: "jeux", timeline: "jour-j", after: "apres-le-mariage", trip_book: "voyage-reservations", trip_days: "voyage-itineraire", trip_todo: "voyage-a-faire", trip_ideas: "voyage-idees" }[key] || key, title: M.label, headers, rows: out };
 }
 const csvCell = v => { const t = String(v == null ? "" : v).replace(/"/g, '""'); return /[";\r\n]/.test(t) ? '"' + t + '"' : t; };
 const stamp = () => todayISO();
