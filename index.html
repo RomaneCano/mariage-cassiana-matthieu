@@ -516,6 +516,41 @@ details.org-card>summary{position:relative}details.org-card>summary>.sel-box{pos
 .trip-tabs{display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--olive-soft);padding-top:10px}
 .trip-tabs button{border:1.5px solid var(--olive-soft);background:transparent;color:var(--olive);border-radius:999px;padding:7px 18px;font:inherit;font-size:.92rem;cursor:pointer}
 .trip-tabs button[aria-pressed="true"]{background:var(--olive);color:var(--paper);border-color:var(--olive)}
+.reco{display:grid;gap:14px;margin:12px 0 18px}.reco-title{margin:0;font-family:"Parisienne",cursive;font-weight:400;font-size:1.8rem;color:var(--olive)}
+.reco-live{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start}.reco-live img{width:180px;max-width:36vw;border-radius:12px;object-fit:cover}.reco-extract{margin:0 0 6px;line-height:1.6}
+.reco-info{display:flex;gap:8px;flex-wrap:wrap}.reco-chip{background:var(--paper-2);border-radius:999px;padding:5px 14px;font-size:.84rem}
+.reco-sec{background:var(--paper-2);border-radius:14px;padding:14px 16px}.reco-sec h4{margin:0 0 8px;color:var(--olive)}
+.reco-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px 14px}.reco-item{display:flex;gap:8px;align-items:center;background:var(--paper);border:1px solid var(--olive-soft);border-radius:10px;padding:6px 10px}
+.reco-item span{flex:1;min-width:0;font-size:.92rem}.reco-add{border:1.5px solid var(--olive);background:transparent;color:var(--olive);border-radius:50%;width:26px;height:26px;min-height:0;padding:0;cursor:pointer;line-height:1;flex:none}.reco-add:hover:not([disabled]){background:var(--olive);color:var(--paper)}.reco-add[disabled]{opacity:.6;cursor:default}
+.reco-map{color:var(--olive);text-decoration:none;opacity:.7}.reco-tips{margin:0;padding-left:18px;display:grid;gap:4px}
+@media(max-width:640px){.reco-live{grid-template-columns:1fr}.reco-live img{width:100%;max-width:none;max-height:200px}}
+.help{display:grid;gap:16px;margin:12px 0 18px}.help-intro{margin:0;max-width:60em;line-height:1.55}
+.help-near{display:grid;gap:4px;max-width:520px;font-size:.82rem;font-weight:700}.help-near input{min-height:42px;font-weight:400}
+.help-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.help-g{background:var(--paper-2);border-radius:14px;padding:14px 16px;display:grid;gap:6px;align-content:start}.help-g h4{margin:0;font-size:1.05rem;color:var(--olive)}.help-g .hint{margin:0}
+.help-l{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}.help-l .btn{text-decoration:none}
+.help-row{display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center;padding:8px 0;border-top:1px dashed var(--olive-soft);font-size:.85rem}.help-row span{font-weight:700}.help-row a{color:var(--olive)}
+.trip-info{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.trip-sub{margin:-6px 0 2px;font-size:1.05rem;color:var(--olive);opacity:.85}
+/* chronologie du voyage */
+.chrono{display:grid;gap:18px;margin:12px 0 18px}
+.cd{display:grid;grid-template-columns:92px 1fr;gap:16px;align-items:start}
+.cd-date{display:grid;justify-items:center;text-align:center;background:var(--olive);color:var(--paper);border-radius:14px;padding:10px 6px;line-height:1.15;position:sticky;top:8px}
+.cd-date b{font-size:1.9rem;font-family:"Libre Baskerville",serif}.cd-date span{text-transform:uppercase;letter-spacing:.12em;font-size:.72rem}.cd-date small{font-size:.72rem;opacity:.85;text-transform:capitalize}.cd-date em{margin-top:4px;font-style:normal;font-size:.7rem;background:var(--paper);color:var(--olive);border-radius:999px;padding:1px 8px}
+.cd-items{list-style:none;margin:0;padding:0 0 0 18px;border-left:2px solid var(--olive-soft);display:grid;gap:10px}
+.ci{position:relative;background:var(--paper-2);border-radius:12px;padding:10px 14px;display:grid;gap:3px}
+.ci::before{content:"";position:absolute;left:-26px;top:16px;width:12px;height:12px;border-radius:50%;background:var(--c);border:2px solid var(--paper)}
+.ci::after{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:12px 0 0 12px;background:var(--c)}
+.ci.fin{opacity:.65;background:transparent;border:1px dashed var(--olive-soft)}
+.ci-top{display:flex;gap:8px 10px;flex-wrap:wrap;align-items:baseline}.ci-top b{flex:1;min-width:0;overflow-wrap:anywhere}
+.ci-time{font-weight:700;font-variant-numeric:tabular-nums;color:var(--c)}
+.ci-kind{font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;background:var(--c);color:#fff;border-radius:999px;padding:1px 9px}
+.ci-price{font-size:.85rem;font-variant-numeric:tabular-nums;opacity:.85}
+.ci-meta{font-size:.84rem;opacity:.8}.ci-note{font-size:.84rem;font-style:italic;opacity:.85}
+.ci-act{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:2px}.ci-act .btn{min-height:30px;padding:2px 12px;font-size:.78rem}
+.ci-edit{border:0;background:transparent;color:var(--olive);text-decoration:underline;font:inherit;font-size:.8rem;cursor:pointer;opacity:.7}
+.cd-cost{margin:6px 0 0 18px;font-size:.85rem;font-weight:700;color:var(--olive);opacity:.85}
+@media(max-width:640px){.cd{grid-template-columns:62px 1fr;gap:10px}.cd-date b{font-size:1.4rem}.cd-items{padding-left:14px}.ci::before{left:-21px}}
 .sale-fold{margin:18px 0 6px;border:1px dashed var(--olive-soft);border-radius:12px;padding:0 14px;background:transparent}
 .sale-fold>summary{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;font-weight:700;font-size:.92rem;list-style:none;min-height:0}
 .sale-fold>summary::-webkit-details-marker{display:none}.sale-fold>summary::before{content:"▸";margin-right:8px;color:var(--olive-soft);display:inline-block;transition:transform .15s}
@@ -2371,7 +2406,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611161426"></script>
-<script src="covoiturage.js?v=202611161426"></script>
+<script src="organisation.js?v=202611161432"></script>
+<script src="covoiturage.js?v=202611161432"></script>
 </body>
 </html>

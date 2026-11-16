@@ -92,7 +92,7 @@ const WHO = ["Cassiana", "Matthieu", "Les deux", "Autre"];
 
 const MOMENTS_GAME = ["Après la cérémonie", "Cocktail", "Dîner", "Soirée dansante", "Fin de soirée"];
 const TRIP_BOOK = ["Vol", "Train / bus", "Hébergement", "Location de voiture", "Activité", "Restaurant", "Assurance", "Autre réservation"], TRIP_TODO = ["À faire", "Document", "Valise"];
-const TRIP_VIEWS = [["trip_book", "Réservations"], ["trip_days", "Itinéraire"], ["trip_todo", "À faire et valise"], ["trip_ideas", "Idées"]];
+const TRIP_VIEWS = [["trip_chrono", "Chronologie"], ["trip_book", "Réservations"], ["trip_help", "Aide à réserver"], ["trip_reco", "Recommandations"], ["trip_days", "Itinéraire"], ["trip_todo", "À faire et valise"], ["trip_ideas", "Idées"]];
 const KINDS_TL = ["Préparatifs", "Photos", "Cérémonie", "Trajet", "Cocktail", "Repas", "Discours", "Jeu / animation", "Danse", "Logistique", "Autre"];
 const KIND_COL = { "Préparatifs": "#b9a77a", "Photos": "#8a9bb0", "Cérémonie": "#4f5020", "Trajet": "#9a8f80", "Cocktail": "#c58a4a", "Repas": "#a3592f", "Discours": "#7d6a9a", "Jeu / animation": "#c0605a", "Danse": "#d08aa0", "Logistique": "#7a8a6a", "Autre": "#8d8d80" };
 const STATUS_TASK = ["À faire", "En cours", "En attente de retour", "Terminé"];
@@ -128,6 +128,9 @@ const ORG = {
     { k: "place", l: "Lieu", t: "text", ph: "ex. jardin, salle, piste de danse" }, { k: "people", l: "Participants", t: "text", ph: "ex. tout le monde, les enfants, 2 équipes" }, { k: "owner", l: "Qui l'anime", t: "text" },
     { k: "material", l: "Matériel", t: "text", wide: true }, { k: "ready", l: "Matériel prêt", t: "check" }, { k: "price", l: "Prix (€)", t: "number" },
     { k: "prize", l: "Lots à gagner", t: "text" }, { k: "rules", l: "Règles / déroulé", t: "long", wide: true }, { k: "notes", l: "Notes", t: "long", wide: true }] },
+  trip_chrono: { table: "org_trip", label: "Chronologie du voyage", accept: () => true, defaults: {}, fields: [] },
+  trip_help: { table: "org_trip", label: "Aide à réserver", accept: () => true, defaults: {}, fields: [] },
+  trip_reco: { table: "org_trip", label: "Recommandations", accept: () => true, defaults: {}, fields: [] },
   trip_book: { table: "org_trip", label: "Réservations du voyage", order: "date", accept: r => TRIP_BOOK.includes(r.kind), defaults: { kind: "Vol" }, fields: [
     { k: "kind", l: "Type", t: "select", o: TRIP_BOOK, span: 2 }, { k: "title", l: "Réservation", t: "text", req: true, span: 4, ph: "ex. Vol Paris → Lisbonne, Hôtel Bairro Alto…" },
     { k: "date", l: "Du", t: "date", sec: "Dates et lieu", span: 2 }, { k: "end_date", l: "Au", t: "date", span: 2 }, { k: "place", l: "Lieu / ville", t: "text", span: 2 },
@@ -795,12 +798,15 @@ function saleBoard(rows) {
 }
 async function tripHeader(key, all) {
   const g = async k => { try { return ((await store.getSetting(k)) || "").trim(); } catch { return ""; } };
-  const [dest, start, end, bud] = await Promise.all([g("trip_dest"), g("trip_start"), g("trip_end"), g("trip_budget")]);
+  const [dest, start, end, bud, from] = await Promise.all([g("trip_dest"), g("trip_start"), g("trip_end"), g("trip_budget"), g("trip_from")]);
+  tripSet = { from, dest, start, end };
   const budget = Number(String(bud).replace(",", ".")) || 0;
   const save = async (k, v) => { try { await store.setSetting(k, v); showToast("Enregistré"); renderOrg(orgState.key); } catch (e) { showToast(orgErr(e)); } };
   const fld = (label, type, val, k, ph) => { const i = el("input", { type, placeholder: ph || "", "aria-label": label, step: type === "number" ? "any" : null, min: type === "number" ? "0" : null }); i.value = val; i.addEventListener("change", () => save(k, i.value.trim())); return el("label", { class: "trip-f" }, el("span", { text: label }), i); };
-  const head = el("div", { class: "card trip-head" }, el("h3", { class: "trip-title", text: "Notre voyage de noces" }),
-    el("div", { class: "trip-info" }, fld("Destination", "text", dest, "trip_dest", "ex. Portugal, Japon, Corse…"), fld("Départ", "date", start, "trip_start"), fld("Retour", "date", end, "trip_end"), fld("Budget du voyage (€)", "number", budget || "", "trip_budget", "ex. 4000")),
+  const fr = iso => new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const subtitle = [dest ? dest : "", start && end ? "du " + fr(start) + " au " + fr(end) : start ? "à partir du " + fr(start) : ""].filter(Boolean).join(" · ");
+  const head = el("div", { class: "card trip-head" }, el("h3", { class: "trip-title", text: "Notre voyage de noces" }), subtitle ? el("p", { class: "trip-sub", text: subtitle }) : "",
+    el("div", { class: "trip-info" }, fld("Ville de départ", "text", from, "trip_from", "ex. Paris, Lagny-sur-Marne…"), fld("Destination", "text", dest, "trip_dest", "ex. Lisbonne, Japon, Corse…"), fld("Départ", "date", start, "trip_start"), fld("Retour", "date", end, "trip_end"), fld("Budget du voyage (€)", "number", budget || "", "trip_budget", "ex. 4000")),
     el("div", { class: "trip-tabs", role: "group", "aria-label": "Voyage de noces" }, ...TRIP_VIEWS.map(([k, l]) => el("button", { type: "button", "aria-pressed": String(k === key), text: l, onclick: () => renderOrg(k) }))));
   const sum = el("div", { class: "org-sum" }), chip = (label, value, cls) => sum.append(el("div", { class: "sum-chip " + (cls || "") }, el("b", { text: value }), el("span", { text: label })));
   const books = all.filter(r => TRIP_BOOK.includes(r.kind)), days = all.filter(r => r.kind === "Étape"), todo = all.filter(r => TRIP_TODO.includes(r.kind));
@@ -811,7 +817,168 @@ async function tripHeader(key, all) {
   chip("réservations", String(books.length), "c-all"); chip("réservé", eur(booked), "c-alg"); if (planned) chip("activités prévues", eur(planned), "c-hand");
   chip("payé", eur(paid), "c-ok"); if (paid > 0 && booked - paid > 0.005) chip("reste à payer", eur(booked - paid), "warn");
   if (todo.length) chip("à faire", todo.filter(r => r.done).length + " / " + todo.length, todo.every(r => r.done) ? "good" : "c-wait");
-  return { head, sum };
+  return { head, sum, start };
+}
+let tripSet = { from: "", dest: "", start: "", end: "" };
+const enc = encodeURIComponent;
+const mapsQ = q => "https://www.google.com/maps/search/" + enc(q);
+function bookingUrl(place, a, b) { return "https://www.booking.com/searchresults.fr.html?ss=" + enc(place) + (a ? "&checkin=" + a : "") + (b ? "&checkout=" + b : "") + "&group_adults=2&no_rooms=1"; }
+function airbnbUrl(place, a, b) { return "https://www.airbnb.fr/s/" + enc(place) + "/homes?adults=2" + (a ? "&checkin=" + a : "") + (b ? "&checkout=" + b : ""); }
+function flightsUrl(from, to, a, b) { return "https://www.google.com/travel/flights?q=" + enc("Vols de " + (from || "Paris") + " à " + to + (a ? " le " + a : "") + (b ? " retour le " + b : "")); }
+function rome2rioUrl(from, to) { return "https://www.rome2rio.com/fr/map/" + enc(from || "Paris") + "/" + enc(to); }
+function transitUrl(from, to) { return "https://www.google.com/maps/dir/?api=1&travelmode=transit&origin=" + enc(from || "Paris") + "&destination=" + enc(to); }
+/* aide à la réservation : liens déjà remplis (destination, dates, 2 voyageurs) vers les sites de recherche ; la réservation se fait sur ces sites */
+function helpGroups(o) {
+  const place = o.near || o.dest, a = o.start, b = o.end;
+  return [
+    { t: "Où dormir", d: "Comparez les hébergements pour vos dates, 2 voyageurs.", l: [["Booking.com", bookingUrl(place, a, b)], ["Airbnb", airbnbUrl(place, a, b)], ["Google Hôtels", "https://www.google.com/travel/search?q=" + enc("hôtels " + place)], ["Hôtels près de « " + place + " » (carte)", mapsQ("hôtels près de " + place)], ["Chambres d'hôtes (carte)", mapsQ("chambres d'hôtes près de " + place)]] },
+    { t: "Y aller", d: "Vols, trains, bus : voyez tous les moyens et comparez les prix.", l: [["Vols (Google Flights)", flightsUrl(o.from, o.dest, a, b)], ["Tous les moyens de transport (Rome2Rio)", rome2rioUrl(o.from, o.dest)], ["Itinéraire en transports (Google Maps)", transitUrl(o.from, o.dest)], ["Trains (Trainline)", "https://www.thetrainline.com/fr"], ["Bus longue distance (FlixBus)", "https://www.flixbus.fr/"], ["Skyscanner", "https://www.skyscanner.fr/"]] },
+    { t: "Se déplacer sur place", d: "Voiture, transports en commun, taxis.", l: [["Location de voiture", "https://www.google.com/search?q=" + enc("location de voiture " + o.dest)], ["Rentalcars", "https://www.rentalcars.com/fr/"], ["Transports en commun (carte)", mapsQ("gare station de métro près de " + place)], ["Parkings (carte)", mapsQ("parking près de " + place)]] },
+    { t: "À voir, à faire", d: "Visites, billets coupe-file, excursions.", l: [["GetYourGuide", "https://www.getyourguide.fr/s/?q=" + enc(o.dest)], ["Viator", "https://www.viator.com/searchResults/all?text=" + enc(o.dest)], ["Tripadvisor", "https://www.tripadvisor.fr/Search?q=" + enc(o.dest)], ["Que faire à " + o.dest + " (carte)", mapsQ("choses à faire à " + o.dest)]] },
+    { t: "Où manger", d: "Restaurants autour de votre hébergement ou d'une étape.", l: [["Restaurants près de « " + place + " » (carte)", mapsQ("restaurants près de " + place)], ["TheFork", "https://www.thefork.fr/"], ["Tripadvisor restaurants", "https://www.tripadvisor.fr/Search?q=" + enc("restaurants " + o.dest)]] },
+    { t: "Avant de partir", d: "Sécurité, santé, connexion, météo.", l: [["Conseils aux voyageurs (pays)", "https://www.diplomatie.gouv.fr/fr/conseils-aux-voyageurs/conseils-par-pays-destination/"], ["Météo en octobre", "https://www.google.com/search?q=" + enc("météo " + o.dest + " en " + (a ? new Date(a + "T12:00:00").toLocaleDateString("fr-FR", { month: "long" }) : "octobre"))], ["Carte européenne d'assurance maladie", "https://www.ameli.fr/assure/droits-demarches/europe-international/protection-sociale-hors-france/carte-europeenne-assurance-maladie"], ["eSIM (Airalo)", "https://www.airalo.com/"]] }
+  ];
+}
+function tripHelpPanel() {
+  const o = { ...tripSet }, box = el("section", { class: "help" });
+  const near = el("input", { type: "text", placeholder: "ex. un quartier, une plage, l'adresse d'une visite…", "aria-label": "Près de", id: "help-near" });
+  const out = el("div", { class: "help-groups" });
+  const draw = () => {
+    out.replaceChildren();
+    if (!o.dest) { out.append(el("p", { class: "hint", text: "Renseignez d'abord la destination en haut de la page (et les dates) : les liens se remplissent tout seuls." })); return; }
+    helpGroups({ ...o, near: near.value.trim() }).forEach(g => out.append(el("div", { class: "help-g" }, el("h4", { text: g.t }), el("p", { class: "hint", text: g.d }), el("div", { class: "help-l" }, ...g.l.map(([t, u]) => el("a", { class: "btn small", href: u, target: "_blank", rel: "noopener noreferrer", text: "↗ " + t }))))));
+  };
+  near.addEventListener("input", draw);
+  box.append(el("p", { class: "help-intro", text: "Les liens ci-dessous ouvrent les sites de réservation avec " + (o.dest ? "« " + o.dest + " »" : "votre destination") + (o.start ? ", vos dates (" + frDate(o.start) + (o.end ? " → " + frDate(o.end) : "") + ")" : "") + " et 2 voyageurs déjà renseignés. Comparez, puis ajoutez ce que vous réservez dans l'onglet Réservations." }),
+    el("label", { class: "help-near" }, el("span", { text: "Chercher autour d'un lieu précis (facultatif)" }), near), out);
+  draw();
+  return box;
+}
+
+/* ---------- recommandations selon la destination ---------- */
+const TRIP_DB = [
+  { n: "Lisbonne et le Portugal", k: ["lisbonne", "portugal", "lisboa", "porto", "sintra", "algarve"], info: ["Monnaie : euro", "Langue : portugais (l'anglais est très courant)", "Prises : mêmes que la France", "Idéal : avril à juin et septembre à octobre"],
+    voir: ["Tour et monastère de Belém", "Quartier d'Alfama et château Saint-Georges", "Sintra : palais de la Pena (journée en train)", "Miradouros au coucher du soleil", "Cascais et la côte"], faire: ["Tramway 28", "Soirée de fado dans Alfama (à réserver)", "Excursion à la plage de Guincho", "Balade en bateau sur le Tage"], manger: ["Pastéis de nata", "Morue (bacalhau) et sardines grillées", "Ginjinha, la liqueur de cerise", "Poulpe grillé"], astuces: ["Ville vallonnée : chaussures confortables", "Réservez le fado et les restaurants du week-end à l'avance"] },
+  { n: "Rome et l'Italie", k: ["rome", "italie", "roma", "italia", "milan", "naples"], info: ["Monnaie : euro", "Langue : italien", "Prises : type C/F, comme la France", "Idéal : avril à juin et septembre à octobre"],
+    voir: ["Colisée, Forum et Palatin", "Vatican : basilique Saint-Pierre et musées", "Fontaine de Trevi et place d'Espagne", "Panthéon et place Navone", "Trastevere le soir"], faire: ["Réserver à l'avance les billets du Colisée et des musées du Vatican", "Cours de cuisine (pâtes fraîches)", "Balade à vélo sur la Via Appia"], manger: ["Carbonara, cacio e pepe, amatriciana", "Pizza al taglio", "Gelato", "Supplì"], astuces: ["Épaules et genoux couverts pour entrer dans les églises", "Évitez les restaurants juste devant les monuments"] },
+  { n: "Toscane", k: ["toscane", "florence", "firenze", "sienne", "pise", "chianti"], info: ["Monnaie : euro", "Langue : italien", "Idéal : mai à juin et septembre à octobre"],
+    voir: ["Florence : Duomo, Offices, Ponte Vecchio", "Sienne et la place du Campo", "San Gimignano et ses tours", "Val d'Orcia : cyprès et collines", "Pise"], faire: ["Dégustation de vins dans le Chianti", "Séjour en agriturismo (ferme-auberge)", "Coucher de soleil sur la place Michel-Ange"], manger: ["Bistecca alla fiorentina", "Ribollita", "Pecorino de Pienza", "Vin Chianti et Brunello"], astuces: ["Louez une voiture pour la campagne", "Réservez les Offices à l'avance"] },
+  { n: "Venise", k: ["venise", "venezia"], info: ["Monnaie : euro", "Langue : italien", "Idéal : avril-mai et septembre-octobre"],
+    voir: ["Place Saint-Marc et basilique", "Palais des Doges", "Pont du Rialto", "Îles de Murano et Burano", "Grand Canal"], faire: ["Tour en gondole", "Vaporetto sur le Grand Canal", "Se perdre dans les ruelles tôt le matin"], manger: ["Cicchetti (tapas vénitiens)", "Risotto aux fruits de mer", "Spritz"], astuces: ["Logez dans un quartier calme (Cannaregio, Dorsoduro)", "Prévoyez des chaussures étanches en cas d'acqua alta"] },
+  { n: "Côte amalfitaine", k: ["amalfi", "positano", "capri", "sorrente", "ravello"], info: ["Monnaie : euro", "Langue : italien", "Idéal : mai-juin et septembre"],
+    voir: ["Positano", "Amalfi et sa cathédrale", "Ravello : villa Rufolo et villa Cimbrone", "Capri : grotte d'Azur"], faire: ["Sentier des Dieux", "Excursion en bateau", "Pompéi (depuis Sorrente)"], manger: ["Citrons de la côte, limoncello", "Spaghetti aux palourdes", "Delizia al limone"], astuces: ["Routes étroites et embouteillées : préférez le bateau et le bus", "Réservez très tôt l'hébergement"] },
+  { n: "Santorin et la Grèce", k: ["santorin", "grece", "mykonos", "athenes", "cyclades", "crete"], info: ["Monnaie : euro", "Langue : grec (anglais très courant)", "Idéal : mai à juin et septembre à octobre"],
+    voir: ["Oia et son coucher de soleil", "Fira et le sentier vers Imerovigli", "Site d'Akrotiri", "Plages rouge et noire"], faire: ["Croisière en catamaran avec baignade", "Dégustation dans un domaine viticole", "Randonnée de Fira à Oia"], manger: ["Salade grecque, tomates cerises de Santorin", "Fava, souvlaki", "Vin Assyrtiko"], astuces: ["Haute saison très fréquentée : réservez tôt", "Prenez un hébergement avec vue caldeira côté ouest"] },
+  { n: "Maldives", k: ["maldives"], info: ["Monnaie : rufiyaa (dollars largement acceptés dans les resorts)", "Langue : divehi (anglais dans les resorts)", "Idéal : novembre à avril (saison sèche)"],
+    voir: ["Atolls et lagons", "Requins-baleines et raies manta (selon l'atoll et la saison)", "Île de Malé"], faire: ["Snorkeling et plongée", "Dîner les pieds dans le sable", "Excursion au coucher du soleil avec dauphins"], manger: ["Poisson frais et thon", "Garudhiya (bouillon de poisson)", "Mas huni (petit-déjeuner local)"], astuces: ["Hébergement sur l'île-hôtel = budget élevé : comparez les formules tout inclus", "Îles habitées (guesthouses) : option plus économique mais règles locales plus strictes"] },
+  { n: "Bali", k: ["bali", "ubud", "indonesie", "seminyak", "uluwatu"], info: ["Monnaie : roupie indonésienne", "Langue : indonésien (anglais courant)", "Idéal : avril à octobre (saison sèche)", "Prises : type C/F"],
+    voir: ["Ubud : rizières de Tegallalang, Monkey Forest", "Temples : Tanah Lot, Uluwatu, Besakih", "Nusa Penida et ses falaises", "Cascades du nord de l'île"], faire: ["Lever de soleil au mont Batur", "Cours de cuisine balinaise", "Massage et spa", "Surf à Uluwatu"], manger: ["Nasi goreng, mie goreng", "Babi guling", "Fruits tropicaux, jus frais"], astuces: ["Circulez avec un chauffeur privé (économique)", "Couvrez-vous les épaules et jambes dans les temples"] },
+  { n: "Japon", k: ["japon", "tokyo", "kyoto", "osaka", "nara", "hiroshima", "hokkaido"], info: ["Monnaie : yen", "Langue : japonais", "Prises : type A (adaptateur nécessaire)", "Idéal : mars-avril (cerisiers) et octobre-novembre (érables)"],
+    voir: ["Tokyo : Shibuya, Asakusa, Shinjuku", "Kyoto : Fushimi Inari, Kinkaku-ji, Arashiyama", "Nara et ses daims", "Mont Fuji et lac Kawaguchi", "Hiroshima et Miyajima"], faire: ["Nuit dans un ryokan avec onsen", "Cérémonie du thé", "Train à grande vitesse Shinkansen", "Marché de Tsukiji / Toyosu"], manger: ["Sushi et sashimi", "Ramen, udon, soba", "Okonomiyaki (Osaka)", "Wagyu"], astuces: ["Pas de pourboire", "Espèces utiles : tout n'accepte pas la carte", "Silence dans les transports, ne pas manger en marchant"] },
+  { n: "Islande", k: ["islande", "reykjavik"], info: ["Monnaie : couronne islandaise", "Langue : islandais (anglais courant)", "Aurores boréales : septembre à mars ; soleil de minuit : juin-juillet"],
+    voir: ["Cercle d'or : Geysir, Gullfoss, Thingvellir", "Côte sud : Skógafoss, Seljalandsfoss, plage de sable noir de Reynisfjara", "Jökulsárlón (lagune glaciaire)", "Péninsule de Snæfellsnes"], faire: ["Lagon bleu ou bains géothermiques (réserver)", "Chasse aux aurores boréales", "Randonnée sur glacier avec guide", "Observation des baleines"], manger: ["Soupe d'agneau", "Skyr", "Poisson frais", "Hot-dog islandais"], astuces: ["Météo très changeante : vêtements en couches", "Location de voiture recommandée, surveillez les alertes routières"] },
+  { n: "Marrakech et le Maroc", k: ["marrakech", "maroc", "essaouira", "agadir", "fes", "casablanca"], info: ["Monnaie : dirham (change local)", "Langue : arabe et français très courant", "Idéal : mars à mai et octobre à novembre"],
+    voir: ["Médina et place Jemaa el-Fna", "Jardin Majorelle", "Palais de la Bahia", "Souks", "Désert d'Agafay"], faire: ["Nuit en riad", "Hammam et massage", "Excursion dans l'Atlas", "Dîner dans le désert"], manger: ["Tajine, couscous", "Pastilla", "Thé à la menthe"], astuces: ["Marchandez dans les souks", "Prévoyez des espèces en petites coupures"] },
+  { n: "Madère", k: ["madere", "funchal"], info: ["Monnaie : euro", "Langue : portugais", "Idéal : toute l'année, climat doux"],
+    voir: ["Funchal et son marché", "Pico do Arieiro et Pico Ruivo", "Cabo Girão", "Porto Moniz et ses piscines naturelles"], faire: ["Randonnée le long des levadas", "Téléphérique du Monte", "Observation des cétacés"], manger: ["Espetada (brochette de bœuf)", "Poisson-sabre noir", "Bolo do caco", "Vin de Madère et poncha"], astuces: ["Louez une voiture, routes en montagne", "Emportez des chaussures de marche"] },
+  { n: "Corse", k: ["corse", "bonifacio", "ajaccio", "calvi", "porto-vecchio"], info: ["Monnaie : euro", "Langue : français", "Idéal : mai à juin et septembre"],
+    voir: ["Bonifacio et ses falaises", "Calanques de Piana", "Îles Lavezzi", "Désert des Agriates", "Vieille ville de Calvi"], faire: ["Randonnées (sentier de Cap Corse, GR20 en partie)", "Plages de Palombaggia et Santa Giulia", "Sortie en bateau"], manger: ["Charcuterie corse", "Brocciu", "Fiadone", "Vins de l'île"], astuces: ["Louez une voiture, les distances sont longues", "Réservez les logements tôt en été"] },
+  { n: "Croatie", k: ["croatie", "dubrovnik", "split", "hvar", "zagreb"], info: ["Monnaie : euro", "Langue : croate", "Idéal : mai-juin et septembre"],
+    voir: ["Remparts de Dubrovnik", "Palais de Dioclétien à Split", "Parc des lacs de Plitvice", "Île de Hvar"], faire: ["Navigation entre les îles", "Kayak à Dubrovnik", "Excursion à Mostar ou Kotor"], manger: ["Poissons grillés", "Peka", "Cevapi", "Vins dalmates"], astuces: ["Évitez juillet-août (affluence et chaleur)", "Réservez les ferries à l'avance"] },
+  { n: "Thaïlande", k: ["thailande", "bangkok", "phuket", "krabi", "chiang mai", "koh samui"], info: ["Monnaie : baht", "Langue : thaï", "Idéal : novembre à février (saison sèche)", "Prises : types A/B/C"],
+    voir: ["Bangkok : Grand Palais, Wat Pho", "Chiang Mai et ses temples", "Îles Phi Phi, Krabi, Koh Samui", "Baie de Phang Nga"], faire: ["Massage thaï", "Cours de cuisine", "Sanctuaire d'éléphants éthique", "Plongée et snorkeling"], manger: ["Pad thaï", "Tom yum, tom kha", "Curry vert", "Mangue et riz gluant"], astuces: ["Épaules et genoux couverts dans les temples", "Choisissez des sanctuaires d'éléphants éthiques (sans équitation)"] },
+  { n: "Mexique", k: ["mexique", "cancun", "tulum", "playa del carmen", "riviera maya", "oaxaca"], info: ["Monnaie : peso mexicain", "Langue : espagnol", "Idéal : novembre à avril"],
+    voir: ["Chichén Itzá et Tulum", "Cenotes du Yucatán", "Isla Mujeres et Holbox", "Mexico et Oaxaca"], faire: ["Nage avec les tortues", "Baignade dans les cenotes", "Excursion à Coba"], manger: ["Tacos al pastor, ceviche", "Cochinita pibil", "Guacamole", "Mezcal et margarita"], astuces: ["Écran total, protection solaire sans produit polluant dans les cenotes", "Vérifiez la saison des sargasses sur les plages"] },
+  { n: "New York", k: ["new york", "new-york", "nyc", "etats-unis", "usa", "manhattan"], info: ["Monnaie : dollar américain", "Langue : anglais", "Prises : type A/B (adaptateur nécessaire)", "Formalité ESTA à faire avant le départ (site officiel)", "Pourboire d'environ 18 à 20 % au restaurant"],
+    voir: ["Central Park", "Statue de la Liberté et Ellis Island", "Brooklyn Bridge", "Top of the Rock / Empire State", "High Line"], faire: ["Comédie musicale à Broadway", "Balade à Brooklyn", "Concert de jazz", "Ferry Staten Island"], manger: ["Pizza au slice", "Bagel et saumon fumé", "Cheesecake", "Brunch"], astuces: ["Achetez le pass de transport (OMNY / MetroCard)", "Réservez les restaurants et spectacles à l'avance"] },
+  { n: "Seychelles", k: ["seychelles", "mahe", "praslin", "la digue"], info: ["Monnaie : roupie seychelloise (euro accepté dans certains lieux)", "Langue : créole, français, anglais", "Idéal : avril-mai et octobre-novembre"],
+    voir: ["Anse Source d'Argent (La Digue)", "Vallée de Mai (Praslin)", "Anse Lazio", "Réserve naturelle de Curieuse"], faire: ["Excursion île à île", "Snorkeling", "Randonnée vers les belvédères"], manger: ["Poisson grillé à la créole", "Curry de poulpe", "Salade de palmiste"], astuces: ["Combinez Mahé, Praslin et La Digue en ferry", "Réservez les ferries à l'avance"] },
+  { n: "Île Maurice", k: ["maurice", "ile maurice", "mauritius"], info: ["Monnaie : roupie mauricienne", "Langue : créole, français, anglais", "Idéal : mai à décembre"],
+    voir: ["Le Morne et sa montagne", "Terre des sept couleurs de Chamarel", "Jardin de Pamplemousses", "Île aux Cerfs"], faire: ["Catamaran dans le lagon", "Nage avec les dauphins (responsable)", "Marché de Port-Louis"], manger: ["Dholl puri", "Gâteaux piments", "Rhum local", "Poisson grillé"], astuces: ["Louez une voiture pour sortir des hôtels", "Évitez la période cyclonique (janvier-mars)"] },
+  { n: "Barcelone et l'Espagne", k: ["barcelone", "espagne", "madrid", "seville", "majorque", "andalousie", "valence"], info: ["Monnaie : euro", "Langue : espagnol, catalan à Barcelone", "Idéal : avril à juin et septembre à octobre"],
+    voir: ["Sagrada Família (à réserver)", "Parc Güell et Casa Batlló", "Quartier gothique et marché de la Boqueria", "Alhambra de Grenade", "Alcazar de Séville"], faire: ["Tapas et balade nocturne", "Spectacle de flamenco", "Plage de la Barceloneta"], manger: ["Tapas, jamón ibérico", "Paella", "Churros chocolat", "Sangria, vermouth"], astuces: ["Les horaires décalés : dîner vers 21h-22h", "Réservez les monuments en ligne"] },
+  { n: "Écosse", k: ["ecosse", "edimbourg", "highlands", "skye", "glasgow"], info: ["Monnaie : livre sterling", "Langue : anglais", "Idéal : mai à septembre"],
+    voir: ["Édimbourg : château et Royal Mile", "Île de Skye", "Loch Ness et Glencoe", "Pont de Glenfinnan"], faire: ["Dégustation dans une distillerie de whisky", "Road trip dans les Highlands", "Randonnée à Arthur's Seat"], manger: ["Haggis", "Saumon fumé", "Cullen skink", "Whisky"], astuces: ["Conduite à gauche : prévoyez le temps d'adaptation", "Météo changeante : imperméable indispensable"] }
+];
+const nz2 = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+const tripEntry = dest => { const d = " " + nz2(dest) + " "; return TRIP_DB.find(e => e.k.some(k => d.includes(" " + nz2(k) + " "))) || null; };
+function tripRecoPanel(all) {
+  const dest = tripSet.dest, box = el("section", { class: "reco" });
+  if (!dest) { box.append(el("p", { class: "hint", text: "Renseignez d'abord la destination en haut de la page : les recommandations s'adaptent." })); return box; }
+  const e = tripEntry(dest), have = new Set(all.filter(r => r.kind === "Idée").map(r => nz2(r.title)));
+  box.append(el("h3", { class: "reco-title", text: "À découvrir : " + (e ? e.n : dest) }));
+  // présentation en direct (Wikivoyage, repli sur Wikipédia)
+  const live = el("div", { class: "card reco-live" }, el("p", { class: "hint", text: "Chargement de la présentation…" }));
+  box.append(live);
+  (async () => {
+    const get = async (host, t) => { const r = await fetch("https://" + host + "/api/rest_v1/page/summary/" + enc(t.replace(/ /g, "_")) + "?redirect=true"); if (!r.ok) throw new Error(r.status); return r.json(); };
+    let j = null, src = "Wikivoyage", site = "fr.wikivoyage.org";
+    try { j = await get("fr.wikivoyage.org", dest); } catch { try { j = await get("fr.wikipedia.org", dest); src = "Wikipédia"; site = "fr.wikipedia.org"; } catch {} }
+    live.replaceChildren();
+    if (!j || !j.extract) { live.append(el("p", { class: "hint", text: "Présentation indisponible pour le moment. Les liens ci-dessous ouvrent des guides complets." })); }
+    else live.append(...(j.thumbnail && j.thumbnail.source ? [el("img", { src: j.thumbnail.source, alt: "", loading: "lazy" })] : []), el("div", {}, el("p", { class: "reco-extract", text: j.extract }), el("p", { class: "hint", text: "Source : " + src + " (licence CC BY-SA). " }, el("a", { href: (j.content_urls && j.content_urls.desktop && j.content_urls.desktop.page) || "https://" + site + "/wiki/" + enc(dest), target: "_blank", rel: "noopener noreferrer", text: "Lire le guide complet ↗" }))));
+  })();
+  const addIdea = async (t, btn) => { btn.disabled = true; try { await orgStore.insert("org_trip", { kind: "Idée", title: t, place: dest, done: false }); showToast("Ajouté aux idées"); btn.textContent = "✓"; have.add(nz2(t)); } catch (err) { showToast(orgErr(err)); btn.disabled = false; } };
+  const section = (title, items, icon0) => { if (!items || !items.length) return; box.append(el("div", { class: "reco-sec" }, el("h4", { text: title }), el("div", { class: "reco-items" }, ...items.map(t => { const b = el("button", { type: "button", class: "reco-add", title: "Ajouter à vos idées de voyage", "aria-label": "Ajouter « " + t + " » aux idées", text: have.has(nz2(t)) ? "✓" : "＋", onclick: () => addIdea(t, b) }); b.disabled = have.has(nz2(t)); return el("div", { class: "reco-item" }, b, el("span", { text: t }), el("a", { href: mapsQ(t + " " + dest), target: "_blank", rel: "noopener noreferrer", class: "reco-map", title: "Voir sur la carte", "aria-label": "Voir " + t + " sur la carte", text: "↗" })); })))); };
+  if (e) {
+    box.append(el("div", { class: "reco-info" }, ...e.info.map(t => el("span", { class: "reco-chip", text: t }))));
+    section("À voir", e.voir); section("À faire", e.faire); section("À goûter", e.manger);
+    if (e.astuces) box.append(el("div", { class: "reco-sec" }, el("h4", { text: "Bon à savoir" }), el("ul", { class: "reco-tips" }, ...e.astuces.map(t => el("li", { text: t })))));
+    box.append(el("p", { class: "hint", text: "Repères généraux : vérifiez les formalités d'entrée, les prix et les horaires sur les sites officiels avant de partir." }));
+  } else {
+    box.append(el("p", { class: "hint", text: "Pas encore de fiche détaillée pour cette destination. Voici des guides pour la découvrir :" }), el("div", { class: "help-l" }, ...[["Guide Wikivoyage", "https://fr.wikivoyage.org/wiki/" + enc(dest.replace(/ /g, "_"))], ["Tripadvisor : à voir", "https://www.tripadvisor.fr/Search?q=" + enc(dest)], ["GetYourGuide", "https://www.getyourguide.fr/s/?q=" + enc(dest)], ["Lonely Planet", "https://www.lonelyplanet.fr/search?q=" + enc(dest)], ["Que faire (carte)", mapsQ("choses à faire à " + dest)]].map(([t, u]) => el("a", { class: "btn small", href: u, target: "_blank", rel: "noopener noreferrer", text: "↗ " + t }))));
+  }
+  box.append(el("div", { class: "reco-sec" }, el("h4", { text: "Pour un voyage de noces" }), el("ul", { class: "reco-tips" }, ...["Prévenez l'hôtel que c'est votre voyage de noces : surclassement ou petite attention possibles", "Réservez à l'avance les restaurants et activités romantiques en haute saison", "Laissez quelques jours sans programme pour profiter l'un de l'autre", "Gardez une assurance voyage et des copies numériques de vos papiers"].map(t => el("li", { text: t })))));
+  return box;
+}
+/* aide contextuelle dans les fiches et la chronologie */
+function helpFor(r) {
+  const set = tripSet, place = r.place || set.dest || "", a = r.date || set.start, b = r.end_date || set.end, L = [];
+  if (!place && r.kind !== "Vol") return [];
+  if (r.kind === "Hébergement") L.push(["Booking.com", bookingUrl(place, r.date || set.start, r.end_date || set.end)], ["Airbnb", airbnbUrl(place, r.date || set.start, r.end_date || set.end)], ["Hôtels à proximité", mapsQ("hôtels près de " + place)]);
+  else if (r.kind === "Vol") L.push(["Google Flights", flightsUrl(set.from, r.place || set.dest, r.date || set.start, r.end_date || set.end)], ["Skyscanner", "https://www.skyscanner.fr/"]);
+  else if (r.kind === "Train / bus") L.push(["Rome2Rio", rome2rioUrl(set.from, place)], ["Trainline", "https://www.thetrainline.com/fr"], ["FlixBus", "https://www.flixbus.fr/"]);
+  else if (r.kind === "Location de voiture") L.push(["Rechercher une location", "https://www.google.com/search?q=" + enc("location de voiture " + place)], ["Rentalcars", "https://www.rentalcars.com/fr/"]);
+  else if (r.kind === "Activité") L.push(["GetYourGuide", "https://www.getyourguide.fr/s/?q=" + enc(place)], ["Tripadvisor", "https://www.tripadvisor.fr/Search?q=" + enc(r.title || place)]);
+  else if (r.kind === "Restaurant") L.push(["Restaurants à proximité", mapsQ("restaurants près de " + place)], ["TheFork", "https://www.thefork.fr/"]);
+  else if (r.kind === "Étape") L.push(["Hôtels autour", mapsQ("hôtels près de " + place)], ["Restaurants autour", mapsQ("restaurants près de " + place)], ["Itinéraire", transitUrl("", place)]);
+  return L;
+}
+const helpRow = r => { const L = helpFor(r); return L.length ? el("div", { class: "help-row" }, el("span", { text: "Chercher :" }), ...L.map(([t, u]) => el("a", { href: u, target: "_blank", rel: "noopener noreferrer", text: t + " ↗" }))) : ""; };
+const tripHeaderStart = async () => { try { return ((await store.getSetting("trip_start")) || "").trim(); } catch { return ""; } };
+const TRIP_COL = { "Vol": "#4a78a8", "Train / bus": "#6f8fa8", "Hébergement": "#5a7a2a", "Location de voiture": "#8a8a70", "Activité": "#c58a4a", "Restaurant": "#a3392a", "Assurance": "#7d6a9a", "Autre réservation": "#8d8d80", "Étape": "#c0605a" };
+function tripChrono(all, start) {
+  const ev = [];
+  all.forEach(r => {
+    if (TRIP_BOOK.includes(r.kind)) {
+      const multi = r.end_date && r.date && r.end_date !== r.date;
+      ev.push({ date: r.date || "", time: r.time || "", kind: r.kind, title: r.title, place: r.place, price: r.price, paid: r.paid, link: r.link, ref: r.ref, notes: r.notes, view: "trip_book", end: multi ? r.end_date : "" });
+      if (multi) ev.push({ date: r.end_date, time: "99", kind: r.kind, title: r.title, link: r.link, view: "trip_book", fin: true });
+    } else if (r.kind === "Étape") ev.push({ date: r.date || "", time: r.time || "", kind: "Étape", title: r.title, place: r.place, price: r.price, link: r.link, notes: r.notes, view: "trip_days" });
+  });
+  const box = el("section", { class: "chrono" });
+  if (!ev.length) { box.append(el("p", { class: "empty", text: "Rien à afficher pour l'instant. Ajoutez vos réservations (vols, hôtels…) et les étapes de l'itinéraire : elles s'organisent ici, jour par jour." })); return box; }
+  const days = {}; ev.forEach(e => (days[e.date || ""] = days[e.date || ""] || []).push(e));
+  const order = Object.keys(days).sort((a, b) => (a || "9999").localeCompare(b || "9999"));
+  const host = h => { try { return new URL(h).hostname.replace(/^www\./, ""); } catch { return "lien"; } };
+  order.forEach(d => {
+    const list = days[d].sort((a, b) => (a.time || "00").localeCompare(b.time || "00") || (a.fin ? 1 : 0) - (b.fin ? 1 : 0) || String(a.title).localeCompare(String(b.title), "fr"));
+    const dt = d ? new Date(d + "T12:00:00") : null, n = d && start ? daysBetween(start, d) + 1 : null;
+    const dayCost = list.filter(e => !e.fin).reduce((a, e) => a + (Number(e.price) || 0), 0);
+    const left = el("div", { class: "cd-date" }, dt ? el("b", { text: String(dt.getDate()) }) : el("b", { text: "?" }), el("span", { text: dt ? dt.toLocaleDateString("fr-FR", { month: "short" }).replace(".", "") : "sans date" }), dt ? el("small", { text: dt.toLocaleDateString("fr-FR", { weekday: "long" }) }) : "", n != null && n >= 1 ? el("em", { text: "Jour " + n }) : n != null ? el("em", { text: "J" + n }) : "");
+    const ol = el("ol", { class: "cd-items" });
+    list.forEach(e => {
+      const meta = [e.fin ? "Fin du séjour" : e.kind, e.end ? "jusqu'au " + new Date(e.end + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : "", e.place].filter(Boolean).join(" · ");
+      ol.append(el("li", { class: "ci" + (e.fin ? " fin" : ""), style: "--c:" + (TRIP_COL[e.kind] || "#8d8d80") },
+        el("div", { class: "ci-top" }, e.time && e.time !== "99" ? el("span", { class: "ci-time", text: String(e.time).slice(0, 5).replace(":", "h") }) : "", el("b", { text: (e.fin ? "Fin : " : "") + e.title }), el("span", { class: "ci-kind", text: e.kind }),
+          e.price && !e.fin ? el("span", { class: "ci-price", text: eur2(e.price) + (e.paid && e.paid >= e.price - 0.005 ? " · payé" : "") }) : ""),
+        el("div", { class: "ci-meta" }, meta, e.ref ? el("span", { class: "ci-ref", text: " · N° " + e.ref }) : ""),
+        e.notes ? el("div", { class: "ci-note", text: e.notes }) : "",
+        el("div", { class: "ci-act" }, isUrl(e.link) ? el("a", { class: "btn small", href: e.link, target: "_blank", rel: "noopener noreferrer", title: e.link, text: "↗ " + host(e.link) }) : "", el("button", { type: "button", class: "ci-edit", text: "Modifier", onclick: () => renderOrg(e.view) }), ...(e.kind === "Étape" && e.place ? [el("a", { class: "ci-edit", href: mapsQ("hôtels près de " + e.place), target: "_blank", rel: "noopener noreferrer", text: "Hôtels autour ↗" }), el("a", { class: "ci-edit", href: mapsQ("restaurants près de " + e.place), target: "_blank", rel: "noopener noreferrer", text: "Restos autour ↗" })] : []))));
+    });
+    box.append(el("div", { class: "cd" }, left, el("div", { class: "cd-body" }, ol, dayCost ? el("div", { class: "cd-cost", text: "Total du jour : " + eur2(dayCost) }) : "")));
+  });
+  return box;
 }
 const TRIP_TPL = [["Document", "Passeports ou cartes d'identité valides (6 mois après le retour)"], ["Document", "Visa ou autorisation de voyage (selon la destination)"], ["Document", "Assurance voyage et rapatriement"], ["Document", "Carte européenne d'assurance maladie / attestation"], ["Document", "Permis de conduire (international si besoin)"], ["Document", "Copies numériques de tous les documents"],
   ["À faire", "Réserver les vols"], ["À faire", "Réserver les hébergements"], ["À faire", "Réserver la voiture / les transports sur place"], ["À faire", "Poser les congés"], ["À faire", "Prévenir la banque et vérifier les frais à l'étranger"], ["À faire", "Vaccins et traitements à prévoir"], ["À faire", "Garde des animaux, plantes, courrier"], ["À faire", "Changer de l'argent / prendre de la monnaie"], ["À faire", "Forfait téléphone ou eSIM"], ["À faire", "Faire le plein de chargeurs et batteries externes"],
@@ -877,7 +1044,7 @@ function timelinePanel(rows, games) {
   return box;
 }
 async function renderOrgInner(key) {
-  if (key === "trip") key = orgState.tripView || "trip_book";   // l'onglet « Voyage de noces » a ses propres sous-onglets
+  if (key === "trip") key = orgState.tripView || "trip_chrono";   // l'onglet « Voyage de noces » a ses propres sous-onglets
   if (key.startsWith("trip_")) orgState.tripView = key;
   const tok = ++orgTok;
   orgState.key = key;
@@ -897,6 +1064,13 @@ async function renderOrgInner(key) {
   let sumBox;
   if (key.startsWith("trip_")) { const th = await tripHeader(key, tripAll); if (tok !== orgTok) return; host.append(th.head); sumBox = th.sum; host.append(sumBox); }
   else { sumBox = orgSummary(key, rows, decoS); host.append(sumBox); }
+  if (key === "trip_help") { host.append(tripHelpPanel()); return; }
+  if (key === "trip_reco") { host.append(tripRecoPanel(tripAll)); return; }
+  if (key === "trip_chrono") {
+    host.append(tripChrono(tripAll, (await tripHeaderStart()) || ""));
+    setExport(host, () => ({ name: "voyage-chronologie", title: "Chronologie du voyage", headers: ["Date", "Heure", "Type", "Titre", "Lieu", "Prix (€)", "Lien"], rows: tripAll.filter(r => r.date).sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.time || "").localeCompare(String(b.time || ""))).map(r => [frDate(r.date), r.time || "", r.kind, r.title, r.place || "", r.price == null ? "" : Number(r.price), r.link || ""]) }));
+    return;
+  }
   if (key === "deco") {
     const bi = el("input", { type: "number", min: "0", step: "any", inputmode: "decimal", "aria-label": "Budget global décoration et papeterie (€)", placeholder: "ex. 700" }); bi.value = decoS.env || "";
     const bm = el("span", { class: "hint" });
@@ -1046,10 +1220,11 @@ async function renderOrgInner(key) {
     const badge = st => { const c = RETAINED.includes(st) ? "ok" : st === "Refusé (NON)" ? "no" : /attente|donner/i.test(st || "") ? "wait" : ""; return el("span", { class: "st-badge " + c, text: st || "—" }); };
     const sumFor = r => {
       if (key === "games") { const when = [r.moment, r.start_time ? String(r.start_time).slice(0, 5).replace(":", "h") : ""].filter(Boolean).join(" · "); return [el("b", { text: (r.chosen ? "★ " : "") + r.name }), el("span", { class: "sm", text: when || "à placer" }), el("span", { class: "num", text: r.duration ? r.duration + " min" : "" }), el("span", { class: "st-badge " + (r.chosen ? (r.ready ? "ok" : "wait") : ""), text: r.chosen ? (r.ready ? "Prêt" : "À préparer") : "Idée" })]; }
+      const linkA = () => isUrl(r.link) ? el("a", { class: "lnk", href: r.link, target: "_blank", rel: "noopener noreferrer", title: r.link, text: "Voir le lien ↗", onclick: e => e.stopPropagation() }) : "";
       if (key === "trip_book") { const pr = Number(r.price) || 0, pd = Number(r.paid) || 0, st = pr > 0 && pd >= pr - 0.005 ? "Payé" : pd > 0 ? "Partiel" : pr > 0 ? "À payer" : "", dts = [r.date ? frDate(r.date) : "", r.end_date ? "→ " + frDate(r.end_date) : ""].filter(Boolean).join(" ");
-        return [el("b", { text: r.title }), el("span", { class: "sm", text: [r.kind, dts, r.place].filter(Boolean).join(" · ") }), el("span", { class: "num", text: pr ? eur2(pr) : "" }), el("span", { class: "st-badge " + (st === "Payé" ? "ok" : st === "Partiel" ? "wait" : st ? "no" : ""), text: st || "—" })]; }
-      if (key === "trip_days") return [el("b", { text: (r.time ? String(r.time).slice(0, 5).replace(":", "h") + " · " : "") + r.title }), el("span", { class: "sm", text: r.place || "" }), el("span", { class: "num", text: r.price ? eur2(r.price) : "" }), el("span", {})];
-      if (key === "trip_ideas") return [el("b", { text: (r.done ? "★ " : "") + r.title }), el("span", { class: "sm", text: r.place || "" }), el("span", { class: "num", text: r.price ? eur2(r.price) : "" }), el("span", { class: "st-badge " + (r.done ? "ok" : ""), text: r.done ? "Retenu" : "Idée" })];
+        return [el("b", { text: r.title }), el("span", { class: "sm" }, [r.kind, dts, r.place].filter(Boolean).join(" · ") + (isUrl(r.link) ? "  " : ""), linkA()), el("span", { class: "num", text: pr ? eur2(pr) : "" }), el("span", { class: "st-badge " + (st === "Payé" ? "ok" : st === "Partiel" ? "wait" : st ? "no" : ""), text: st || "—" })]; }
+      if (key === "trip_days") return [el("b", { text: (r.time ? String(r.time).slice(0, 5).replace(":", "h") + " · " : "") + r.title }), el("span", { class: "sm" }, (r.place || "") + (isUrl(r.link) ? "  " : ""), linkA()), el("span", { class: "num", text: r.price ? eur2(r.price) : "" }), el("span", {})];
+      if (key === "trip_ideas") return [el("b", { text: (r.done ? "★ " : "") + r.title }), el("span", { class: "sm" }, (r.place || "") + (isUrl(r.link) ? "  " : ""), linkA()), el("span", { class: "num", text: r.price ? eur2(r.price) : "" }), el("span", { class: "st-badge " + (r.done ? "ok" : ""), text: r.done ? "Retenu" : "Idée" })];
       if (key === "vendors") return [el("b", { text: r.name }), badge(r.status), el("span", { class: "num", text: r.price != null ? eur(r.price) : "" }), el("span", { class: "sm", text: r.phone || r.email || r.contact || r.location || "" })];
       if (key === "deco") { const tot = (Number(r.unit) || 0) * (Number(r.qty) || 0), pd = Number(r.paid) || 0, sm = el("span", { class: "sm" }); if (isUrl(r.link)) sm.append(el("a", { class: "lnk", href: r.link, target: "_blank", rel: "noopener noreferrer", title: r.link, text: "Voir le lien ↗", onclick: e => e.stopPropagation() })); const st = tot > 0 && pd >= tot - 0.005 ? "Payé" : pd > 0 ? "Partiel" : "À payer"; return [el("b", { text: r.name }), sm, el("span", { class: "num", text: (r.qty || 0) + " × " + eur2(r.unit || 0) + " = " + eur2(tot) }), el("span", { class: "st-badge " + (r.sold ? "ok" : r.for_sale ? "wait" : st === "Payé" ? "ok" : st === "Partiel" ? "wait" : "no"), text: r.sold ? "Vendu" + (r.sold_price ? " " + eur2(r.sold_price) : "") : r.for_sale ? "À revendre" : st === "Partiel" ? "Payé " + eur2(pd) : st })]; }
       if (key === "budget") return [el("b", { text: r.item }), el("span", { class: "sm", text: r.family ? "famille " + eur(r.family) : "" }), el("span", { class: "num", text: "prévu " + eur(r.estimated || 0) }), el("span", { class: "num pay " + payCls(r.estimated, r.paid), text: "● payé " + eur(r.paid || 0) })];
@@ -1081,7 +1256,7 @@ async function renderOrgInner(key) {
         acts.append(el("button", { class: "btn small", type: "button", text: "▲", "aria-label": "Monter la table", disabled: i === 0, onclick: () => swap(-1) }), el("button", { class: "btn small", type: "button", text: "▼", "aria-label": "Descendre la table", disabled: i === shown.length - 1, onclick: () => swap(1) }));
       }
       acts.append(el("button", { class: "btn small danger", type: "button", text: "Supprimer", "aria-label": "Supprimer", onclick: async () => { try { await orgStore.remove(M.table, r.id); orgOpen.delete(r.id); renderOrg(key); } catch (e) { showToast(orgErr(e)); } } }));
-      card.append(head, el("div", { class: "org-card-body" }, g, acts));
+      card.append(head, el("div", { class: "org-card-body" }, g, (key === "trip_book" || key === "trip_days") ? helpRow(r) : "", acts));
       list.append(card);
     });
     if (key === "budget" && decoS && (decoS.count || decoS.env)) {
