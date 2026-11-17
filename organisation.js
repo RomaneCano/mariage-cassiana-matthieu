@@ -1067,19 +1067,19 @@ const TRIP_TPL = [["Document", "Passeports ou cartes d'identité valides (6 mois
   ["À faire", "Réserver les vols"], ["À faire", "Réserver les hébergements"], ["À faire", "Réserver la voiture / les transports sur place"], ["À faire", "Poser les congés"], ["À faire", "Prévenir la banque et vérifier les frais à l'étranger"], ["À faire", "Vaccins et traitements à prévoir"], ["À faire", "Garde des animaux, plantes, courrier"], ["À faire", "Changer de l'argent / prendre de la monnaie"], ["À faire", "Forfait téléphone ou eSIM"], ["À faire", "Faire le plein de chargeurs et batteries externes"],
   ["Valise", "Adaptateurs de prises"], ["Valise", "Trousse à pharmacie et médicaments"], ["Valise", "Maillots, crème solaire, lunettes de soleil"], ["Valise", "Tenues pour les soirées"], ["Valise", "Chaussures de marche"], ["Valise", "Appareil photo et chargeurs"]];
 const AFTER_TPL = [
-  ["Papiers d'identité", "Récupérer le livret de famille remis par la mairie", "livret de famille mariage"],
-  ["Papiers d'identité", "Demander des copies intégrales de l'acte de mariage (mairie)", "copie intégrale acte de mariage"],
-  ["Papiers d'identité", "Carte d'identité : ajouter le nom d'usage si vous le souhaitez", "carte nationale d'identité nom d'usage"],
-  ["Papiers d'identité", "Passeport : ajouter le nom d'usage si vous le souhaitez", "passeport nom d'usage"],
-  ["Papiers d'identité", "Permis de conduire et carte grise : mettre à jour si besoin", "permis de conduire changement de nom"],
-  ["Impôts et argent", "Signaler le mariage aux impôts (changement de situation familiale)", "mariage déclaration changement de situation impôts"],
-  ["Impôts et argent", "Choisir déclaration commune ou séparée pour l'année du mariage", "mariage impôt sur le revenu année du mariage"],
-  ["Impôts et argent", "Vérifier le taux de prélèvement à la source", "prélèvement à la source changement de situation"],
+  ["Papiers d'identité", "Récupérer le livret de famille remis par la mairie", "https://www.service-public.fr/particuliers/vosdroits/F930"],
+  ["Papiers d'identité", "Demander des copies intégrales de l'acte de mariage (mairie)", "https://mdel.mon.service-public.fr/acte-etat-civil.html"],
+  ["Papiers d'identité", "Carte d'identité : ajouter le nom d'usage si vous le souhaitez", "https://www.service-public.fr/particuliers/vosdroits/R19902"],
+  ["Papiers d'identité", "Passeport : ajouter le nom d'usage si vous le souhaitez", "https://www.service-public.fr/particuliers/vosdroits/R19902"],
+  ["Papiers d'identité", "Permis de conduire et carte grise : mettre à jour si besoin", "https://www.service-public.fr/particuliers/vosdroits/R19902"],
+  ["Impôts et argent", "Signaler le mariage aux impôts (changement de situation familiale)", "https://www.impots.gouv.fr/particulier/jai-change-de-situation-de-famille-mariage-pacs-naissance"],
+  ["Impôts et argent", "Choisir déclaration commune ou séparée pour l'année du mariage", "https://www.impots.gouv.fr/particulier/declarer-lannee-du-mariage"],
+  ["Impôts et argent", "Vérifier le taux de prélèvement à la source", "https://www.impots.gouv.fr/particulier/je-me-marie-je-me-pacse"],
   ["Impôts et argent", "Informer la banque (nom d'usage, situation) et voir pour un compte joint", ""],
   ["Impôts et argent", "Mettre à jour les bénéficiaires de l'assurance-vie", ""],
-  ["Santé et social", "Mettre à jour la carte Vitale et informer la CPAM (nom d'usage)", "carte vitale changement de nom"],
+  ["Santé et social", "Mettre à jour la carte Vitale et informer la CPAM (nom d'usage)", "https://www.ameli.fr/assure/adresses-et-contacts/un-changement-de-situation/declarer-un-changement-de-nom-d-usage-en-cas-de-mariage-divorce"],
   ["Santé et social", "Mutuelle : ajouter le conjoint ou mettre à jour les bénéficiaires", ""],
-  ["Santé et social", "Informer la CAF du changement de situation", "caf changement de situation familiale mariage"],
+  ["Santé et social", "Informer la CAF du changement de situation", "https://www.caf.fr/allocataires/aides-et-demarches/ma-situation/vie-personnelle/je-vis-maintenant-en-couple"],
   ["Travail", "Informer l'employeur (situation familiale, mutuelle et prévoyance d'entreprise)", ""],
   ["Travail", "Mettre à jour France Travail et les caisses de retraite si besoin", ""],
   ["Assurances", "Assurance habitation : ajouter le conjoint", ""],
@@ -1087,7 +1087,7 @@ const AFTER_TPL = [
   ["Assurances", "Vérifier la protection juridique et la responsabilité civile", ""],
   ["Logement et contrats", "Bail, électricité, gaz, eau : ajouter le conjoint ou mettre à jour le nom", ""],
   ["Logement et contrats", "Internet, téléphone, transports, abonnements : mettre à jour le nom", ""],
-  ["Logement et contrats", "Changement d'adresse si déménagement (poste, mairie, organismes)", "changement d'adresse"],
+  ["Logement et contrats", "Changement d'adresse si déménagement (poste, mairie, organismes)", "https://www.service-public.fr/particuliers/vosdroits/services-en-ligne-et-formulaires"],
   ["Souvenirs et remerciements", "Envoyer les remerciements aux invités", ""],
   ["Souvenirs et remerciements", "Récupérer les photos et vidéos du photographe et du vidéaste", ""],
   ["Souvenirs et remerciements", "Choisir et commander l'album photo", ""],
@@ -1180,7 +1180,7 @@ function afterProposal(rows, bar) {
   box.append(el("p", { class: "hint", text: "Pistes générales à adapter à votre situation (les démarches changent selon chacun : vérifiez sur service-public.fr). Décochez ce que vous ne voulez pas." }));
   const list = el("div", { class: "tl-prop-list" }), checks = [];
   items.forEach(([c, t]) => { const cb = el("input", { type: "checkbox" }); cb.checked = true; checks.push(cb); list.append(el("label", { class: "tl-prop-row" }, cb, el("span", { class: "tl-prop-t", text: c }), el("span", { class: "tl-prop-n" }, el("b", { text: t })))); });
-  const go = el("button", { type: "button", class: "btn small solid", onclick: async () => { go.disabled = true; try { for (let i = 0; i < items.length; i++) if (checks[i].checked) { const [c, t, kw] = items[i]; await orgStore.insert("org_after", { cat: c, title: t, who: "Les deux", done: false, ...afterDetail(c, t), ...(kw ? { link: "https://www.service-public.fr/particuliers/recherche?keyword=" + encodeURIComponent(kw) } : {}) }); } showToast("Liste mise à jour"); renderOrg("after"); } catch (e) { showToast(orgErr(e)); go.disabled = false; } } });
+  const go = el("button", { type: "button", class: "btn small solid", onclick: async () => { go.disabled = true; try { for (let i = 0; i < items.length; i++) if (checks[i].checked) { const [c, t, kw] = items[i]; await orgStore.insert("org_after", { cat: c, title: t, who: "Les deux", done: false, ...afterDetail(c, t), ...(kw ? { link: kw } : {}) }); } showToast("Liste mise à jour"); renderOrg("after"); } catch (e) { showToast(orgErr(e)); go.disabled = false; } } });
   const upd = () => { const n = checks.filter(c => c.checked).length; go.disabled = !n; go.textContent = "Ajouter la sélection (" + n + ")"; };
   list.addEventListener("change", upd); upd();
   box.append(list, el("div", { class: "tl-prop-act" }, go, el("button", { type: "button", class: "btn small", text: "Annuler", onclick: () => box.remove() })));
@@ -1257,6 +1257,13 @@ async function renderOrgInner(key) {
   const M = ORG[key]; let rows = [], tripAll = [];
   try { rows = await orgStore.list(M.table); if (key.startsWith("trip_")) { tripAll = rows; rows = rows.filter(M.accept); } } catch (e) { host.append(el("p", { class: "msg err", text: "Impossible de charger : " + explainErr(e) + " Exécutez supabase-tout-en-un.sql dans Supabase." })); return; }
   if (tok !== orgTok) return;
+  if (key === "after") {   // anciennes lignes : le lien de recherche est remplacé par la page exacte de la démarche
+    for (const r of rows) {
+      if (!/service-public\.fr\/particuliers\/recherche\?keyword=/.test(r.link || "")) continue;
+      const hit = AFTER_TPL.find(t => norm(t[1]) === norm(r.title) && /^https:/.test(t[2])); if (!hit) continue;
+      try { const { error } = await remote.from(M.table).update({ link: hit[2] }).eq("id", r.id); if (!error) r.link = hit[2]; } catch {}
+    }
+  }
   rows = sortRows(key, rows);
   setExport($("#org-body"), () => buildOrgExport(key, M, rows));
   if (key === "guests") rows.filter(r => r.envoi === "QR code").forEach(r => { r.envoi = "Lien"; orgStore.update(M.table, r.id, { envoi: "Lien" }).catch(() => {}); });   // ancien libellé
