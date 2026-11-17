@@ -307,7 +307,7 @@ document.addEventListener("keydown", e => {
   if (k === "z" && !e.shiftKey) { e.preventDefault(); histUndo(); } else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); histRedo(); }
 });
 /* Flèche « annuler » : retour arrière sur les dernières modifications de l'onglet affiché (plan de tables : son propre historique) */
-const gUndo = { stacks: {}, busy: false, btn: null };
+const gUndo = { stacks: {}, busy: false, btn: null, top: null };
 const gCan = () => orgState.key !== "seating" && orgState.key !== "notes" && !gUndo.busy;
 const gOld = async (t, id) => { try { const { data } = await remote.from(t).select("*").eq("id", id); return (data && data[0]) || null; } catch { return null; } };
 function gRecord(op) {
@@ -322,8 +322,8 @@ function gUndoRefresh() {
   }
   const org = document.querySelector("#org-body"), k = orgState.key, visible = !!org && !org.closest("[hidden]") && k !== "notes";
   const n = k === "seating" ? seatHist.undo.length : (gUndo.stacks[k] || []).length;
-  gUndo.btn.hidden = !visible; gUndo.btn.disabled = !n;
-  gUndo.btn.title = n ? "Annuler la dernière modification (Ctrl+Z) · " + n + " possible" + (n > 1 ? "s" : "") : "Rien à annuler pour l'instant";
+  const ttl = n ? "Annuler la dernière modification (Ctrl+Z) · " + n + " possible" + (n > 1 ? "s" : "") : "Rien à annuler pour l'instant";
+  for (const b of [gUndo.btn, gUndo.top]) if (b && b.isConnected) { b.hidden = !visible; b.disabled = !n; b.title = ttl; }
 }
 setInterval(gUndoRefresh, 700);
 async function gUndoRun() {
@@ -352,7 +352,7 @@ document.addEventListener("keydown", e => {
 const orgStore = {
   async list(t) { const { data, error } = await remote.from(t).select("*"); if (error) throw error; return data || []; },
   async insert(t, rows) { if (t === "org_tables") histPush(); if (t === "org_guests") scheduleSheetSync(); const { data, error } = await remote.from(t).insert(rows).select(); if (error) throw error; if (!data || !data.length) throw { code: "42501", message: "row-level security" }; if (gCan()) gRecord({ k: "delete", t, ids: data.map(r => r.id) }); return data; },
-  async update(t, id, patch) { if (t === "org_tables") histPush(); if (t === "org_guests") scheduleSheetSync(); const old = gCan() ? await gOld(t, id) : null; const { data, error } = await remote.from(t).update(patch).eq("id", id).select(); if (error) throw error; if (!data || !data.length) throw { code: "42501", message: "row-level security" }; if (old) gRecord({ k: "update", t, id, patch: Object.fromEntries(Object.keys(patch).map(c => [c, old[c] === undefined ? null : old[c]])) }); },
+  async update(t, id, patch) { if (t === "org_tables") histPush(); if (t === "org_guests") scheduleSheetSync(); const old = gCan() ? await gOld(t, id) : null; const { data, error } = await remote.from(t).update(patch).eq("id", id).select(); if (error) throw error; if (!data || !data.length) throw { code: "42501", message: "row-level security" }; if (old && Object.keys(patch).some(c => String(old[c] ?? "") !== String(patch[c] ?? ""))) gRecord({ k: "update", t, id, patch: Object.fromEntries(Object.keys(patch).map(c => [c, old[c] === undefined ? null : old[c]])) }); },
   async remove(t, id) { if (t === "org_tables") histPush(); const old = gCan() ? await gOld(t, id) : null; const { error } = await remote.from(t).delete().eq("id", id); if (error) throw error; if (old) gRecord({ k: "insert", t, row: old }); }
 };
 const orgErr = e => "Non enregistré : " + explainErr(e) + (/table|relation|schema/i.test(String((e && e.message) || "")) || (e && e.code === "PGRST205") ? " Exécutez supabase-tout-en-un.sql dans Supabase." : "");
@@ -1110,13 +1110,34 @@ function afterPhaseHead(k, rows) {
     el("div", { class: "af-ph-side" }, el("span", { text: done + " / " + inP.length + " faites" + (cost ? " · " + eur2(cost) : "") }), el("span", { class: "af-bar" }, el("i", { style: "width:" + pct + "%" }))));
 }
 /* Dans la fiche : contact cliquable, lien, pièces jointes (stockage privé « prive », réservé aux mariés) */
-function afterExtras(r) {
+const afterEdit = new Set();
+/* Affichage « lecture » d'une démarche : les infos s'affichent directement, le formulaire n'apparaît qu'avec le crayon */
+function afterView(r) {
+  const box = el("div", { class: "af-view" }), ph = AFTER_PHASES.find(x => x.k === afterPhase(r));
+  const tags = el("div", { class: "af-tags" }, el("span", { class: "af-tag", text: ph.l }), r.cat ? el("span", { class: "af-tag", text: r.cat }) : "", r.who ? el("span", { class: "af-tag", text: r.who }) : "", r.due ? el("span", { class: "af-tag", text: "pour le " + frDate(r.due) }) : "", r.ref ? el("span", { class: "af-tag", text: "dossier " + r.ref }) : "");
+  box.append(tags);
+  const lines = t => String(t || "").split(/\n+/).map(x => x.trim()).filter(Boolean);
+  const steps = lines(r.instructions);
+  if (steps.length) box.append(el("section", { class: "af-sec" }, el("h5", { text: "Comment faire" }), el("ol", { class: "af-steps" }, ...steps.map(x => el("li", { text: x.replace(/^\s*(?:\d+\s*[.)]|[-•])\s*/, "") })))));
+  const docs = String(r.docs || "").split(/[\n,;]+/).map(x => x.trim()).filter(Boolean);
+  if (docs.length) box.append(el("section", { class: "af-sec" }, el("h5", { text: "Pièces à fournir" }), el("ul", { class: "af-docs" }, ...docs.map(x => el("li", { text: x })))));
+  const links = afterExtras(r, true);
+  if (r.contact || links.childNodes.length) box.append(el("section", { class: "af-sec" }, el("h5", { text: "Contact et liens" }), r.contact ? el("p", { class: "af-contact", text: r.contact + (r.address ? " · " + r.address : "") }) : "", links));
+  const cs = Number(r.cost) || 0, pd = Number(r.paid) || 0;
+  if (cs > 0) box.append(el("section", { class: "af-sec" }, el("h5", { text: "Frais" }), el("p", { class: "af-fee " + (pd >= cs - 0.005 ? "ok" : pd > 0 ? "part" : "no"), text: eur2(cs) + " prévus · payé " + eur2(pd) + (cs - pd > 0.005 ? " · reste " + eur2(cs - pd) : " · réglé") })));
+  if (String(r.notes || "").trim()) box.append(el("section", { class: "af-sec" }, el("h5", { text: "Notes" }), el("p", { class: "af-notes", text: r.notes })));
+  if (!box.querySelector(".af-sec")) box.append(el("p", { class: "hint", text: "Aucun détail pour l'instant. Cliquez sur ✎ Modifier pour ajouter les étapes, pièces, contact ou frais." }));
+  box.append(afterFiles(r));
+  return box;
+}
+function afterExtras(r, linksOnly) {
   const box = el("div", { class: "af-extra" });
   const links = el("div", { class: "af-links" });
   if (isUrl(r.link)) links.append(el("a", { class: "btn small", href: r.link, target: "_blank", rel: "noopener noreferrer", text: "Ouvrir le site ↗" }));
   if (r.phone) links.append(el("a", { class: "btn small", href: "tel:" + String(r.phone).replace(/[^\d+]/g, ""), text: "📞 " + r.phone }));
   if (isMail(r.email)) links.append(el("a", { class: "btn small", href: "mailto:" + r.email.trim(), text: "✉ " + r.email.trim() }));
   if (r.address) links.append(el("a", { class: "btn small", href: "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(r.address), target: "_blank", rel: "noopener noreferrer", text: "📍 Voir sur la carte ↗" }));
+  if (linksOnly) return links;
   if (links.childNodes.length) box.append(links);
   const cs = Number(r.cost) || 0, pd = Number(r.paid) || 0;
   if (cs > 0) box.append(el("p", { class: "af-fee " + (pd >= cs - 0.005 ? "ok" : pd > 0 ? "part" : "no"), text: "Frais : " + eur2(cs) + " · payé " + eur2(pd) + (cs - pd > 0.005 ? " · reste " + eur2(cs - pd) : " · réglé") }));
@@ -1484,6 +1505,11 @@ async function renderOrgInner(key) {
         acts.append(el("button", { class: "btn small", type: "button", text: "▲", "aria-label": "Monter la table", disabled: i === 0, onclick: () => swap(-1) }), el("button", { class: "btn small", type: "button", text: "▼", "aria-label": "Descendre la table", disabled: i === shown.length - 1, onclick: () => swap(1) }));
       }
       acts.append(el("button", { class: "btn small danger", type: "button", text: "Supprimer", "aria-label": "Supprimer", onclick: async () => { try { await orgStore.remove(M.table, r.id); orgOpen.delete(r.id); renderOrg(key); } catch (e) { showToast(orgErr(e)); } } }));
+      if (key === "after") {
+        const ed = afterEdit.has(r.id);
+        acts.prepend(el("button", { class: "btn small" + (ed ? " solid" : ""), type: "button", text: ed ? "✓ Terminé" : "✎ Modifier", "aria-label": ed ? "Terminer la modification" : "Modifier cette démarche", onclick: () => { if (ed) afterEdit.delete(r.id); else afterEdit.add(r.id); renderOrg(key); } }));
+        card.append(head, el("div", { class: "org-card-body" }, ed ? g : afterView(r), ed ? afterFiles(r) : "", acts));
+      } else
       card.append(head, el("div", { class: "org-card-body" }, g, (key === "trip_book" || key === "trip_days") ? helpRow(r) : key === "after" ? afterExtras(r) : "", acts));
       list.append(card);
     });
@@ -1885,7 +1911,7 @@ function buildAdminShell() {
     ...[["today", "Aujourd'hui"], ["site", "Le site"], ["org", "Organisation"], ["photos", "Photos"], ["pray", "Prière"]].map(([k, l]) => el("button", { type: "button", "data-main": k, "aria-pressed": "false", text: l, onclick: () => showMain(k) })));
   const sortBtn = el("button", { type: "button", class: "link", id: "tab-sort", "aria-pressed": "false", title: "Changer l'ordre des onglets", text: "⇄ Réorganiser les onglets", onclick: () => { const on = !document.body.classList.contains("sorting"); document.body.classList.toggle("sorting", on); sortBtn.setAttribute("aria-pressed", String(on)); sortBtn.textContent = on ? "✓ Terminer" : "⇄ Réorganiser les onglets"; sortHint.hidden = !on; } });
   const sortHint = el("p", { class: "hint sort-hint", hidden: true, text: "Glissez un onglet à sa nouvelle place, ou utilisez ‹ › sur chaque onglet. L'ordre est enregistré." });
-  const top = el("div", { class: "admin-bar2" }, nav, el("div", { class: "admin-bar-right" }, BUILD_LABEL ? el("small", { class: "build-label", title: "Si ce numéro ne change pas après une mise à jour, faites Ctrl+F5 pour recharger la page", text: BUILD_LABEL }) : "", makePrintMenu(), sortBtn, logout));
+  const top = el("div", { class: "admin-bar2" }, nav, el("div", { class: "admin-bar-right" }, BUILD_LABEL ? el("small", { class: "build-label", title: "Si ce numéro ne change pas après une mise à jour, faites Ctrl+F5 pour recharger la page", text: BUILD_LABEL }) : "", makePrintMenu(), (gUndo.top = el("button", { type: "button", class: "btn small undo-top", hidden: true, "aria-label": "Annuler la dernière modification", text: "↶ Annuler", onclick: () => gUndoRun() })), sortBtn, logout));
   const today = el("section", { "data-main-sec": "today" }, el("div", { id: "today-body" }));
   const org = el("section", { "data-main-sec": "org", hidden: true },
     el("div", { class: "admin-tabs", role: "group", "aria-label": "Organisation" },

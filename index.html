@@ -629,6 +629,7 @@ details.org-card>summary{position:relative}details.org-card>summary>.sel-box{pos
 @media(max-width:640px){.org-sum-row{grid-template-columns:minmax(0,1fr) auto}.org-sum-row .sm,.org-sum-row .num:nth-of-type(2){display:none}}
 .org-grp{margin:10px 0 0;font-size:.95rem;color:var(--olive)}
 .undo-fab{position:fixed;left:max(12px,env(safe-area-inset-left,0px));bottom:max(12px,env(safe-area-inset-bottom,0px));z-index:40;width:34px;height:34px;min-height:0;padding:0;border-radius:50%;border:1px solid var(--olive-soft);background:var(--paper);color:var(--olive);font-size:1.15rem;line-height:1;display:grid;place-items:center;cursor:pointer;opacity:.75;box-shadow:0 1px 5px rgba(0,0,0,.15)}
+.undo-top[hidden]{display:none}.undo-top:disabled{opacity:.4}
 .undo-fab:hover:not(:disabled){opacity:1}.undo-fab:disabled{opacity:.3;cursor:default}.undo-fab[hidden]{display:none}
 @media print{.undo-fab{display:none!important}}
 
@@ -646,6 +647,10 @@ details.org-card>summary{position:relative}details.org-card>summary>.sel-box{pos
 .af-files{display:grid;gap:8px}.af-files h5.fsec{margin:6px 0 0;padding-bottom:4px;border-bottom:1px solid var(--olive-soft);font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--olive);opacity:.85}
 .af-flist{list-style:none;margin:0;padding:0;display:grid;gap:6px}.af-flist li{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--paper-2);border-radius:10px;padding:6px 10px}
 .lnk-btn{border:0;background:none;font:inherit;color:var(--olive);text-decoration:underline;cursor:pointer;text-align:left;padding:0;overflow-wrap:anywhere}
+.af-view{display:grid;gap:12px}.af-tags{display:flex;gap:6px;flex-wrap:wrap}.af-tag{font-size:.74rem;letter-spacing:.04em;background:var(--paper-2);border:1px solid var(--olive-soft);border-radius:999px;padding:2px 11px}
+.af-sec{display:grid;gap:6px}.af-sec h5{margin:0;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--olive);opacity:.9;border-bottom:1px solid var(--olive-soft);padding-bottom:3px}
+.af-steps{margin:0;padding-left:1.3rem;display:grid;gap:4px}.af-docs{margin:0;padding:0;list-style:none;display:flex;gap:6px;flex-wrap:wrap}.af-docs li{background:var(--paper);border:1px solid var(--olive-soft);border-radius:8px;padding:3px 10px;font-size:.88rem}
+.af-contact{margin:0;font-weight:600}.af-notes{margin:0;white-space:pre-wrap;font-style:italic;opacity:.9}.af-sec .af-fee{margin:0}
 .af-fadd{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 @media(max-width:640px){.af-phase{grid-template-columns:auto 1fr}.af-ph-side{grid-column:1/-1;justify-items:start}}
 @media print{.af-files .btn,.af-fadd{display:none}}
@@ -2430,7 +2435,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611172225"></script>
+<script src="organisation.js?v=202611172228"></script>
 <script src="covoiturage.js?v=202611161745"></script>
 </body>
 </html>
