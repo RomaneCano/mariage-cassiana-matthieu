@@ -1290,7 +1290,7 @@ async function renderOrgInner(key) {
     bar.append(st, ct);
   }
   if (key === "after") {
-    const st = el("select", { "aria-label": "Afficher" }, ...[["todo", "À faire"], ["done", "Faites"], ["all", "Toutes"]].map(([v, t]) => el("option", { value: v, text: t }))); st.value = orgState.filter.astat || "todo";
+    const st = el("select", { "aria-label": "Afficher" }, ...[["all", "Toutes"], ["todo", "À faire"], ["done", "Faites"]].map(([v, t]) => el("option", { value: v, text: t }))); st.value = orgState.filter.astat || "all";
     const ct = el("select", { "aria-label": "Rubrique" }, el("option", { value: "", text: "Toutes les rubriques" }), ...ORG.after.fields.find(f => f.k === "cat").o.map(c => el("option", { value: c, text: c }))); ct.value = orgState.filter.acat || "";
     st.addEventListener("change", () => { orgState.filter.astat = st.value; renderOrg(key); }); ct.addEventListener("change", () => { orgState.filter.acat = ct.value; renderOrg(key); });
     bar.append(st, ct, el("button", { type: "button", class: "btn small", text: "✦ Proposer la liste type", title: "Papiers, impôts, santé, assurances, remerciements… vous choisissez ce que vous ajoutez", onclick: () => afterProposal(rows, bar) }));
@@ -1416,7 +1416,7 @@ async function renderOrgInner(key) {
 
   // tableau modifiable
   let shown = rows;
-  if (key === "after") shown = rows.filter(r => ((orgState.filter.astat || "todo") === "all" || ((orgState.filter.astat || "todo") === "done" ? r.done : !r.done)) && (!orgState.filter.acat || r.cat === orgState.filter.acat));
+  if (key === "after") shown = rows.filter(r => ((orgState.filter.astat || "all") === "all" || ((orgState.filter.astat || "all") === "done" ? r.done : !r.done)) && (!orgState.filter.acat || r.cat === orgState.filter.acat));
   if (key === "tasks") shown = rows.filter(r => (orgState.filter.status === "all" || (orgState.filter.status.startsWith("s:") ? statusOf(r) === orgState.filter.status.slice(2) : orgState.filter.status === "done" ? r.done : !r.done)) && (!orgState.filter.cat || r.cat === orgState.filter.cat));
   if (!shown.length) { host.append(el("div", { class: "empty-ico" }, icon("Agneau couché", 44)), el("p", { class: "empty", text: rows.length ? "Aucune ligne avec ce filtre." : "Rien pour l'instant. Ajoutez une première ligne avec « Ajouter »." })); return; }
   if (key === "vendors" || key === "seating" || key === "budget" || key === "deco" || key === "games" || key === "after" || key === "trip_book" || key === "trip_days" || key === "trip_ideas") {
