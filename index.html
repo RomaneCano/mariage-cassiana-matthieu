@@ -628,6 +628,10 @@ details.org-card>summary{position:relative}details.org-card>summary>.sel-box{pos
 .org-fold{display:flex;gap:6px;justify-content:flex-end;margin:0 0 6px}
 @media(max-width:640px){.org-sum-row{grid-template-columns:minmax(0,1fr) auto}.org-sum-row .sm,.org-sum-row .num:nth-of-type(2){display:none}}
 .org-grp{margin:10px 0 0;font-size:.95rem;color:var(--olive)}
+.undo-fab{position:fixed;left:max(12px,env(safe-area-inset-left,0px));bottom:max(12px,env(safe-area-inset-bottom,0px));z-index:40;width:34px;height:34px;min-height:0;padding:0;border-radius:50%;border:1px solid var(--olive-soft);background:var(--paper);color:var(--olive);font-size:1.15rem;line-height:1;display:grid;place-items:center;cursor:pointer;opacity:.75;box-shadow:0 1px 5px rgba(0,0,0,.15)}
+.undo-fab:hover:not(:disabled){opacity:1}.undo-fab:disabled{opacity:.3;cursor:default}.undo-fab[hidden]{display:none}
+@media print{.undo-fab{display:none!important}}
+
 /* Après le mariage : frise chronologique par phases */
 .af-phase{display:grid;grid-template-columns:auto 1fr auto;gap:4px 14px;align-items:center;margin:22px 0 8px;padding:10px 14px;border-left:5px solid var(--c);background:var(--paper-2);border-radius:0 12px 12px 0}
 .af-phase:first-child{margin-top:8px}
@@ -2426,7 +2430,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611161926"></script>
+<script src="organisation.js?v=202611172219"></script>
 <script src="covoiturage.js?v=202611161745"></script>
 </body>
 </html>

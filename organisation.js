@@ -306,11 +306,54 @@ document.addEventListener("keydown", e => {
   const k = String(e.key).toLowerCase();
   if (k === "z" && !e.shiftKey) { e.preventDefault(); histUndo(); } else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); histRedo(); }
 });
+/* Flèche « annuler » : retour arrière sur les dernières modifications de l'onglet affiché (plan de tables : son propre historique) */
+const gUndo = { stacks: {}, busy: false, btn: null };
+const gCan = () => orgState.key !== "seating" && orgState.key !== "notes" && !gUndo.busy;
+const gOld = async (t, id) => { try { const { data } = await remote.from(t).select("*").eq("id", id); return (data && data[0]) || null; } catch { return null; } };
+function gRecord(op) {
+  const k = orgState.key, st = gUndo.stacks[k] || (gUndo.stacks[k] = []), now = Date.now(), last = st[st.length - 1];
+  if (last && now - last.t < 900) { last.ops.push(op); last.t = now; } else { st.push({ ops: [op], t: now }); if (st.length > 40) st.shift(); }   // les ajouts d'un même geste forment une seule étape
+  gUndoRefresh();
+}
+function gUndoRefresh() {
+  if (!gUndo.btn) {
+    gUndo.btn = el("button", { type: "button", class: "undo-fab", hidden: true, "aria-label": "Annuler la dernière modification", text: "↶", onclick: () => gUndoRun() });
+    document.body.append(gUndo.btn);
+  }
+  const org = document.querySelector("#org-body"), k = orgState.key, visible = !!org && !org.closest("[hidden]") && k !== "notes";
+  const n = k === "seating" ? seatHist.undo.length : (gUndo.stacks[k] || []).length;
+  gUndo.btn.hidden = !visible; gUndo.btn.disabled = !n;
+  gUndo.btn.title = n ? "Annuler la dernière modification (Ctrl+Z) · " + n + " possible" + (n > 1 ? "s" : "") : "Rien à annuler pour l'instant";
+}
+setInterval(gUndoRefresh, 700);
+async function gUndoRun() {
+  const k = orgState.key; if (k === "seating") return histUndo();
+  const st = gUndo.stacks[k]; if (!st || !st.length || gUndo.busy) return;
+  const step = st.pop(); gUndo.busy = true;
+  try {
+    for (const op of step.ops.reverse()) {
+      if (op.t === "org_guests") scheduleSheetSync();
+      let r;
+      if (op.k === "update") r = await remote.from(op.t).update(op.patch).eq("id", op.id);
+      else if (op.k === "insert") r = await remote.from(op.t).insert(op.row);
+      else for (const id of op.ids) { r = await remote.from(op.t).delete().eq("id", id); if (r.error) break; }
+      if (r && r.error) throw r.error;
+    }
+    showToast("Modification annulée");
+  } catch (e) { showToast(orgErr(e)); }
+  gUndo.busy = false; gUndoRefresh(); renderOrg(k);
+}
+document.addEventListener("keydown", e => {
+  if (!(e.ctrlKey || e.metaKey) || e.shiftKey || String(e.key).toLowerCase() !== "z" || orgState.key === "seating") return;
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || "") || (e.target && e.target.isContentEditable)) return;
+  const org = document.querySelector("#org-body"); if (!org || org.closest("[hidden]")) return;
+  e.preventDefault(); gUndoRun();
+});
 const orgStore = {
   async list(t) { const { data, error } = await remote.from(t).select("*"); if (error) throw error; return data || []; },
-  async insert(t, rows) { if (t === "org_tables") histPush(); if (t === "org_guests") scheduleSheetSync(); const { data, error } = await remote.from(t).insert(rows).select(); if (error) throw error; if (!data || !data.length) throw { code: "42501", message: "row-level security" }; return data; },
-  async update(t, id, patch) { if (t === "org_tables") histPush(); if (t === "org_guests") scheduleSheetSync(); const { data, error } = await remote.from(t).update(patch).eq("id", id).select(); if (error) throw error; if (!data || !data.length) throw { code: "42501", message: "row-level security" }; },
-  async remove(t, id) { if (t === "org_tables") histPush(); const { error } = await remote.from(t).delete().eq("id", id); if (error) throw error; }
+  async insert(t, rows) { if (t === "org_tables") histPush(); if (t === "org_guests") scheduleSheetSync(); const { data, error } = await remote.from(t).insert(rows).select(); if (error) throw error; if (!data || !data.length) throw { code: "42501", message: "row-level security" }; if (gCan()) gRecord({ k: "delete", t, ids: data.map(r => r.id) }); return data; },
+  async update(t, id, patch) { if (t === "org_tables") histPush(); if (t === "org_guests") scheduleSheetSync(); const old = gCan() ? await gOld(t, id) : null; const { data, error } = await remote.from(t).update(patch).eq("id", id).select(); if (error) throw error; if (!data || !data.length) throw { code: "42501", message: "row-level security" }; if (old) gRecord({ k: "update", t, id, patch: Object.fromEntries(Object.keys(patch).map(c => [c, old[c] === undefined ? null : old[c]])) }); },
+  async remove(t, id) { if (t === "org_tables") histPush(); const old = gCan() ? await gOld(t, id) : null; const { error } = await remote.from(t).delete().eq("id", id); if (error) throw error; if (old) gRecord({ k: "insert", t, row: old }); }
 };
 const orgErr = e => "Non enregistré : " + explainErr(e) + (/table|relation|schema/i.test(String((e && e.message) || "")) || (e && e.code === "PGRST205") ? " Exécutez supabase-tout-en-un.sql dans Supabase." : "");
 
@@ -782,14 +825,19 @@ function invitePanel(rows) {
 }
 let orgTok = 0, lastOrgKey = null;
 /* Redessine l'onglet en gardant la position de défilement (sinon la page remontait en haut à chaque modification) */
+let orgBusy = 0, orgY = 0;
 async function renderOrg(key) {
-  const keep = key === lastOrgKey, y = window.scrollY, host = $("#org-body"); lastOrgKey = key;
-  if (keep && host) { host.style.minHeight = host.offsetHeight + "px"; host.dataset.re = "1"; }   // la page garde sa hauteur pendant le redessin : aucun saut vers le haut
-  const r = await renderOrgInner(key);
-  if (keep && host) {
-    window.scrollTo(0, y);
-    requestAnimationFrame(() => { window.scrollTo(0, y); host.style.minHeight = ""; delete host.dataset.re; });
+  const keep = key === lastOrgKey, host = $("#org-body"); lastOrgKey = key;
+  if (!orgBusy) orgY = window.scrollY;            // position d'origine, mémorisée une seule fois même si plusieurs redessins se chevauchent
+  orgBusy++;
+  if (keep && host) { host.style.minHeight = Math.max(host.offsetHeight, parseInt(host.style.minHeight) || 0) + "px"; host.dataset.re = "1"; }   // la page garde sa hauteur pendant le redessin : aucun saut vers le haut
+  let r;
+  try { r = await renderOrgInner(key); } finally { orgBusy--; }
+  if (keep && host && !orgBusy) {
+    const y = orgY; window.scrollTo(0, y);
+    requestAnimationFrame(() => { window.scrollTo(0, y); setTimeout(() => { if (!orgBusy) { window.scrollTo(0, y); host.style.minHeight = ""; delete host.dataset.re; } }, 60); });
   }
+  gUndoRefresh();
   return r;
 }
 const getDecoBudget = async () => { try { return Number(String((await store.getSetting("deco_budget")) || "").replace(",", ".")) || 0; } catch { return 0; } };
@@ -1083,7 +1131,7 @@ function afterFiles(r) {
     list.replaceChildren(...(Array.isArray(r.files) ? r.files : []).map((f, i) => el("li", {},
       el("button", { type: "button", class: "lnk-btn", text: "📎 " + f.name, title: "Ouvrir", onclick: async () => { try { const { data, error } = await remote.storage.from("prive").createSignedUrl(f.path, 300); if (error) throw error; window.open(data.signedUrl, "_blank", "noopener"); } catch (e) { showToast("Ouverture impossible : " + explainErr(e)); } } }),
       el("span", { class: "sm", text: f.size ? Math.max(1, Math.round(f.size / 1024)) + " Ko" : "" }),
-      el("button", { type: "button", class: "btn small danger", text: "Retirer", "aria-label": "Retirer " + f.name, onclick: async () => { try { await remote.storage.from("prive").remove([f.path]); await save(r.files.filter((_, j) => j !== i)); } catch (e) { showToast(orgErr(e)); } } }))));
+      el("button", { type: "button", class: "btn small danger", text: "Retirer", "aria-label": "Retirer " + f.name, onclick: async () => { try { await save(r.files.filter((_, j) => j !== i)); } catch (e) { showToast(orgErr(e)); } } }))));
   };
   const input = el("input", { type: "file", multiple: true, hidden: true, accept: ".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.txt,.odt" });
   input.addEventListener("change", async () => {
