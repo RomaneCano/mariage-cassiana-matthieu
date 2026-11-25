@@ -662,6 +662,12 @@ details.org-card>summary{position:relative}details.org-card>summary>.sel-box{pos
 .rm-g{display:flex;gap:7px;align-items:center;font-size:.88rem;min-width:0}.rm-g[hidden]{display:none}.rm-g .tag{font-size:.65rem;opacity:.8}
 .rm-act{display:flex;gap:8px;flex-wrap:wrap}.rm-stats{display:flex;gap:8px;flex-wrap:wrap}.rm-filters{display:flex;gap:8px;flex-wrap:wrap}.rm-filters select{min-height:38px;width:auto;min-width:180px}
 .rm-tbl td{vertical-align:middle}.rm-tbl tr.rm-ok b{opacity:.6}
+.rm-panel{padding:14px 16px;font-size:.9rem}.rm-panel input:not([type=checkbox]),.rm-panel select,.rm-panel textarea{min-height:34px;padding:4px 10px;font-size:.88rem;border-radius:10px}
+.rm-panel input[type=checkbox]{width:16px!important;height:16px!important;min-height:0!important;padding:0;flex:none;margin:0}
+.rm-panel .btn.small{min-height:32px;padding:3px 12px;font-size:.82rem}.rm-panel h3{font-size:1.05rem}.rm-create h4{font-size:.95rem}
+.rm-panel .hint{margin:0;font-size:.82rem}.rm-grid,.rm-meta{gap:8px}.rm-grid label,.rm-meta label{font-size:.76rem}
+.rm-guests{max-height:170px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));padding:6px 8px}.rm-g{font-size:.82rem;line-height:1.2}.rm-g span{overflow-wrap:anywhere}
+.rm-gtools input{min-height:34px!important}.rm-chk span{font-size:.82rem}.rm-stats .sum-chip{padding:6px 12px}.rm-stats .sum-chip b{font-size:1.1rem}
 #rm-print{display:none}
 @media print{
   body.print-rm>*:not(#rm-print){display:none!important}
@@ -2461,7 +2467,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611251218"></script>
+<script src="organisation.js?v=202611251223"></script>
 <script src="covoiturage.js?v=202611161745"></script>
 </body>
 </html>
