@@ -825,6 +825,13 @@ function invitePanel(rows) {
 }
 let orgTok = 0, lastOrgKey = null;
 /* Redessine l'onglet en gardant la position de défilement (sinon la page remontait en haut à chaque modification) */
+/* Redessine l'onglet seulement quand vous avez fini de saisir : une heure ou une date « valide » dès le premier chiffre tapé, un redessin immédiat vous ferait perdre la main au milieu de la saisie */
+function renderWhenIdle(key) {
+  const act = document.activeElement, inField = a => a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.closest("#org-body");
+  if (!inField(act) || orgState.key !== key) { renderOrg(key); return; }
+  if (act._idle) return; act._idle = true;
+  act.addEventListener("blur", () => { act._idle = false; setTimeout(() => { if (orgState.key === key) renderWhenIdle(key); }, 250); }, { once: true });
+}
 let orgBusy = 0, orgY = 0;
 async function renderOrg(key) {
   const keep = key === lastOrgKey, host = $("#org-body"); lastOrgKey = key;
@@ -1541,13 +1548,18 @@ async function renderOrgInner(key) {
       if (key === "guests" && f.k === "envoi") inp.dataset.envoi = r.envoi || "";
       if (key === "guests" && (f.k === "nom" || f.k === "prenom")) inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
       if (key === "guests" && f.k === "allergie") { const mark = () => inp.classList.toggle("has-alg", !!inp.value.trim()); mark(); inp.addEventListener("input", mark); }
-      inp.addEventListener("change", async () => {
+      const commit = async () => {
         const v = readInput(f, inp);
         try { const patch = { [f.k]: v }; if (key === "tasks" && f.k === "done") patch.status = v ? "Terminé" : (statusOf(r) === "Terminé" ? "À faire" : statusOf(r)); if (key === "tasks" && f.k === "status") patch.done = v === "Terminé"; const oldGuestName = key === "guests" ? guestDisplay(r) : "";
           await orgStore.update(M.table, r.id, patch); Object.assign(r, patch);
-          if (key === "guests" && (f.k === "nom" || f.k === "prenom")) { const nb = await renameSeated(oldGuestName, guestDisplay(r), rows.filter(x => x.id !== r.id && guestDisplay(x) === oldGuestName).length); if (nb) showToast("Nom mis à jour aussi dans le plan de tables"); } if (key === "tasks" || key === "budget" || key === "seating" || key === "timeline" || (key === "guests" && (f.k === "presence" || f.k === "allergie" || f.k === "envoi" || f.k === "age"))) renderOrg(key); else showToast("Enregistré"); }
+          if (key === "guests" && (f.k === "nom" || f.k === "prenom")) { const nb = await renameSeated(oldGuestName, guestDisplay(r), rows.filter(x => x.id !== r.id && guestDisplay(x) === oldGuestName).length); if (nb) showToast("Nom mis à jour aussi dans le plan de tables"); } if (key === "tasks" || key === "budget" || key === "seating" || key === "timeline" || (key === "guests" && (f.k === "presence" || f.k === "allergie" || f.k === "envoi" || f.k === "age"))) renderWhenIdle(key); else showToast("Enregistré"); }
         catch (e) { showToast(orgErr(e)); }
-      });
+      };
+      if (f.t === "time" || f.t === "date" || f.t === "number") {   // une heure est « valide » dès le premier chiffre : on n'enregistre qu'une fois la saisie terminée (pause ou sortie du champ)
+        let tm = null; const flush = () => { if (tm) { clearTimeout(tm); tm = null; commit(); } };
+        inp.addEventListener("change", () => { clearTimeout(tm); tm = setTimeout(flush, 1400); });
+        inp.addEventListener("blur", flush);
+      } else inp.addEventListener("change", commit);
       tr.append(el("td", { "data-label": f.l }, inp));
     });
     if (key === "seating") {
