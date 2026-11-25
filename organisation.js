@@ -491,6 +491,23 @@ async function sendInvite(g) {
     throw e;
   }
 }
+async function sendRoadmap(rm, steps, g, force) {
+  const url = (typeof CONFIG !== "undefined" && CONFIG.APPS_SCRIPT_URL) || "";
+  if (!url) throw new Error("L'envoi par e-mail n'est pas encore activé.");
+  let key = ""; try { key = sessionStorage.getItem(INVITE_KEY_LS) || ""; } catch {}
+  if (!key) throw new Error("Saisissez d'abord le mot de passe d'envoi (onglet Invités, bloc « Envoyer le lien d'invitation par e-mail »).");
+  const body = JSON.stringify({ action: "roadmap", key, force: !!force, to: String(g.email || "").trim(), prenom: g.prenom || "", message: rm.message || "",
+    steps: steps.map(r => ({ time: r.time || "", end_time: r.end_time || "", title: r.title || "", kind: r.kind || "", place: r.place || "", notes: r.notes || "" })) });
+  try {
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "Envoi refusé par le script.");
+    return "ok";
+  } catch (e) {
+    if (e instanceof TypeError) return "envoyé, réponse non lisible";
+    throw e;
+  }
+}
 const isUrl = v => typeof v === "string" && /^https?:\/\//i.test(v);
 const readInput = (f, inp) => f.t === "check" ? inp.checked : f.t === "number" ? (inp.value === "" ? null : Number(inp.value)) : (inp.value.trim() === "" ? null : inp.value.trim());
 
@@ -1383,6 +1400,12 @@ function roadmapPanel(ctx) {
       g && g.presence_mairie ? el("p", { class: "hint", text: "Cet invité est convié à la mairie (" + ({ OUI: "présent", NON: "absent", ATT: "réponse en attente" }[g.presence_mairie] || "") + ")." }) : "",
       el("div", { class: "rm-act" },
         el("button", { type: "button", class: "btn small solid", text: "🖨 Imprimer la feuille", onclick: () => rmPrint(rm, steps, who) }),
+        rm.kind === "guest" ? el("button", { type: "button", class: "btn small", text: rm.sent ? "✉ Renvoyer par e-mail" : "✉ Envoyer par e-mail", disabled: !(g && isMail(g.email)) || !steps.length, title: g && isMail(g.email) ? "Envoie le planning à " + g.email.trim() + " depuis cassmattas@gmail.com" : "Renseignez l'e-mail de cet invité dans l'onglet Invités", onclick: async e => {
+          if (!window.confirm((rm.sent ? "Cette feuille a déjà été envoyée. La renvoyer à " : "Envoyer la feuille de route à ") + g.email.trim() + " ?")) return;
+          const b = e.currentTarget; b.disabled = true; b.textContent = "Envoi…";
+          try { const res = await sendRoadmap(rm, steps, g, rm.sent); await upd(rm, { sent: true, sent_at: todayISO() }); showToast("Feuille envoyée à " + g.email.trim() + (res === "ok" ? "" : " (vérifiez dans Gmail > Envoyés)")); }
+          catch (err) { showToast(err.message || String(err)); b.disabled = false; b.textContent = "✉ Envoyer par e-mail"; }
+        } }) : "",
         el("button", { type: "button", class: "btn small", text: rm.kind === "profile" ? "Appliquer à des invités…" : "Dupliquer pour d'autres invités…", title: "Crée des copies de cette feuille, une par invité coché", onclick: () => openCreate({ kind: "guest", src: rm.id, profile: rm.profile || "" }) }),
         rm.kind === "guest" ? el("button", { type: "button", class: "btn small", text: "En faire un modèle de profil", onclick: () => openCreate({ kind: "profile", src: rm.id, profile: rm.profile || "", name: rm.profile || "" }) }) : "",
         el("button", { type: "button", class: "btn small", text: "← Déroulé général", onclick: () => go(null) }),
