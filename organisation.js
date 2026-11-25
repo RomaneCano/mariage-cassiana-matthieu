@@ -1416,10 +1416,11 @@ async function renderOrgInner(key) {
   const tok = ++orgTok;
   orgState.key = key;
   document.querySelectorAll("[data-org]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.org === (key.startsWith("trip_") ? "trip" : key))));
-  const host = $("#org-body"); host.replaceChildren(); host.dataset.key = key;
-  if (key === "notes") return renderNotes(host, () => tok === orgTok);
+  const host = $("#org-body");
+  let cleared = false; const clearHost = () => { if (!cleared) { cleared = true; host.dataset.key = key; host.replaceChildren(); } };   // l'ancien contenu reste affiché jusqu'à ce que le nouveau soit prêt : plus de page blanche entre deux rafraîchissements
+  if (key === "notes") { clearHost(); return renderNotes(host, () => tok === orgTok); }
   const M = ORG[key]; let rows = [], tripAll = [];
-  try { rows = await orgStore.list(M.table); if (key.startsWith("trip_")) { tripAll = rows; rows = rows.filter(M.accept); } } catch (e) { host.append(el("p", { class: "msg err", text: "Impossible de charger : " + explainErr(e) + " Exécutez supabase-tout-en-un.sql dans Supabase." })); return; }
+  try { rows = await orgStore.list(M.table); if (key.startsWith("trip_")) { tripAll = rows; rows = rows.filter(M.accept); } } catch (e) { clearHost(); host.append(el("p", { class: "msg err", text: "Impossible de charger : " + explainErr(e) + " Exécutez supabase-tout-en-un.sql dans Supabase." })); return; }
   if (tok !== orgTok) return;
   if (key === "after") {   // anciennes lignes : le lien de recherche est remplacé par la page exacte de la démarche
     for (const r of rows) {
@@ -1449,8 +1450,8 @@ async function renderOrgInner(key) {
   if (key === "timeline") { try { tlGames = await orgStore.list("org_games"); } catch {} if (tok !== orgTok) return; const gf = M.fields.find(f => f.k === "game"); gf.o.length = 0; tlGames.forEach(g => { if (g.name && !gf.o.includes(g.name)) gf.o.push(g.name); }); }
   const decoS = key === "budget" ? await decoStats() : key === "deco" ? { env: await getDecoBudget() } : null; if (tok !== orgTok) return;
   let sumBox;
-  if (key.startsWith("trip_")) { const th = await tripHeader(key, tripAll); if (tok !== orgTok) return; host.append(th.head); sumBox = th.sum; host.append(sumBox); }
-  else { sumBox = orgSummary(key, rows, decoS); host.append(sumBox); }
+  if (key.startsWith("trip_")) { const th = await tripHeader(key, tripAll); if (tok !== orgTok) return; clearHost(); host.append(th.head); sumBox = th.sum; host.append(sumBox); }
+  else { sumBox = orgSummary(key, rows, decoS); clearHost(); host.append(sumBox); }
   if (rmCtx) host.append(roadmapPanel(rmCtx));
   if (key === "trip_help") { host.append(tripHelpPanel()); return; }
   if (key === "trip_reco") { host.append(tripRecoPanel(tripAll)); return; }
