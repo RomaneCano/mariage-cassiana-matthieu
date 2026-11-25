@@ -286,3 +286,20 @@ create policy org_after_admin on public.org_after for all to authenticated using
 revoke all on public.org_after from anon;
 grant select, insert, update, delete on public.org_after to authenticated;
 notify pgrst, 'reload schema';
+
+-- 26. Présence à la mairie + feuilles de route (déroulé du jour J par invité ou par profil)
+alter table public.org_guests add column if not exists presence_mairie text;
+create table if not exists public.org_roadmaps (
+  id uuid primary key default gen_random_uuid(), created_at timestamptz not null default now(),
+  name text not null check (char_length(name) between 1 and 200),
+  kind text not null default 'guest', guest_id uuid, profile text,
+  status text not null default 'À faire', sent boolean not null default false, sent_at date,
+  message text, notes text
+);
+alter table public.org_roadmaps enable row level security;
+drop policy if exists org_roadmaps_admin on public.org_roadmaps;
+create policy org_roadmaps_admin on public.org_roadmaps for all to authenticated using (public.is_admin()) with check (public.is_admin());
+revoke all on public.org_roadmaps from anon;
+grant select, insert, update, delete on public.org_roadmaps to authenticated;
+alter table public.org_timeline add column if not exists roadmap_id uuid references public.org_roadmaps(id) on delete cascade;
+notify pgrst, 'reload schema';

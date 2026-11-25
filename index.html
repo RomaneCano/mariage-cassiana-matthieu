@@ -651,6 +651,32 @@ details.org-card>summary{position:relative}details.org-card>summary>.sel-box{pos
 .af-sec{display:grid;gap:6px}.af-sec h5{margin:0;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--olive);opacity:.9;border-bottom:1px solid var(--olive-soft);padding-bottom:3px}
 .af-steps{margin:0;padding-left:1.3rem;display:grid;gap:4px}.af-docs{margin:0;padding:0;list-style:none;display:flex;gap:6px;flex-wrap:wrap}.af-docs li{background:var(--paper);border:1px solid var(--olive-soft);border-radius:8px;padding:3px 10px;font-size:.88rem}
 .af-contact{margin:0;font-weight:600}.af-notes{margin:0;white-space:pre-wrap;font-style:italic;opacity:.9}.af-sec .af-fee{margin:0}
+/* Feuilles de route */
+.rm-panel{display:grid;gap:12px;margin:12px 0}.rm-head{display:flex;gap:10px 16px;flex-wrap:wrap;align-items:center;justify-content:space-between}.rm-head h3{margin:0}
+.rm-pick{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}.rm-pick label{display:grid;gap:2px;font-size:.78rem}.rm-pick select{min-height:38px;max-width:100%;width:auto;min-width:220px}
+.rm-create{display:grid;gap:10px;padding:12px;border:1px dashed var(--olive-soft);border-radius:12px;background:var(--paper)}.rm-create h4{margin:0}
+.rm-grid,.rm-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}.rm-grid label,.rm-meta label{display:grid;gap:3px;font-size:.82rem;font-weight:600;min-width:0}.rm-grid input,.rm-grid select,.rm-meta input,.rm-meta select,.rm-meta textarea{min-height:38px;width:100%}
+.rm-wide{grid-column:1/-1}.rm-chk{display:flex!important;grid-auto-flow:column;gap:8px;align-items:center;font-weight:400!important}.rm-chk input{width:auto!important;min-height:0!important}
+.rm-gpart{display:grid;gap:8px}.rm-gtools{display:flex;gap:8px;flex-wrap:wrap}.rm-gtools input{flex:1;min-width:160px;min-height:38px}
+.rm-guests{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 12px;max-height:230px;overflow:auto;padding:8px;border:1px solid var(--line);border-radius:10px}
+.rm-g{display:flex;gap:7px;align-items:center;font-size:.88rem;min-width:0}.rm-g[hidden]{display:none}.rm-g .tag{font-size:.65rem;opacity:.8}
+.rm-act{display:flex;gap:8px;flex-wrap:wrap}.rm-stats{display:flex;gap:8px;flex-wrap:wrap}.rm-filters{display:flex;gap:8px;flex-wrap:wrap}.rm-filters select{min-height:38px;width:auto;min-width:180px}
+.rm-tbl td{vertical-align:middle}.rm-tbl tr.rm-ok b{opacity:.6}
+#rm-print{display:none}
+@media print{
+  body.print-rm>*:not(#rm-print){display:none!important}
+  body.print-rm #rm-print{display:block;font-family:"Libre Baskerville",Georgia,serif;color:#222;padding:0;max-width:none}
+  body.print-rm{background:#fff!important}
+  #rm-print .rmp-kick{margin:0;text-align:center;letter-spacing:.2em;text-transform:uppercase;font-size:10pt}
+  #rm-print h1{margin:4pt 0;text-align:center;font-size:26pt;font-weight:400}
+  #rm-print .rmp-for{margin:2pt 0;text-align:center;font-size:15pt;font-weight:700}#rm-print .rmp-date{margin:0 0 14pt;text-align:center;font-size:11pt}
+  #rm-print .rmp-msg{margin:0 0 14pt;padding:8pt 12pt;border-left:3pt solid #999;font-style:italic;white-space:pre-wrap}
+  #rm-print .rmp-tbl{width:100%;border-collapse:collapse}#rm-print .rmp-tbl td{padding:7pt 8pt;border-bottom:.5pt solid #bbb;vertical-align:top;font-size:11pt}
+  #rm-print .rmp-t{width:22%;font-weight:700;white-space:nowrap}#rm-print .rmp-p{width:28%;font-size:10pt}
+  #rm-print .rmp-k{margin-left:8pt;font-size:8pt;text-transform:uppercase;letter-spacing:.06em;opacity:.7}#rm-print .rmp-n{font-size:10pt;font-style:italic;margin-top:2pt}
+  #rm-print .rmp-end{margin-top:18pt;text-align:center;font-style:italic}
+  #rm-print tr{break-inside:avoid}
+}
 .af-fadd{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 @media(max-width:640px){.af-phase{grid-template-columns:auto 1fr}.af-ph-side{grid-column:1/-1;justify-items:start}}
 @media print{.af-files .btn,.af-fadd{display:none}}
@@ -2435,7 +2461,7 @@ window.addEventListener("hashchange", route); route();
 window.addEventListener("resize", () => { drawLoops(); fitPanel(); }); window.addEventListener("load", () => { drawLoops(); fitPanel(); });
 if (window.ResizeObserver) new ResizeObserver(drawLoops).observe($(".timeline"));
 </script>
-<script src="organisation.js?v=202611251214"></script>
+<script src="organisation.js?v=202611251218"></script>
 <script src="covoiturage.js?v=202611161745"></script>
 </body>
 </html>

@@ -122,7 +122,8 @@ const ORG = {
     { k: "availability", l: "Disponibilité", t: "text" }, { k: "deposit", l: "Acompte (€)", t: "number" }, { k: "notes", l: "Notes", t: "long", wide: true }] },
   guests: { table: "org_guests", label: "Invités", order: "position", defaults: { presence: "ATT" }, fields: [
     { k: "nom", l: "Nom de famille", t: "long" }, { k: "prenom", l: "Prénom", t: "long", req: true }, { k: "tel", l: "Téléphone", t: "text" }, { k: "email", l: "E-mail", t: "text" },
-    { k: "presence", l: "Présence", t: "select", o: ["ATT", "OUI", "NON"], labels: { ATT: "En attente", OUI: "Présent(e)", NON: "Absent(e)" } },
+    { k: "presence_mairie", l: "Présence mairie", t: "select", o: ["ATT", "OUI", "NON"], labels: { ATT: "En attente", OUI: "Présent(e)", NON: "Absent(e)" }, blank: "Non invité(e)" },
+    { k: "presence", l: "Présence cérémonie", t: "select", o: ["ATT", "OUI", "NON"], labels: { ATT: "En attente", OUI: "Présent(e)", NON: "Absent(e)" } },
     { k: "allergie", l: "Allergie", t: "long" }, { k: "adresse", l: "Adresse", t: "long" },
     { k: "envoi", l: "Invitation", t: "select", o: ["Courrier", "Lien", "Remise en main"] }, { k: "age", l: "Âge", t: "text" }, { k: "notes", l: "Notes", t: "long" }, { k: "a_verifier", l: "À vérifier", t: "check" }] },
   games: { table: "org_games", label: "Jeux", order: "created_at", defaults: { chosen: false, ready: false }, fields: [
@@ -419,7 +420,7 @@ function fieldInput(f, value, row) {
   let inp;
   if (f.t === "select") {
     const opts = ["", ...f.o]; if (value && !opts.includes(value)) opts.push(value);
-    inp = el("select", {}, ...opts.map(o => el("option", { value: o, text: (f.labels && f.labels[o]) || o || "—" })));
+    inp = el("select", {}, ...opts.map(o => el("option", { value: o, text: (f.labels && f.labels[o]) || (o === "" && f.blank) || o || "—" })));
     if (f.newable) inp.append(el("option", { value: "__new__", text: "➕ Nouvelle catégorie…" }));
     inp.value = value || ""; inp.dataset.prev = inp.value;
     if (f.newable) inp.addEventListener("change", () => {
@@ -526,7 +527,7 @@ function orgSummary(key, rows, deco) {
   } else if (key === "guests") {
     const c = f => rows.filter(f).length;
     chip("invités", String(rows.length), "c-all"); if (c(r => r.a_verifier)) chip("à vérifier (réponses du site)", String(c(r => r.a_verifier)), "warn"); chip("présents", String(c(r => r.presence === "OUI")), "c-ok"); chip("absents", String(c(r => r.presence === "NON")), "c-no");
-    chip("en attente", String(c(r => !r.presence || r.presence === "ATT")), "c-wait"); chip("allergies", String(c(r => r.allergie && r.allergie.trim())), "c-alg");
+    chip("en attente", String(c(r => !r.presence || r.presence === "ATT")), "c-wait"); { const inv = c(r => r.presence_mairie); if (inv) chip("à la mairie", c(r => r.presence_mairie === "OUI") + " / " + inv, "c-link"); } chip("allergies", String(c(r => r.allergie && r.allergie.trim())), "c-alg");
     chip("enfants (0 à 12 ans)", String(c(r => { const n = parseInt(String(r.age || "").replace(/[^\d]/g, ""), 10); return !isNaN(n) && n <= 12; })), "c-kid"); const prog = e => c(r => r.envoi === e && r.invite_sent_at) + " / " + c(r => r.envoi === e);
     const envChip = (label, mode, cls) => { chip(label, prog(mode), cls + " clickable" + (orgState.filter.envoi === mode ? " on" : "")); const el0 = box.lastChild; el0.title = "Cliquer pour n'afficher que ces invités (re-cliquer pour tout voir)"; el0.addEventListener("click", () => { orgState.filter.envoi = orgState.filter.envoi === mode ? "" : mode; renderOrg("guests"); }); };
     envChip("courriers envoyés", "Courrier", "c-post"); envChip("remises en main effectuées", "Remise en main", "c-hand"); envChip("liens envoyés", "Lien", "c-link");
@@ -1274,6 +1275,141 @@ function timelinePanel(rows, games) {
   else if (!games.some(g => g.chosen)) box.append(el("p", { class: "hint", text: "Cochez « Retenu » dans l'onglet Jeux pour les voir ici, puis placez-les dans une étape." }));
   return box;
 }
+/* --- Feuilles de route : le déroulé du jour J, décliné par invité ou par profil (famille, témoins…) --- */
+const RM_STATUS = ["À faire", "En cours", "Terminée"];
+const RM_PROFILES = ["Famille proche", "Témoins", "Famille élargie", "Amis", "Demoiselles / garçons d'honneur", "Enfants", "Collègues", "Autre"];
+const rmCls = st => st === "Terminée" ? "ok" : st === "En cours" ? "wait" : "";
+const isMairieStep = r => /mairie|civil/i.test(String(r.title || "") + " " + String(r.place || ""));
+const rmHm = t => { if (!t) return ""; const [h, m] = String(t).split(":"); return Number(h) + "h" + (m && m !== "00" ? m : ""); };
+async function rmCopySteps(src, toId, dropMairie) {
+  const keep = src.filter(r => !(dropMairie && isMairieStep(r)));
+  if (!keep.length) return 0;
+  await orgStore.insert("org_timeline", keep.map(r => ({ time: r.time, end_time: r.end_time || null, title: r.title, kind: r.kind || null, place: r.place || null, who: r.who || null, notes: r.notes || null, game: r.game || null, roadmap_id: toId })));
+  return keep.length;
+}
+function rmPrint(rm, steps, who) {
+  const old = document.getElementById("rm-print"); if (old) old.remove();
+  const tbl = el("table", { class: "rmp-tbl" }, el("tbody", {}, ...steps.map(r => el("tr", {},
+    el("td", { class: "rmp-t", text: rmHm(r.time) + (r.end_time ? " → " + rmHm(r.end_time) : "") }),
+    el("td", {}, el("b", { text: r.title }), r.kind ? el("span", { class: "rmp-k", text: r.kind }) : "", r.notes ? el("div", { class: "rmp-n", text: r.notes }) : ""),
+    el("td", { class: "rmp-p", text: r.place || "" })))));
+  const box = el("div", { id: "rm-print" },
+    el("p", { class: "rmp-kick", text: "Mariage de Cassiana & Matthieu" }), el("h1", { text: "Feuille de route" }),
+    el("p", { class: "rmp-for", text: who ? "Pour " + who : rm.name }), el("p", { class: "rmp-date", text: "Samedi 9 octobre 2027" }),
+    rm.message ? el("p", { class: "rmp-msg", text: rm.message }) : "", steps.length ? tbl : el("p", { text: "Aucune étape pour l'instant." }), el("p", { class: "rmp-end", text: "Nous avons hâte de partager cette journée avec vous !" }));
+  document.body.append(box); document.body.classList.add("print-rm");
+  const done = () => { document.body.classList.remove("print-rm"); box.remove(); window.removeEventListener("afterprint", done); };
+  window.addEventListener("afterprint", done); setTimeout(() => window.print(), 60);
+}
+function roadmapPanel(ctx) {
+  const { list, rm, all, steps, guests, ready } = ctx;
+  const wrap = el("section", { class: "card rm-panel" });
+  if (!ready) return el("section", { class: "card rm-panel" }, el("h3", { text: "Feuilles de route par invité" }), el("p", { class: "hint", text: "Pour activer les feuilles de route, exécutez une fois supabase-tout-en-un.sql dans Supabase, puis rechargez la page." }));
+  const go = id => { orgState.rmId = id; renderOrg("timeline"); };
+  const stepsOf = id => all.filter(r => (r.roadmap_id || null) === id);
+  const gOf = r => guests.find(g => g.id === r.guest_id);
+  const nm = r => (r.kind === "guest" && gOf(r)) ? guestDisplay(gOf(r)) : r.name;
+  const upd = async (r, patch, idle) => { try { await orgStore.update("org_roadmaps", r.id, patch); Object.assign(r, patch); if (idle) renderWhenIdle("timeline"); else renderOrg("timeline"); } catch (e) { showToast(orgErr(e)); } };
+  const opt = (v, t) => el("option", { value: v, text: t });
+  const profs = list.filter(r => r.kind === "profile"), gsheets = list.filter(r => r.kind !== "profile");
+
+  // sélecteur + bouton de création
+  const sel = el("select", { "aria-label": "Planning affiché" }, opt("", "Déroulé général (tout le monde)"));
+  if (profs.length) sel.append(el("optgroup", { label: "Modèles par profil" }, ...profs.map(r => opt(r.id, r.name))));
+  if (gsheets.length) sel.append(el("optgroup", { label: "Feuilles d'invités" }, ...gsheets.map(r => opt(r.id, nm(r) + " · " + r.status))));
+  sel.value = rm ? rm.id : ""; sel.addEventListener("change", () => go(sel.value || null));
+  const openCreate = preset => { orgState.rmCreate = preset || {}; renderOrg("timeline"); };
+  wrap.append(el("div", { class: "rm-head" },
+    el("h3", { text: rm ? (rm.kind === "profile" ? "Modèle « " + rm.name + " »" : "Feuille de route de " + nm(rm)) : "Feuilles de route par invité" }),
+    el("div", { class: "rm-pick" }, el("label", {}, el("span", { text: "Afficher" }), sel), el("button", { type: "button", class: "btn small solid", text: "＋ Nouvelle feuille de route", onclick: () => openCreate({}) }))));
+  if (!rm) wrap.append(el("p", { class: "hint", text: "Le déroulé ci-dessous est celui de tout le monde. Créez une feuille de route pour un invité (ou un modèle pour un profil : famille, témoins…), personnalisez les étapes, imprimez-la et suivez son avancement." }));
+
+  // création
+  if (orgState.rmCreate) {
+    const pre = orgState.rmCreate, box = el("div", { class: "rm-create" }, el("h4", { text: "Nouvelle feuille de route" }));
+    const kindSel = el("select", { "aria-label": "Type" }, opt("guest", "Pour un ou plusieurs invités"), opt("profile", "Modèle pour un profil (famille, témoins…)")); kindSel.value = pre.kind || "guest";
+    const prof = el("input", { type: "text", list: "rm-profiles", "aria-label": "Profil", placeholder: "ex. Témoins, Famille proche…" }); prof.value = pre.profile || "";
+    const dl = el("datalist", { id: "rm-profiles" }, ...RM_PROFILES.map(p => el("option", { value: p })));
+    const nameIn = el("input", { type: "text", "aria-label": "Nom du modèle", placeholder: "ex. Témoins" }); nameIn.value = pre.name || "";
+    const src = el("select", { "aria-label": "Partir de" }, opt("", "Du déroulé général (copie)"), opt("__none__", "D'une feuille vide"), ...list.map(r => opt(r.id, (r.kind === "profile" ? "Modèle · " : "Feuille · ") + nm(r)))); src.value = pre.src || "";
+    const dropM = el("input", { type: "checkbox" }); dropM.checked = true;
+    const picker = el("div", { class: "rm-guests" }), q = el("input", { type: "search", placeholder: "Rechercher un invité…", "aria-label": "Rechercher un invité" });
+    const have = new Set(gsheets.map(r => r.guest_id)), gl = sortRows("guests", [...guests]).filter(g => g.presence !== "NON"), checks = new Map();
+    gl.forEach(g => { const cb = el("input", { type: "checkbox" }); checks.set(g, cb); picker.append(el("label", { class: "rm-g", "data-q": norm(guestDisplay(g)) }, cb, el("span", { text: guestDisplay(g) }), g.presence_mairie ? el("small", { class: "tag", text: "mairie" }) : "", have.has(g.id) ? el("small", { class: "tag", text: "a déjà une feuille" }) : "")); });
+    const vis = () => [...picker.querySelectorAll(".rm-g:not([hidden])")];
+    q.addEventListener("input", () => { const t = norm(q.value); picker.querySelectorAll(".rm-g").forEach(l => { l.hidden = !!t && !l.dataset.q.includes(t); }); });
+    const guestPart = el("div", { class: "rm-gpart" }, el("div", { class: "rm-gtools" }, q,
+      el("button", { type: "button", class: "btn small", text: "Cocher les affichés", onclick: () => vis().forEach(l => { l.querySelector("input").checked = true; }) }),
+      el("button", { type: "button", class: "btn small", text: "Tout décocher", onclick: () => picker.querySelectorAll("input").forEach(c => { c.checked = false; }) })), picker,
+      el("label", { class: "rm-chk" }, dropM, el("span", { text: "Retirer les étapes de la mairie pour les invités non conviés à la mairie" })));
+    const nameRow = el("label", {}, el("span", { text: "Nom du modèle" }), nameIn);
+    const sync = () => { const g = kindSel.value === "guest"; guestPart.hidden = !g; nameRow.hidden = g; };
+    kindSel.addEventListener("change", sync); sync();
+    const msg = el("p", { class: "msg", role: "status", hidden: true });
+    const create = el("button", { type: "button", class: "btn solid small", text: "Créer", onclick: async () => {
+      create.disabled = true;
+      try {
+        const srcSteps = src.value === "__none__" ? [] : stepsOf(src.value || null); let made = [];
+        if (kindSel.value === "profile") {
+          const name = nameIn.value.trim() || prof.value.trim(); if (!name) { showMsg(msg, "Donnez un nom au modèle.", "err"); create.disabled = false; return; }
+          const [row] = await orgStore.insert("org_roadmaps", { name, kind: "profile", profile: prof.value.trim() || name, status: "À faire", sent: false });
+          await rmCopySteps(srcSteps, row.id, false); made = [row];
+        } else {
+          const picked = [...checks].filter(([, cb]) => cb.checked).map(([g]) => g); if (!picked.length) { showMsg(msg, "Cochez au moins un invité.", "err"); create.disabled = false; return; }
+          for (const g of picked) { const [row] = await orgStore.insert("org_roadmaps", { name: guestDisplay(g), kind: "guest", guest_id: g.id, profile: prof.value.trim() || null, status: "À faire", sent: false }); await rmCopySteps(srcSteps, row.id, dropM.checked && !g.presence_mairie); made.push(row); }
+        }
+        orgState.rmCreate = null; showToast(made.length + " feuille" + (made.length > 1 ? "s" : "") + " de route créée" + (made.length > 1 ? "s" : "")); go(made.length === 1 ? made[0].id : null);
+      } catch (e) { showMsg(msg, orgErr(e), "err"); create.disabled = false; }
+    } });
+    box.append(el("div", { class: "rm-grid" }, el("label", {}, el("span", { text: "Type" }), kindSel), el("label", {}, el("span", { text: "Profil" }), prof, dl), nameRow, el("label", {}, el("span", { text: "Partir de" }), src)), guestPart, msg,
+      el("div", { class: "rm-act" }, create, el("button", { type: "button", class: "btn small", text: "Annuler", onclick: () => { orgState.rmCreate = null; renderOrg("timeline"); } })));
+    wrap.append(box);
+  }
+
+  if (rm) {   // fiche de la feuille affichée
+    const g = rm.kind === "guest" ? gOf(rm) : null, who = rm.kind === "guest" ? nm(rm) : "";
+    const inp = (label, val, fn, extra) => { const i = el("input", { type: "text", "aria-label": label, ...(extra || {}) }); i.value = val || ""; i.addEventListener("change", () => fn(i.value.trim() || null)); return i; };
+    const stSel = el("select", { "aria-label": "Avancement" }, ...RM_STATUS.map(x => opt(x, x))); stSel.value = rm.status || "À faire"; stSel.addEventListener("change", () => upd(rm, { status: stSel.value }));
+    const sent = el("input", { type: "checkbox", "aria-label": "Envoyée" }); sent.checked = !!rm.sent; sent.addEventListener("change", () => upd(rm, { sent: sent.checked, sent_at: sent.checked ? todayISO() : null }));
+    const msgI = el("textarea", { rows: "2", "aria-label": "Message pour l'invité", placeholder: "Un petit mot imprimé en haut de la feuille (facultatif)" }); msgI.value = rm.message || ""; msgI.addEventListener("change", () => upd(rm, { message: msgI.value.trim() || null }, true));
+    const guestSel = rm.kind === "guest" ? el("select", { "aria-label": "Invité" }, opt("", "— choisir —"), ...sortRows("guests", [...guests]).map(x => opt(x.id, guestDisplay(x)))) : null;
+    if (guestSel) { guestSel.value = rm.guest_id || ""; guestSel.addEventListener("change", () => { const x = guests.find(y => y.id === guestSel.value); upd(rm, { guest_id: guestSel.value || null, name: x ? guestDisplay(x) : rm.name }); }); }
+    wrap.append(el("div", { class: "rm-meta" },
+      guestSel ? el("label", {}, el("span", { text: "Invité" }), guestSel) : el("label", {}, el("span", { text: "Nom du modèle" }), inp("Nom", rm.name, v => v && upd(rm, { name: v }, true))),
+      el("label", {}, el("span", { text: "Profil" }), inp("Profil", rm.profile, v => upd(rm, { profile: v }, true), { list: "rm-profiles" }), el("datalist", { id: "rm-profiles" }, ...RM_PROFILES.map(p => el("option", { value: p })))),
+      el("label", {}, el("span", { text: "Avancement" }), stSel),
+      rm.kind === "guest" ? el("label", { class: "rm-chk" }, sent, el("span", { text: rm.sent ? "Envoyée le " + (rm.sent_at ? frDate(rm.sent_at) : "—") : "Envoyée à l'invité" })) : "",
+      el("label", { class: "rm-wide" }, el("span", { text: "Message pour l'invité (imprimé)" }), msgI)),
+      g && g.presence_mairie ? el("p", { class: "hint", text: "Cet invité est convié à la mairie (" + ({ OUI: "présent", NON: "absent", ATT: "réponse en attente" }[g.presence_mairie] || "") + ")." }) : "",
+      el("div", { class: "rm-act" },
+        el("button", { type: "button", class: "btn small solid", text: "🖨 Imprimer la feuille", onclick: () => rmPrint(rm, steps, who) }),
+        el("button", { type: "button", class: "btn small", text: rm.kind === "profile" ? "Appliquer à des invités…" : "Dupliquer pour d'autres invités…", title: "Crée des copies de cette feuille, une par invité coché", onclick: () => openCreate({ kind: "guest", src: rm.id, profile: rm.profile || "" }) }),
+        rm.kind === "guest" ? el("button", { type: "button", class: "btn small", text: "En faire un modèle de profil", onclick: () => openCreate({ kind: "profile", src: rm.id, profile: rm.profile || "", name: rm.profile || "" }) }) : "",
+        el("button", { type: "button", class: "btn small", text: "← Déroulé général", onclick: () => go(null) }),
+        el("button", { type: "button", class: "btn small danger", text: "Supprimer cette feuille", onclick: async () => {
+          if (!window.confirm("Supprimer cette feuille de route et ses " + steps.length + " étape(s) ?")) return;
+          try { await remote.from("org_timeline").delete().eq("roadmap_id", rm.id); const { error } = await remote.from("org_roadmaps").delete().eq("id", rm.id); if (error) throw error; showToast("Feuille supprimée"); go(null); } catch (e) { showToast(orgErr(e)); }
+        } })));
+  } else if (list.length) {   // vue d'ensemble : retrouver, filtrer, suivre
+    const f = orgState.rmFilter || (orgState.rmFilter = { kind: "", status: "", sent: "" });
+    const fsel = (label, key, opts) => { const s = el("select", { "aria-label": label }, ...opts.map(([v, t]) => opt(v, t))); s.value = f[key]; s.addEventListener("change", () => { f[key] = s.value; renderOrg("timeline"); }); return s; };
+    const shown = list.filter(r => (!f.kind || (f.kind === "profile") === (r.kind === "profile")) && (!f.status || r.status === f.status) && (!f.sent || (f.sent === "yes") === !!r.sent));
+    const nSent = gsheets.filter(r => r.sent).length, nDone = list.filter(r => r.status === "Terminée").length;
+    wrap.append(el("div", { class: "rm-stats" }, el("span", { class: "sum-chip c-all" }, el("b", { text: String(gsheets.length) }), "feuilles d'invités"), el("span", { class: "sum-chip c-link" }, el("b", { text: String(profs.length) }), "modèles"), el("span", { class: "sum-chip c-ok" }, el("b", { text: String(nDone) }), "terminées"), el("span", { class: "sum-chip c-wait" }, el("b", { text: nSent + " / " + gsheets.length }), "envoyées")),
+      el("div", { class: "rm-filters" }, fsel("Type", "kind", [["", "Tous les types"], ["guest", "Feuilles d'invités"], ["profile", "Modèles"]]), fsel("Avancement", "status", [["", "Tous les états"], ...RM_STATUS.map(x => [x, x])]), fsel("Envoi", "sent", [["", "Envoyées ou non"], ["yes", "Envoyées"], ["no", "Pas encore envoyées"]])));
+    const t = el("table", { class: "org-table rm-tbl" }, el("thead", {}, el("tr", {}, ...["Feuille", "Profil", "Avancement", "Envoyée", "Étapes", ""].map(h => el("th", { text: h })))));
+    const tb = el("tbody");
+    shown.forEach(r => {
+      const st = el("select", { "aria-label": "Avancement" }, ...RM_STATUS.map(x => opt(x, x))); st.value = r.status || "À faire"; st.addEventListener("change", () => upd(r, { status: st.value }));
+      const sn = el("input", { type: "checkbox", "aria-label": "Envoyée" }); sn.checked = !!r.sent; sn.disabled = r.kind === "profile"; sn.addEventListener("change", () => upd(r, { sent: sn.checked, sent_at: sn.checked ? todayISO() : null }));
+      tb.append(el("tr", { class: "rm-" + rmCls(r.status) }, el("td", {}, el("b", { text: nm(r) }), r.kind === "profile" ? el("small", { class: "tag", text: "modèle" }) : ""), el("td", { text: r.profile || "" }), el("td", {}, st),
+        el("td", {}, r.kind === "profile" ? "" : el("label", { class: "rm-chk" }, sn, el("small", { text: r.sent && r.sent_at ? frDate(r.sent_at) : "" }))), el("td", { text: String(stepsOf(r.id).length) }),
+        el("td", {}, el("button", { type: "button", class: "btn small", text: "Ouvrir", onclick: () => go(r.id) }))));
+    });
+    t.append(tb); wrap.append(shown.length ? el("div", { class: "tbl org-wrap" }, t) : el("p", { class: "hint", text: "Aucune feuille avec ce filtre." }));
+  }
+  return wrap;
+}
 async function renderOrgInner(key) {
   if (key === "trip") key = orgState.tripView || "trip_chrono";   // l'onglet « Voyage de noces » a ses propres sous-onglets
   if (key.startsWith("trip_")) orgState.tripView = key;
@@ -1292,7 +1428,20 @@ async function renderOrgInner(key) {
       try { const { error } = await remote.from(M.table).update({ link: hit[2] }).eq("id", r.id); if (!error) r.link = hit[2]; } catch {}
     }
   }
+  let rmCtx = null;
+  if (key === "timeline") {   // le déroulé général, ou la feuille de route d'un invité / d'un profil
+    const all = rows; let list = [], ready = true, guests = [];
+    try { list = await orgStore.list("org_roadmaps"); } catch { ready = false; }
+    try { guests = await orgStore.list("org_guests"); } catch {}
+    if (tok !== orgTok) return;
+    list.sort((a, b) => (a.kind === "profile" ? 0 : 1) - (b.kind === "profile" ? 0 : 1) || String(a.name || "").localeCompare(String(b.name || ""), "fr"));
+    const id = ready && orgState.rmId && list.some(x => x.id === orgState.rmId) ? orgState.rmId : null; orgState.rmId = id;
+    rows = all.filter(r => (r.roadmap_id || null) === id);
+    if (id) M.defaults.roadmap_id = id; else delete M.defaults.roadmap_id;
+    rmCtx = { list, rm: list.find(x => x.id === id) || null, all, steps: null, guests, ready };
+  }
   rows = sortRows(key, rows);
+  if (rmCtx) rmCtx.steps = rows;
   setExport($("#org-body"), () => buildOrgExport(key, M, rows));
   if (key === "guests") rows.filter(r => r.envoi === "QR code").forEach(r => { r.envoi = "Lien"; orgStore.update(M.table, r.id, { envoi: "Lien" }).catch(() => {}); });   // ancien libellé
   M.fields.filter(f => f.t === "select").forEach(f => rows.forEach(r => { if (r[f.k] && !f.o.includes(r[f.k])) f.o.push(r[f.k]); }));
@@ -1302,6 +1451,7 @@ async function renderOrgInner(key) {
   let sumBox;
   if (key.startsWith("trip_")) { const th = await tripHeader(key, tripAll); if (tok !== orgTok) return; host.append(th.head); sumBox = th.sum; host.append(sumBox); }
   else { sumBox = orgSummary(key, rows, decoS); host.append(sumBox); }
+  if (rmCtx) host.append(roadmapPanel(rmCtx));
   if (key === "trip_help") { host.append(tripHelpPanel()); return; }
   if (key === "trip_reco") { host.append(tripRecoPanel(tripAll)); return; }
   if (key === "trip_chrono") {
@@ -1332,11 +1482,11 @@ async function renderOrgInner(key) {
   }
   let guestFilter = () => {};
   if (key === "guests") {
-    const gp = el("select", { "aria-label": "Présence" }, ...[["", "Tous les invités"], ["ATT", "En attente"], ["OUI", "Présents"], ["NON", "Absents"], ["ALL", "Avec allergie"], ["CHK", "À vérifier (réponses du site)"]].map(([v, t]) => el("option", { value: v, text: t }))); gp.value = orgState.filter.gp;
+    const gp = el("select", { "aria-label": "Présence" }, ...[["", "Tous les invités"], ["ATT", "Cérémonie : en attente"], ["OUI", "Cérémonie : présents"], ["NON", "Cérémonie : absents"], ["MAI", "Invités à la mairie"], ["M:OUI", "Mairie : présents"], ["M:ATT", "Mairie : en attente"], ["M:NON", "Mairie : absents"], ["ALL", "Avec allergie"], ["CHK", "À vérifier (réponses du site)"]].map(([v, t]) => el("option", { value: v, text: t }))); gp.value = orgState.filter.gp;
     const gs = el("select", { "aria-label": "Ordre de la liste", title: "Ordre d'affichage des invités" }, el("option", { value: "list", text: "Ordre de ma liste (Excel)" }), el("option", { value: "az", text: "Ordre alphabétique" })); gs.value = orgState.filter.gsort || "list";
     gs.addEventListener("change", () => { orgState.filter.gsort = gs.value; renderOrg("guests"); });
     const gq = el("input", { type: "search", placeholder: "Rechercher un invité…", "aria-label": "Rechercher un invité", style: "max-width:260px;min-height:38px;padding:4px 10px;font-size:var(--fs-small)" }); gq.value = orgState.filter.gq;
-    guestFilter = () => { orgState.filter.gp = gp.value; orgState.filter.gq = gq.value; const q = norm(gq.value); document.querySelectorAll("#org-body tr[data-q]").forEach(tr => { const okP = !gp.value || (gp.value === "ALL" ? tr.dataset.a === "1" : gp.value === "CHK" ? tr.dataset.c === "1" : tr.dataset.p === gp.value), okQ = !q || tr.dataset.q.includes(q), okE = !orgState.filter.envoi || tr.dataset.e === orgState.filter.envoi; tr.hidden = !(okP && okQ && okE); }); };
+    guestFilter = () => { orgState.filter.gp = gp.value; orgState.filter.gq = gq.value; const q = norm(gq.value); document.querySelectorAll("#org-body tr[data-q]").forEach(tr => { const okP = !gp.value || (gp.value === "ALL" ? tr.dataset.a === "1" : gp.value === "CHK" ? tr.dataset.c === "1" : gp.value === "MAI" ? !!tr.dataset.m : gp.value.startsWith("M:") ? tr.dataset.m === gp.value.slice(2) : tr.dataset.p === gp.value), okQ = !q || tr.dataset.q.includes(q), okE = !orgState.filter.envoi || tr.dataset.e === orgState.filter.envoi; tr.hidden = !(okP && okQ && okE); }); };
     gp.addEventListener("change", guestFilter); gq.addEventListener("input", guestFilter);
     bar.append(gs, gp, gq);
   }
@@ -1369,7 +1519,7 @@ async function renderOrgInner(key) {
         go.disabled = true;
         try {
           let added = 0, filled = 0;
-          for (let k = 0; k < items.length; k++) { if (!checks[k].checked) continue; const it = items[k]; if (it.kind === "new") { await orgStore.insert("org_timeline", it.t); added++; } else { await orgStore.update("org_timeline", it.ex.id, it.patch); filled++; } }
+          for (let k = 0; k < items.length; k++) { if (!checks[k].checked) continue; const it = items[k]; if (it.kind === "new") { await orgStore.insert("org_timeline", { ...it.t, ...(orgState.rmId ? { roadmap_id: orgState.rmId } : {}) }); added++; } else { await orgStore.update("org_timeline", it.ex.id, it.patch); filled++; } }
           showToast(added + " étape(s) ajoutée(s), " + filled + " complétée(s)."); renderOrg("timeline");
         } catch (e) { showToast(orgErr(e)); go.disabled = false; }
       } });
@@ -1541,7 +1691,7 @@ async function renderOrgInner(key) {
     }
     const late = (key === "tasks" || key === "after") && !r.done && r.due && r.due < todayISO();
     const tr = el("tr", { "data-rid": r.id, class: (late ? "late " : "") + ((key === "tasks" || key === "trip_todo" || key === "after") && r.done ? "done" : "") + (key === "guests" ? " p-" + (r.presence || "ATT") + (r.a_verifier ? " to-check" : "") : "") });
-    if (key === "guests") { tr.dataset.q = norm((r.nom || "") + " " + (r.prenom || "")); tr.dataset.p = r.presence || "ATT"; tr.dataset.a = r.allergie && r.allergie.trim() ? "1" : "0"; tr.dataset.c = r.a_verifier ? "1" : "0"; tr.dataset.e = r.envoi || ""; }
+    if (key === "guests") { tr.dataset.q = norm((r.nom || "") + " " + (r.prenom || "")); tr.dataset.p = r.presence || "ATT"; tr.dataset.m = r.presence_mairie || ""; tr.dataset.a = r.allergie && r.allergie.trim() ? "1" : "0"; tr.dataset.c = r.a_verifier ? "1" : "0"; tr.dataset.e = r.envoi || ""; }
     M.fields.forEach(f => {
       const inp = fieldInput(f, f.k === "status" && key === "tasks" ? statusOf(r) : r[f.k]);
       if (key === "tasks" && f.k === "status") inp.dataset.st = statusOf(r);
